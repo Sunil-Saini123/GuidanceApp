@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Phase 2: Production accessibility service configuration.
+
+    eventTypes:
+      typeWindowStateChanged   — fires when the user navigates to a new screen / Activity.
+      typeWindowContentChanged — fires when content inside the current window changes
+                                 (scroll, new views loaded, etc.).
+
+    flags:
+      flagReportViewIds            — exposes resource-id strings on each node (needed for
+                                     reliable hashing in Phase 3).
+      flagRetrieveInteractiveWindows — lets us walk windows that are not currently focused
+                                     (e.g. overlays).
+
+    canRetrieveWindowContent="true" is mandatory; without it rootInActiveWindow is always null.
+-->
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/accessibility_service_description"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:settingsActivity=".MainActivity" />

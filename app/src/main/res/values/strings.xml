@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">FloatingAssistant</string>
+    <string name="permission_rationale">FloatingAssistant needs Accessibility permission to read and filter on-screen UI trees.</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="service_on">Capturing UI Tree</string>
+    <string name="service_off">Capture Paused</string>
+    <string name="accessibility_service_description">Reads and filters the on-screen UI tree for the FloatingAssistant capture engine.</string>
+</resources>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        BIND_ACCESSIBILITY_SERVICE is required for any app that declares an AccessibilityService.
+        The actual <service> entry will be added in Phase 2 once the service class exists.
+        Declaring the permission here now so Phase 1 builds cleanly.
+    -->
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+        Phase 7: Floating Overlay Window.
+        SYSTEM_ALERT_WINDOW is a "special" permission — it cannot be granted via
+        the normal runtime dialog. The user must be sent to
+        Settings.ACTION_MANAGE_OVERLAY_PERMISSION (see FloatingOverlayService /
+        MainActivity). FOREGROUND_SERVICE(_SPECIAL_USE) is required so the
+        overlay bubble's Service can keep running while the app is backgrounded.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FloatingAssistant">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.FloatingAssistant"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Accessibility Service — stub registered in Phase 1 so the service appears
+            in Android Accessibility Settings and the permission check resolves correctly.
+            Full implementation added in Phase 2.
+        -->
+        <service
+            android:name=".UiTreeAccessibilityService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!--
+            Phase 7: Floating Overlay Window — draggable bubble + control panel
+            (SYSTEM_ALERT_WINDOW). foregroundServiceType="specialUse" is required
+            on Android 14+ for services that don't fit a predefined FGS category.
+        -->
+        <service
+            android:name=".FloatingOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating_navigation_overlay" />
+        </service>
+
+    </application>
+
+</manifest>
