@@ -5,19 +5,22 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
 
 /**
  * CloudPathDatabaseInstrumentedTest
  *
  * This test class is used to verify the Firestore-backed CloudPathDatabase.
  * It contains four main tests:
- * 1. [test_add_whatsapp_profile_path]: Verifies that an entry can be added correctly to Firestore.
- * 2. [test_fetch_whatsapp_profile_path]: Verifies that an existing entry can be fetched correctly.
- * 3. [test_fetch_wrong_query]: Verifies that lookup returns empty for non-existent intents.
- * 4. [test_fetch_non_existent_device_signature]: Verifies that lookup returns empty for a signature not in Firestore.
+ * 1. [test01_add_whatsapp_profile_path]: Verifies that an entry can be added correctly to Firestore.
+ * 2. [test02_fetch_whatsapp_profile_path]: Verifies that an existing entry can be fetched correctly.
+ * 3. [test03_fetch_wrong_query]: Verifies that lookup returns empty for non-existent intents.
+ * 4. [test04_fetch_non_existent_device_signature]: Verifies that lookup returns empty for a signature not in Firestore.
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(AndroidJUnit4::class)
 class CloudPathDatabaseInstrumentedTest {
 
@@ -31,7 +34,7 @@ class CloudPathDatabaseInstrumentedTest {
      * It does not clean up the data so that Test 2 can verify the fetch.
      */
     @Test
-    fun test_add_whatsapp_profile_path() {
+    fun test01_add_whatsapp_profile_path() {
         runBlocking {
             CloudPathDatabase.ensureSignedIn()
 
@@ -54,7 +57,7 @@ class CloudPathDatabaseInstrumentedTest {
      * Run this AFTER Test 1 to ensure the data is present.
      */
     @Test
-    fun test_fetch_whatsapp_profile_path() {
+    fun test02_fetch_whatsapp_profile_path() {
         runBlocking {
             CloudPathDatabase.ensureSignedIn()
 
@@ -76,7 +79,7 @@ class CloudPathDatabaseInstrumentedTest {
      * when the intent is not found in Firestore.
      */
     @Test
-    fun test_fetch_wrong_query() {
+    fun test03_fetch_wrong_query() {
         runBlocking {
             CloudPathDatabase.ensureSignedIn()
 
@@ -97,7 +100,7 @@ class CloudPathDatabaseInstrumentedTest {
      * when no document exists for the provided device signature.
      */
     @Test
-    fun test_fetch_non_existent_device_signature() {
+    fun test04_fetch_non_existent_device_signature() {
         runBlocking {
             CloudPathDatabase.ensureSignedIn()
 
@@ -105,10 +108,7 @@ class CloudPathDatabaseInstrumentedTest {
             val fakeDevice = CloudPathDatabase.DeviceSignatureInfo(
                 manufacturer = "non_existent_manufacturer",
                 brand = "non_existent_brand",
-                model = "non_existent_model_${System.currentTimeMillis()}",
-                androidVersion = "99",
-                customOs = "none",
-                customOsVersion = "0"
+                androidVersion = "99"
             )
 
             Log.i("CloudPathTest", "Step 4: Fetching for non-existent device signature: ${CloudPathDatabase.buildSignature(fakeDevice)}")

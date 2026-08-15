@@ -30,11 +30,7 @@ import java.util.Locale
  * model, not a reintroduction of fuzzy matching.
  *
  * ── Device signature ────────────────────────────────────────────────────
- * `Manufacturer_Brand_Model_AndroidVersion_Os`, where `Os` is the OEM skin
- * name+version combined (e.g. "one_ui6_0") rather than just the skin name —
- * two phones can share an Android version and skin name but differ in skin
- * version (One UI 5.1 vs 6.0), with genuinely different menu layouts, so the
- * version stays folded into that last segment.
+ * `Manufacturer_Brand_AndroidVersion`, e.g. "samsung_samsung_14".
  *
  * Firestore layout:
  * ```
@@ -64,10 +60,7 @@ object CloudPathDatabase {
     data class DeviceSignatureInfo(
         val manufacturer: String,
         val brand: String,
-        val model: String,
-        val androidVersion: String,
-        val customOs: String,
-        val customOsVersion: String
+        val androidVersion: String
     )
 
     private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
@@ -175,38 +168,24 @@ object CloudPathDatabase {
 
     // ── Device signature ────────────────────────────────────────────────────
 
-    /** Builds signature info from live Build.* + OemRomDetector, same sources DeviceInfoWriter uses. */
+    /** Builds signature info from live Build.* sources. */
     fun currentDeviceSignatureInfo(): DeviceSignatureInfo {
         val manufacturer = Build.MANUFACTURER ?: "unknown"
         val brand = Build.BRAND ?: "unknown"
-        val model = Build.MODEL ?: "unknown"
         val androidVersion = Build.VERSION.RELEASE?.takeIf { it.isNotBlank() }
             ?: Build.VERSION.SDK_INT.toString()
-        val (customOs, customOsVersion) = when (val result = OemRomDetector.detect()) {
-            is OemRomDetector.OemResult.Custom -> result.name to result.version
-            OemRomDetector.OemResult.Stock -> "stock" to "stock"
-        }
-        return DeviceSignatureInfo(manufacturer, brand, model, androidVersion, customOs, customOsVersion)
+        return DeviceSignatureInfo(manufacturer, brand, androidVersion)
     }
 
-    /** The "Os" segment: OEM skin name + version combined, e.g. "one_ui_6_0" or "stock". */
-    private fun osSegment(info: DeviceSignatureInfo): String =
-        "${info.customOs}_${info.customOsVersion}"
-
     /**
-     * signature = "<manufacturer>_<brand>_<model>_<android_version>_<os>",
-     * lowercased and sanitized to Firestore-safe document-ID characters
-     * (Firestore doc IDs must not contain "/", must not be "." or "..",
-     * and must not be empty — sanitizing here also collapses whitespace and
-     * punctuation from OEM strings like "One UI" or "V816.0.6.0").
+     * signature = "<manufacturer>_<brand>_<android_version>",
+     * lowercased and sanitized to Firestore-safe document-ID characters.
      */
     fun buildSignature(info: DeviceSignatureInfo): String {
         val raw = listOf(
             info.manufacturer,
             info.brand,
-            info.model,
-            info.androidVersion,
-            osSegment(info)
+            info.androidVersion
         ).joinToString("_")
 
         return raw.lowercase(Locale.US)
@@ -214,7 +193,7 @@ object CloudPathDatabase {
             .replace(Regex("_+"), "_")
             .trim('_')
             .ifBlank { "unknown_device" }
-            .take(400) // Firestore doc IDs allow up to 1500 bytes; well under that
+            .take(400)
     }
 
     /**
