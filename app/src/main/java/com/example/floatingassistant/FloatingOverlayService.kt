@@ -128,6 +128,11 @@ class FloatingOverlayService : Service() {
         inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         startForeground(NOTIFICATION_ID, buildNotification())
         addBubble()
+        serviceScope.launch {
+            // Firestore security rules require an authenticated (anonymous) user —
+            // sign in once up front so the first query submission isn't slowed down by it.
+            CloudPathDatabase.ensureSignedIn()
+        }
         Log.i(TAG, "Overlay service started")
     }
 
@@ -178,8 +183,8 @@ class FloatingOverlayService : Service() {
     private fun applyIdleFlags() {
         bubbleParams.flags =
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
         typingModeActive = false
     }
@@ -192,8 +197,8 @@ class FloatingOverlayService : Service() {
     private fun applyTypingFlags() {
         bubbleParams.flags =
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
         typingModeActive = true
     }
@@ -427,8 +432,24 @@ class FloatingOverlayService : Service() {
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
         statusText.text = "Searching…"
         serviceScope.launch {
-            val path = withContext(Dispatchers.IO) {
-                PathDatabase.lookup(this@FloatingOverlayService, query)
+            // "Has anyone done this before?" — check the cloud (Firestore) first, scoped to
+            // this exact device signature (manufacturer + model + Android version + OEM ROM).
+            // NOTE: CloudPathDatabase.lookup() now expects a canonical INTENT string, not the
+            // raw query — run `query` through your intent-extraction model before this call
+            // once that's wired in. Passing the raw query works today but only matches if the
+            // raw query text is itself byte-for-byte what was stored via addEntry().
+            var path = try {
+                CloudPathDatabase.lookup(query)
+            } catch (e: Exception) {
+                Log.e(TAG, "Cloud lookup failed, falling back to local DB: ${e.message}", e)
+                ""
+            }
+
+            // Fallback to the local on-device DB (e.g. offline, or nothing in the cloud yet).
+            if (path.isEmpty()) {
+                path = withContext(Dispatchers.IO) {
+                    PathDatabase.lookup(this@FloatingOverlayService, query)
+                }
             }
 
             if (path.isEmpty()) {
