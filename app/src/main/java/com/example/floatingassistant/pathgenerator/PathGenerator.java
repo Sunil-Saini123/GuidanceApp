@@ -36,17 +36,21 @@ public class PathGenerator {
      */
     public NavigationPath generatePath(Context context, PathRequest request) {
         if (request == null || !request.getIntent().isValid()) {
+            AppLogger.w(TAG, "❌ Path generation aborted: Request or Intent is null/invalid.");
             return NavigationPath.failure("Invalid or missing intent request");
         }
 
-        AppLogger.i(TAG, "Generating path for Intent: " + request.getIntent().getIntentName() +
-                ", Query: \"" + request.getIntent().getRawQuery() + "\", Pos: " + request.getCurrentPosition());
+        AppLogger.i(TAG, "🚀 START PATH GENERATION");
+        AppLogger.i(TAG, "📋 Intent: " + request.getIntent().getIntentName() +
+                " | Query: \"" + request.getIntent().getRawQuery() + "\"" +
+                " | Position: " + request.getCurrentPosition());
 
         // 1. Gather device info if missing in request
         JSONObject deviceInfo = request.getDeviceInfo();
         if (deviceInfo.length() == 0 && context != null) {
             deviceInfo = DeviceInfoGatherer.gather(context);
         }
+        AppLogger.d(TAG, "📱 Device Context: " + deviceInfo.toString());
 
         // 2. Build full request with gathered device info
         PathRequest fullRequest = new PathRequest(
@@ -62,16 +66,19 @@ public class PathGenerator {
             NavigationPath validated = PathValidator.validate(rawOutput);
 
             if (validated.isValid()) {
+                AppLogger.i(TAG, "✨ SUCCESS: Navigation Path Generated -> " + validated.toPathString());
                 return validated;
             }
-            AppLogger.w(TAG, "Groq proxy returned invalid path: " + validated.getErrorMessage());
+            AppLogger.w(TAG, "⚠️ Groq proxy returned invalid path structure: " + validated.getErrorMessage());
         } catch (Exception e) {
-            AppLogger.e(TAG, "Groq proxy communication failed: " + e.getMessage(), e);
+            AppLogger.e(TAG, "⚠️ Groq proxy request failed (" + e.getMessage() + ")");
         }
 
         // 4. Fallback resolution for predefined intents when proxy is unavailable or invalid
-        AppLogger.i(TAG, "Falling back to predefined path rules for intent: " + request.getIntent().getIntentName());
-        return resolveFallbackPath(fullRequest);
+        AppLogger.w(TAG, "🔄 FALLBACK ACTIVATED: Resolving path using local fallback rules for intent: " + request.getIntent().getIntentName());
+        NavigationPath fallbackPath = resolveFallbackPath(fullRequest);
+        AppLogger.i(TAG, "✨ FALLBACK PATH GENERATED -> " + fallbackPath.toPathString());
+        return fallbackPath;
     }
 
     /**

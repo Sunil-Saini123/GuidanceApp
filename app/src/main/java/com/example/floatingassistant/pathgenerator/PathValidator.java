@@ -16,10 +16,12 @@ public class PathValidator {
 
     public static NavigationPath validate(String rawGroqOutput) {
         if (rawGroqOutput == null || rawGroqOutput.trim().isEmpty()) {
+            AppLogger.w(TAG, "⚠️ Validation Failed: Raw response is null or empty");
             return NavigationPath.failure("Empty or null response from Groq");
         }
 
         String cleanedJson = sanitizeJson(rawGroqOutput);
+        AppLogger.d(TAG, "🔍 Sanitized JSON for Parsing: " + cleanedJson);
 
         try {
             JSONObject json = new JSONObject(cleanedJson);
@@ -38,7 +40,7 @@ public class PathValidator {
             }
 
             if (steps.isEmpty()) {
-                AppLogger.w(TAG, "Validation failed: path steps array is empty");
+                AppLogger.w(TAG, "❌ Validation Failed: 'path' array is empty in JSON");
                 return NavigationPath.failure("Path steps array is empty");
             }
 
@@ -47,11 +49,12 @@ public class PathValidator {
                 destination = steps.get(steps.size() - 1);
             }
 
-            AppLogger.i(TAG, "Path validated successfully (" + steps.size() + " steps): " + destination);
+            AppLogger.i(TAG, "✅ VALIDATION SUCCESS: Destination=\"" + destination + "\", Steps=" + steps);
             return NavigationPath.success(destination, steps, rawGroqOutput);
 
         } catch (Exception e) {
-            AppLogger.e(TAG, "Validation error parsing Groq output: " + e.getMessage() + "\nRaw: " + rawGroqOutput, e);
+            AppLogger.e(TAG, "❌ VALIDATION ERROR: Failed to parse JSON from Groq output: " + e.getMessage());
+            AppLogger.d(TAG, "Raw text was: " + rawGroqOutput);
             return NavigationPath.failure("Malformed JSON response: " + e.getMessage());
         }
     }

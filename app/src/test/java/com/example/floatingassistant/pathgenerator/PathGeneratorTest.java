@@ -4,9 +4,6 @@ import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.List;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -14,7 +11,8 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * PathGeneratorTest — Unit tests for Java Path Generation module,
- * covering prompt generation, response validation, intent matching, and mock proxy integration.
+ * covering prompt generation, response validation, intent matching, mock proxy integration,
+ * and live Vercel proxy server testing.
  */
 public class PathGeneratorTest {
 
@@ -131,5 +129,17 @@ public class PathGeneratorTest {
         assertTrue(path.isValid());
         assertEquals("Display", path.getDestination());
         assertEquals("SettingsHomepage -> Display", path.toPathString());
+    }
+
+    @Test
+    public void testLiveVercelProxyConnection() {
+        System.out.println("\n--- TESTING LIVE VERCEL PROXY SERVER ---");
+        PathGenerator generator = new PathGenerator(new GroqProxyClient(GroqProxyClient.DEFAULT_PROXY_URL, 15000, "llama-3.3-70b-versatile"));
+        NavigationPath path = generator.generatePath(null, mockRequest);
+
+        System.out.println("Live Result Destination: " + path.getDestination());
+        System.out.println("Live Result Formatted Path: " + path.toPathString());
+        assertTrue(path.isValid());
+        assertFalse(path.getSteps().isEmpty());
     }
 }

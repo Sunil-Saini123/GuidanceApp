@@ -12,24 +12,24 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
- * GroqProxyClient — Handles HTTP networking calls to the Groq Proxy API server.
+ * GroqProxyClient — Handles HTTP networking calls to the live deployed Groq Proxy API server.
  */
 public class GroqProxyClient {
 
     private static final String TAG = "GroqProxyClient";
 
-    // Default Proxy URL (can be overridden via setProxyUrl or constructor)
-    private static final String DEFAULT_PROXY_URL = "http://10.0.2.2:8080/v1/chat/completions";
-    private static final int DEFAULT_TIMEOUT_MS = 10000;
+    // Deployed Live Vercel Proxy Endpoint
+    public static final String DEFAULT_PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate";
+    private static final int DEFAULT_TIMEOUT_MS = 12000;
 
     private String proxyUrl;
     private int timeoutMs;
     private String modelName;
 
     public GroqProxyClient(String proxyUrl, int timeoutMs, String modelName) {
-        this.proxyUrl = (proxyUrl != null && !proxyUrl.isEmpty()) ? proxyUrl : DEFAULT_PROXY_URL;
+        this.proxyUrl = (proxyUrl != null && !proxyUrl.trim().isEmpty()) ? proxyUrl.trim() : DEFAULT_PROXY_URL;
         this.timeoutMs = timeoutMs > 0 ? timeoutMs : DEFAULT_TIMEOUT_MS;
-        this.modelName = (modelName != null && !modelName.isEmpty()) ? modelName : "llama-3.3-70b-versatile";
+        this.modelName = (modelName != null && !modelName.trim().isEmpty()) ? modelName.trim() : "llama-3.3-70b-versatile";
     }
 
     public GroqProxyClient() {
@@ -37,9 +37,13 @@ public class GroqProxyClient {
     }
 
     public void setProxyUrl(String proxyUrl) {
-        if (proxyUrl != null && !proxyUrl.isEmpty()) {
-            this.proxyUrl = proxyUrl;
+        if (proxyUrl != null && !proxyUrl.trim().isEmpty()) {
+            this.proxyUrl = proxyUrl.trim();
         }
+    }
+
+    public String getProxyUrl() {
+        return proxyUrl;
     }
 
     /**
@@ -51,6 +55,8 @@ public class GroqProxyClient {
 
         JSONObject requestBody = new JSONObject();
         requestBody.put("model", modelName);
+        requestBody.put("temperature", 0.0);
+        requestBody.put("max_tokens", 400);
 
         JSONArray messages = new JSONArray();
         JSONObject sysMsg = new JSONObject();
@@ -64,9 +70,9 @@ public class GroqProxyClient {
         messages.put(userMsg);
 
         requestBody.put("messages", messages);
-        requestBody.put("temperature", 0.1);
 
-        AppLogger.d(TAG, "Posting request to Groq Proxy URL: " + proxyUrl);
+        AppLogger.i(TAG, "🌐 CONNECTING TO PROXY: " + proxyUrl);
+        AppLogger.d(TAG, "📤 Request Model: " + modelName);
 
         HttpURLConnection connection = null;
         try {
@@ -85,7 +91,7 @@ public class GroqProxyClient {
             }
 
             int statusCode = connection.getResponseCode();
-            AppLogger.d(TAG, "Groq Proxy response status: " + statusCode);
+            AppLogger.i(TAG, "📡 PROXY RESPONSE CODE: HTTP " + statusCode);
 
             InputStream is = (statusCode >= 200 && statusCode < 300)
                     ? connection.getInputStream()
@@ -105,10 +111,16 @@ public class GroqProxyClient {
 
             String responseStr = responseBuilder.toString();
             if (statusCode < 200 || statusCode >= 300) {
+                AppLogger.e(TAG, "❌ HTTP ERROR " + statusCode + " from Proxy: " + responseStr);
                 throw new Exception("Groq Proxy returned HTTP " + statusCode + ": " + responseStr);
             }
 
+            AppLogger.d(TAG, "📥 Raw Proxy Output Received (" + responseStr.length() + " bytes)");
             return extractContentFromResponse(responseStr);
+
+        } catch (Exception e) {
+            AppLogger.e(TAG, "💥 NETWORK / PROXY ERROR: " + e.getMessage());
+            throw e;
         } finally {
             if (connection != null) {
                 connection.disconnect();
