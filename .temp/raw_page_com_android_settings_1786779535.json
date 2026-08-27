@@ -1,0 +1,712 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "Settings$Overlay",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779535993,
+    "total_nodes": 43
+  },
+  "tree": {
+    "id": 5506846699858397558,
+    "text": "",
+    "resource_id": "apps_list",
+    "class": "ListView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 452,
+      "right": 1260,
+      "bottom": 2674,
+      "width": 1260,
+      "height": 2222
+    },
+    "children": [
+      {
+        "id": -5238443983906225768,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 452,
+          "right": 1167,
+          "bottom": 491,
+          "width": 1101,
+          "height": 39
+        },
+        "children": [
+          {
+            "id": -2672513265412095477,
+            "text": "Expo Go",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 452,
+              "right": 391,
+              "bottom": 434,
+              "width": 154,
+              "height": -18
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 452,
+              "right": 1051,
+              "bottom": 429,
+              "width": 163,
+              "height": -23
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -3799271111244726255,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 491,
+          "right": 1167,
+          "bottom": 664,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -9100607926350075508,
+            "text": "File Manager",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 548,
+              "right": 481,
+              "bottom": 607,
+              "width": 244,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 553,
+              "right": 1051,
+              "bottom": 602,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -6017495926633237624,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 664,
+          "right": 1167,
+          "bottom": 837,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 5704242945499933493,
+            "text": "Floating Assistant",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 721,
+              "right": 580,
+              "bottom": 780,
+              "width": 343,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 726,
+              "right": 1051,
+              "bottom": 775,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -6429801503063065798,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 837,
+          "right": 1167,
+          "bottom": 1010,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 2120605202961638723,
+            "text": "FloatingAssistant",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 894,
+              "right": 562,
+              "bottom": 953,
+              "width": 325,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 899,
+              "right": 1051,
+              "bottom": 948,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4072789357382992545,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1010,
+          "right": 1167,
+          "bottom": 1183,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -515882845686803204,
+            "text": "Game Center",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1067,
+              "right": 475,
+              "bottom": 1126,
+              "width": 238,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1072,
+              "right": 1051,
+              "bottom": 1121,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -5907411892623986953,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1183,
+          "right": 1167,
+          "bottom": 1356,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -837824821493479962,
+            "text": "Google",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1240,
+              "right": 362,
+              "bottom": 1299,
+              "width": 125,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1245,
+              "right": 1051,
+              "bottom": 1294,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 5841439085569284367,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1356,
+          "right": 1167,
+          "bottom": 1529,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -4100266463852519500,
+            "text": "Google Play services",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1413,
+              "right": 621,
+              "bottom": 1472,
+              "width": 384,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1418,
+              "right": 1051,
+              "bottom": 1467,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4116590780754056395,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1529,
+          "right": 1167,
+          "bottom": 1702,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -851155671080455986,
+            "text": "Google Play Services for AR",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1586,
+              "right": 766,
+              "bottom": 1645,
+              "width": 529,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1591,
+              "right": 1051,
+              "bottom": 1640,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4874088562906452493,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1702,
+          "right": 1167,
+          "bottom": 1875,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -7421209948272632240,
+            "text": "Great Learning",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1759,
+              "right": 524,
+              "bottom": 1818,
+              "width": 287,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1764,
+              "right": 1051,
+              "bottom": 1813,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -7991870573275365564,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1875,
+          "right": 1167,
+          "bottom": 2048,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 880103357231593465,
+            "text": "iManager",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1932,
+              "right": 405,
+              "bottom": 1991,
+              "width": 168,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1937,
+              "right": 1051,
+              "bottom": 1986,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -8141362845139630021,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2048,
+          "right": 1167,
+          "bottom": 2221,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -7455506620310277086,
+            "text": "iQOO account",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2105,
+              "right": 490,
+              "bottom": 2164,
+              "width": 253,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 2110,
+              "right": 1051,
+              "bottom": 2159,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4756761454553681275,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2221,
+          "right": 1167,
+          "bottom": 2394,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -5561157148964644712,
+            "text": "iQOO Cloud",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2278,
+              "right": 442,
+              "bottom": 2337,
+              "width": 205,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 2283,
+              "right": 1051,
+              "bottom": 2332,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 9039975349089233557,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2394,
+          "right": 1167,
+          "bottom": 2567,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -8091382425251897720,
+            "text": "iQOO Store",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2451,
+              "right": 442,
+              "bottom": 2510,
+              "width": 205,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 2456,
+              "right": 1051,
+              "bottom": 2505,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -7772572672663244902,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2567,
+          "right": 1167,
+          "bottom": 2674,
+          "width": 1101,
+          "height": 107
+        },
+        "children": [
+          {
+            "id": -5729540654357410871,
+            "text": "KDE Connect",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2624,
+              "right": 480,
+              "bottom": 2674,
+              "width": 243,
+              "height": 50
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2629,
+              "right": 1051,
+              "bottom": 2674,
+              "width": 163,
+              "height": 45
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

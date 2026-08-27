@@ -1,0 +1,748 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "Settings$Development",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779611208,
+    "total_nodes": 45
+  },
+  "tree": {
+    "id": -2710310464215543290,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 4,
+      "top": 17,
+      "right": 1204,
+      "bottom": 2682,
+      "width": 1200,
+      "height": 2665
+    },
+    "children": [
+      {
+        "id": 2440811016071536088,
+        "text": "",
+        "resource_id": "content_frame",
+        "class": "FrameLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 4,
+          "top": 17,
+          "right": 1204,
+          "bottom": 2562,
+          "width": 1200,
+          "height": 2545
+        },
+        "children": [
+          {
+            "id": -4136222645048167815,
+            "text": "",
+            "resource_id": "recycler_view",
+            "class": "RecyclerView",
+            "clickable": false,
+            "bounds": {
+              "left": 4,
+              "top": 17,
+              "right": 1204,
+              "bottom": 2562,
+              "width": 1200,
+              "height": 2545
+            },
+            "children": [
+              {
+                "id": -8661485286837250121,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 17,
+                  "right": 1141,
+                  "bottom": 44,
+                  "width": 1074,
+                  "height": 27
+                },
+                "children": [
+                  {
+                    "id": 6149349161098209466,
+                    "text": "WebView implementation",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": -65,
+                      "right": 519,
+                      "bottom": 17,
+                      "width": 409,
+                      "height": 82
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -4644031958252343306,
+                    "text": "Android System WebView",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": -18,
+                      "right": 455,
+                      "bottom": 17,
+                      "width": 345,
+                      "height": 35
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -7706625117132486651,
+                "text": "Automatic system updates",
+                "resource_id": "",
+                "class": "Switch",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 44,
+                  "right": 1141,
+                  "bottom": 269,
+                  "width": 1074,
+                  "height": 225
+                },
+                "children": [
+                  {
+                    "id": -3785532904984312691,
+                    "text": "Automatic system updates",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 105,
+                      "right": 575,
+                      "bottom": 160,
+                      "width": 465,
+                      "height": 55
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 3434996363111246899,
+                    "text": "Apply updates when device restarts",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 160,
+                      "right": 632,
+                      "bottom": 206,
+                      "width": 522,
+                      "height": 46
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 4593528702578909621,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 269,
+                  "right": 1141,
+                  "bottom": 495,
+                  "width": 1074,
+                  "height": 226
+                },
+                "children": [
+                  {
+                    "id": -4340039687874791954,
+                    "text": "DSU Loader",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 331,
+                      "right": 320,
+                      "bottom": 385,
+                      "width": 210,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 1740643022554931368,
+                    "text": "Load a Dynamic System Update Image",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 385,
+                      "right": 660,
+                      "bottom": 432,
+                      "width": 550,
+                      "height": 47
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -5567608170839496851,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 495,
+                  "right": 1141,
+                  "bottom": 649,
+                  "width": 1074,
+                  "height": 154
+                },
+                "children": [
+                  {
+                    "id": -2859001303730719736,
+                    "text": "System UI demo mode",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 543,
+                      "right": 486,
+                      "bottom": 599,
+                      "width": 376,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 8093768697289410647,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 649,
+                  "right": 1141,
+                  "bottom": 803,
+                  "width": 1074,
+                  "height": 154
+                },
+                "children": [
+                  {
+                    "id": -7644368509311363854,
+                    "text": "Quick settings developer tiles",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 697,
+                      "right": 647,
+                      "bottom": 754,
+                      "width": 537,
+                      "height": 57
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -888542031005038811,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 803,
+                  "right": 1141,
+                  "bottom": 1040,
+                  "width": 1074,
+                  "height": 237
+                },
+                "children": [
+                  {
+                    "id": -3839563617439953302,
+                    "text": "Grammatical gender",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 865,
+                      "right": 460,
+                      "bottom": 919,
+                      "width": 350,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -809441820799463660,
+                    "text": "Not specified",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 919,
+                      "right": 299,
+                      "bottom": 966,
+                      "width": 189,
+                      "height": 47
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -5031603140238944073,
+                "text": "",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 67,
+                  "top": 1040,
+                  "right": 1141,
+                  "bottom": 1187,
+                  "width": 1074,
+                  "height": 147
+                },
+                "children": [
+                  {
+                    "id": -2616901949343875811,
+                    "text": "Debugging",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 79,
+                      "top": 1107,
+                      "right": 231,
+                      "bottom": 1153,
+                      "width": 152,
+                      "height": 46
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 6136262523047211812,
+                "text": "USB debugging",
+                "resource_id": "",
+                "class": "Switch",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 1187,
+                  "right": 1141,
+                  "bottom": 1424,
+                  "width": 1074,
+                  "height": 237
+                },
+                "children": [
+                  {
+                    "id": 3345457350614863375,
+                    "text": "USB debugging",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1260,
+                      "right": 379,
+                      "bottom": 1314,
+                      "width": 269,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -4938252502778014562,
+                    "text": "Debug mode when USB is connected",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1314,
+                      "right": 634,
+                      "bottom": 1361,
+                      "width": 524,
+                      "height": 47
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 3558698258776158348,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 1424,
+                  "right": 1141,
+                  "bottom": 1578,
+                  "width": 1074,
+                  "height": 154
+                },
+                "children": [
+                  {
+                    "id": 6267305125884935463,
+                    "text": "Revoke USB debugging authorizations",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1472,
+                      "right": 783,
+                      "bottom": 1528,
+                      "width": 673,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -8520044048469981311,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 1578,
+                  "right": 1141,
+                  "bottom": 1803,
+                  "width": 1074,
+                  "height": 225
+                },
+                "children": [
+                  {
+                    "id": 7698677871943603459,
+                    "text": "Wireless debugging",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1640,
+                      "right": 448,
+                      "bottom": 1694,
+                      "width": 338,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -6690101549424703188,
+                    "text": "Debug mode when Wi‑Fi is connected",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1694,
+                      "right": 640,
+                      "bottom": 1741,
+                      "width": 530,
+                      "height": 47
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -3345857308893946683,
+                    "text": "Wireless debugging",
+                    "resource_id": "switchWidget",
+                    "class": "Switch",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 964,
+                      "top": 1624,
+                      "right": 1098,
+                      "bottom": 1756,
+                      "width": 134,
+                      "height": 132
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -588358882533032416,
+                "text": "Disable adb authorization timeout",
+                "resource_id": "",
+                "class": "Switch",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 1803,
+                  "right": 1141,
+                  "bottom": 2144,
+                  "width": 1074,
+                  "height": 341
+                },
+                "children": [
+                  {
+                    "id": -8287417177976083684,
+                    "text": "Disable adb authorization timeout",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1843,
+                      "right": 717,
+                      "bottom": 1897,
+                      "width": 607,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -776819717928186746,
+                    "text": "Disable automatic revocation of adb authorizations for systems that have not reconnected within the default (7 days) or user-configured (minimum 1 day) amount of time.",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 1897,
+                      "right": 929,
+                      "bottom": 2104,
+                      "width": 819,
+                      "height": 207
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 6961131109848984459,
+                "text": "Bug report shortcut",
+                "resource_id": "",
+                "class": "Switch",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 2144,
+                  "right": 1141,
+                  "bottom": 2378,
+                  "width": 1074,
+                  "height": 234
+                },
+                "children": [
+                  {
+                    "id": -6153329153713583273,
+                    "text": "Bug report shortcut",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 2184,
+                      "right": 475,
+                      "bottom": 2238,
+                      "width": 365,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 732310058775708253,
+                    "text": "Show a button in the power menu for taking a bug report",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 2238,
+                      "right": 929,
+                      "bottom": 2338,
+                      "width": 819,
+                      "height": 100
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -5981117392134038370,
+                "text": "Enable verbose vendor logging",
+                "resource_id": "",
+                "class": "Switch",
+                "clickable": true,
+                "bounds": {
+                  "left": 67,
+                  "top": 2378,
+                  "right": 1141,
+                  "bottom": 2562,
+                  "width": 1074,
+                  "height": 184
+                },
+                "children": [
+                  {
+                    "id": -6651412064768350647,
+                    "text": "Enable verbose vendor logging",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 2418,
+                      "right": 664,
+                      "bottom": 2472,
+                      "width": 554,
+                      "height": 54
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 4321478024915550396,
+                    "text": "Include additional device-specific vendor logs in bug reports, which may contain private information, use more battery, and\/or use more storage.",
+                    "resource_id": "subtitle",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 110,
+                      "top": 2472,
+                      "right": 929,
+                      "bottom": 2562,
+                      "width": 819,
+                      "height": 90
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 6495624999495933878,
+            "text": "",
+            "resource_id": "list_container_footer",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 4,
+              "top": 2562,
+              "right": 1204,
+              "bottom": 2562,
+              "width": 1200,
+              "height": 0
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4354275965637175202,
+        "text": "",
+        "resource_id": "bbk_title_view",
+        "class": "FrameLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 4,
+          "top": 17,
+          "right": 1204,
+          "bottom": 308,
+          "width": 1200,
+          "height": 291
+        },
+        "children": [
+          {
+            "id": -9103173009752379518,
+            "text": "",
+            "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 42,
+              "top": 134,
+              "right": 1186,
+              "bottom": 308,
+              "width": 1144,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 2936210952110819260,
+                "text": "",
+                "resource_id": "originui_vtoolbar_navigation_view_rom14_0",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 42,
+                  "top": 155,
+                  "right": 167,
+                  "bottom": 286,
+                  "width": 125,
+                  "height": 131
+                },
+                "children": [
+                  {
+                    "id": -7620949286317815104,
+                    "text": "Back",
+                    "resource_id": "originui_vtoolbar_navigation_view_btn_rom14_0",
+                    "class": "ImageButton",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 42,
+                      "top": 158,
+                      "right": 167,
+                      "bottom": 283,
+                      "width": 125,
+                      "height": 125
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 2406146974721773789,
+                "text": "Developer options",
+                "resource_id": "originui_vtoolbar_normal_title_rom14_0",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 167,
+                  "top": 188,
+                  "right": 534,
+                  "bottom": 245,
+                  "width": 367,
+                  "height": 57
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "generated_at": 1787470567021,
+  "total_apps": 6,
+  "apps": [
+    {
+      "package_name": "com.android.deskclock",
+      "display_name": "Deskclock",
+      "screen_count": 1,
+      "screens": [
+        {
+          "id": "com.android.deskclock::FrameLayout",
+          "title": "FrameLayout",
+          "root_class": "FrameLayout",
+          "visit_count": 1,
+          "last_seen": 1787470018397,
+          "elements": [
+            "Sunday, August 23"
+          ],
+          "element_count": 1,
+          "transitions": []
+        }
+      ]
+    },
+    {
+      "package_name": "com.vivo.upslide",
+      "display_name": "Upslide",
+      "screen_count": 1,
+      "screens": [
+        {
+          "id": "com.vivo.upslide::RelativeLayout",
+          "title": "RelativeLayout",
+          "root_class": "RelativeLayout",
+          "visit_count": 1,
+          "last_seen": 1787469382312,
+          "elements": [
+            "Rotation Button Background"
+          ],
+          "element_count": 1,
+          "transitions": []
+        }
+      ]
+    },
+    {
+      "package_name": "ru.zdevs.zarchiver",
+      "display_name": "Zarchiver",
+      "screen_count": 2,
+      "screens": [
+        {
+          "id": "ru.zdevs.zarchiver::ROOT · \/",
+          "title": "ROOT · \/",
+          "root_class": "FrameLayout",
+          "visit_count": 1,
+          "last_seen": 1787469072649,
+          "elements": [
+            "ROOT · \/"
+          ],
+          "element_count": 1,
+          "transitions": []
+        },
+        {
+          "id": "ru.zdevs.zarchiver::fp",
+          "title": "fp",
+          "root_class": "ZArchiver",
+          "visit_count": 2,
+          "last_seen": 1787469072082,
+          "elements": [
+            "fp",
+            "Bottom_Nav_Item",
+            "Navigate up",
+            "Anime · \/storage\/emulated\/0 · Search",
+            "View",
+            "More options"
+          ],
+          "element_count": 6,
+          "transitions": [
+            {
+              "to_id": "ru.zdevs.zarchiver::ROOT · \/",
+              "to_title": "ROOT · \/",
+              "action": "Anime",
+              "type": "CLICK",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package_name": "com.vivo.card",
+      "display_name": "Card",
+      "screen_count": 1,
+      "screens": [
+        {
+          "id": "com.vivo.card::FrameLayout",
+          "title": "FrameLayout",
+          "root_class": "FrameLayout",
+          "visit_count": 1,
+          "last_seen": 1787468936063,
+          "elements": [],
+          "element_count": 0,
+          "transitions": []
+        }
+      ]
+    },
+    {
+      "package_name": "com.android.settings",
+      "display_name": "Settings",
+      "screen_count": 4,
+      "screens": [
+        {
+          "id": "com.android.settings::Dashboard",
+          "title": "Dashboard",
+          "root_class": "SettingsHomepageActivity",
+          "visit_count": 1,
+          "last_seen": 1787470566999,
+          "elements": [
+            "Dashboard",
+            "sawa**7@gmail.com · Account password & security",
+            "Wi-Fi",
+            "Settings · Search settings"
+          ],
+          "element_count": 4,
+          "transitions": []
+        },
+        {
+          "id": "com.android.settings::Home Dashboard Rootview",
+          "title": "Home Dashboard Rootview",
+          "root_class": "SettingsHomepageActivity",
+          "visit_count": 2,
+          "last_seen": 1787470535950,
+          "elements": [
+            "Home Dashboard Rootview",
+            "Main Content Scrollable",
+            "Dashboard",
+            "sawa**7@gmail.com · Account password & security",
+            "Wi-Fi, Off · Wi-Fi · Off",
+            "Bottom_Bar",
+            "Settings · Search settings"
+          ],
+          "element_count": 7,
+          "transitions": []
+        },
+        {
+          "id": "com.android.settings::home dashboard rootview",
+          "title": "home dashboard rootview",
+          "root_class": "SettingsHomepageActivity",
+          "visit_count": 3,
+          "last_seen": 1787468360639,
+          "elements": [
+            "home dashboard rootview",
+            "main content scrollable container",
+            "dashboard container",
+            "Action_Bar",
+            "Bottom_Bar",
+            "Settings · Search settings"
+          ],
+          "element_count": 6,
+          "transitions": []
+        },
+        {
+          "id": "com.android.settings::content frame",
+          "title": "content frame",
+          "root_class": "Settings$DevelopmentSettingsActivity",
+          "visit_count": 3,
+          "last_seen": 1787468334191,
+          "elements": [
+            "content frame",
+            "recycler view",
+            "Control center",
+            "Virtual graphics card and Multi-Turbo",
+            "Looking for other settings?",
+            "Task timer",
+            "Multiple users",
+            "Global search",
+            "title view",
+            "System management",
+            "Back"
+          ],
+          "element_count": 11,
+          "transitions": [
+            {
+              "to_id": "com.android.settings::home dashboard rootview",
+              "to_title": "home dashboard rootview",
+              "action": "Back",
+              "type": "CLICK",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "package_name": "com.whatsapp",
+      "display_name": "WhatsApp",
+      "screen_count": 2,
+      "screens": [
+        {
+          "id": "com.whatsapp::content frame",
+          "title": "content frame",
+          "root_class": "FrameLayout",
+          "visit_count": 1,
+          "last_seen": 1787468311962,
+          "elements": [
+            "content frame",
+            "recycler view",
+            "Action_Bar",
+            "USB debugging",
+            "Wireless debugging",
+            "Disable adb authorization timeout",
+            "Bug report shortcut",
+            "Enable verbose vendor logging",
+            "Enable view attribute inspection",
+            "Bottom_Bar",
+            "title view",
+            "Developer options",
+            "Back"
+          ],
+          "element_count": 13,
+          "transitions": []
+        },
+        {
+          "id": "com.whatsapp::pager",
+          "title": "pager",
+          "root_class": "HomeActivity",
+          "visit_count": 5,
+          "last_seen": 1787468294395,
+          "elements": [
+            "pager",
+            "conversations coordinator layout",
+            "Ask Meta AI or Search",
+            "search icon",
+            "Swipe down to reveal additional actions",
+            "Inbox filters, Radio Group",
+            "conversations swipe to reveal filter recycler view",
+            "All filter, , selected",
+            "Unread filter, , unselected",
+            "Favorites filter, , unselected",
+            "Groups filter, , unselected",
+            "Add new list",
+            "conversations archive header",
+            "Archived",
+            "WhatsApp",
+            "Payments on WhatsApp",
+            "Camera",
+            "More options",
+            "Message your assistant",
+            "New chat",
+            "ILW"
+          ],
+          "element_count": 21,
+          "transitions": [
+            {
+              "to_id": "com.whatsapp::content frame",
+              "to_title": "content frame",
+              "action": "Chats",
+              "type": "CLICK",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "active_stacks": {
+    "com.android.settings": [
+      "com.android.settings::Dashboard"
+    ]
+  }
+}

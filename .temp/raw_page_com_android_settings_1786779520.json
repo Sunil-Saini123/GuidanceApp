@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "FrameLayout",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779520770,
+    "total_nodes": 1
+  },
+  "tree": {
+    "id": -8427008166556140416,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 1032,
+      "top": 1059,
+      "right": 1134,
+      "bottom": 1161,
+      "width": 102,
+      "height": 102
+    },
+    "children": []
+  }
+}

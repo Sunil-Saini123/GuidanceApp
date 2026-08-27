@@ -1,0 +1,578 @@
+{
+  "meta": {
+    "package": "com.vivo.gallery",
+    "root_name": "GalleryTab",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779815952,
+    "total_nodes": 35
+  },
+  "tree": {
+    "id": -2188930422474706559,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 7476640357623506156,
+        "text": "",
+        "resource_id": "title_view_layout",
+        "class": "RelativeLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 0,
+          "width": 1260,
+          "height": 0
+        },
+        "children": []
+      },
+      {
+        "id": 8504283246614914390,
+        "text": "",
+        "resource_id": "cv_root_view",
+        "class": "View",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": 7058592095609678882,
+            "text": "Yesterday",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 384,
+              "right": 359,
+              "bottom": 475,
+              "width": 359,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": -68880828633065023,
+            "text": "Kalyan、Mumbai",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 475,
+              "right": 392,
+              "bottom": 566,
+              "width": 392,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": -3196961545753334585,
+            "text": "Image 1,Aug 14, 2026 17:16",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 567,
+              "right": 312,
+              "bottom": 879,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": 2351764617314239448,
+            "text": "Image 2,Aug 14, 2026 12:57",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 316,
+              "top": 567,
+              "right": 628,
+              "bottom": 879,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": -178513419965750632,
+            "text": "Image 3,Aug 14, 2026 12:47",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 632,
+              "top": 567,
+              "right": 944,
+              "bottom": 879,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": -5126709200298246749,
+            "text": "August 13",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 883,
+              "right": 369,
+              "bottom": 974,
+              "width": 369,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": 2783819359874329870,
+            "text": "Hanuman Nagar-Kalyan",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 974,
+              "right": 499,
+              "bottom": 1065,
+              "width": 499,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": 5091667669367304962,
+            "text": "Image 4,Aug 13, 2026 17:44",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1066,
+              "right": 312,
+              "bottom": 1378,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": -3183321517174082597,
+            "text": "Image 5,Aug 13, 2026 17:42",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 316,
+              "top": 1066,
+              "right": 628,
+              "bottom": 1378,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": 3780247273841317742,
+            "text": "August 12",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1382,
+              "right": 371,
+              "bottom": 1473,
+              "width": 371,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": 88363382579530032,
+            "text": "विजय नगर-कल्याण",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1473,
+              "right": 446,
+              "bottom": 1564,
+              "width": 446,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": 1901715162547544288,
+            "text": "Image 6,Aug 12, 2026 12:15",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1565,
+              "right": 312,
+              "bottom": 1877,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": -8211699804024012863,
+            "text": "August 11",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1881,
+              "right": 361,
+              "bottom": 1972,
+              "width": 361,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": -2232129884871661467,
+            "text": "Kalyan、कल्याण",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1972,
+              "right": 402,
+              "bottom": 2063,
+              "width": 402,
+              "height": 91
+            },
+            "children": []
+          },
+          {
+            "id": 908721414549887939,
+            "text": "Image 7,Aug 11, 2026 11:44",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2064,
+              "right": 312,
+              "bottom": 2376,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": -5310270059601385010,
+            "text": "Image 8,Aug 11, 2026 11:44",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 316,
+              "top": 2064,
+              "right": 628,
+              "bottom": 2376,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": -8689357666772447051,
+            "text": "Image 9,Aug 11, 2026 11:26",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 632,
+              "top": 2064,
+              "right": 944,
+              "bottom": 2376,
+              "width": 312,
+              "height": 312
+            },
+            "children": []
+          },
+          {
+            "id": 7168880474641320356,
+            "text": "August 10",
+            "resource_id": "",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2380,
+              "right": 371,
+              "bottom": 2471,
+              "width": 371,
+              "height": 91
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4663668529966541203,
+        "text": "",
+        "resource_id": "coordinator",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 384,
+          "width": 1260,
+          "height": 384
+        },
+        "children": [
+          {
+            "id": -349903958867483662,
+            "text": "",
+            "resource_id": "orginui_vcommonlayout_toptargetview",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 384,
+              "width": 1260,
+              "height": 384
+            },
+            "children": [
+              {
+                "id": 4672416959930319659,
+                "text": "Photos",
+                "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 201,
+                  "right": 1260,
+                  "bottom": 384,
+                  "width": 1260,
+                  "height": 183
+                },
+                "children": [
+                  {
+                    "id": -8613647140487720415,
+                    "text": "",
+                    "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 39,
+                      "top": 201,
+                      "right": 1242,
+                      "bottom": 375,
+                      "width": 1203,
+                      "height": 174
+                    },
+                    "children": [
+                      {
+                        "id": 3619676104852693282,
+                        "text": "",
+                        "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                        "class": "LinearLayout",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 768,
+                          "top": 214,
+                          "right": 1218,
+                          "bottom": 352,
+                          "width": 450,
+                          "height": 138
+                        },
+                        "children": [
+                          {
+                            "id": 8606205405902799929,
+                            "text": "Search",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 768,
+                              "top": 214,
+                              "right": 918,
+                              "bottom": 352,
+                              "width": 150,
+                              "height": 138
+                            },
+                            "children": []
+                          },
+                          {
+                            "id": -6938858147310009615,
+                            "text": "Select",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 918,
+                              "top": 214,
+                              "right": 1068,
+                              "bottom": 352,
+                              "width": 150,
+                              "height": 138
+                            },
+                            "children": []
+                          },
+                          {
+                            "id": -460067870317672458,
+                            "text": "More",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 1068,
+                              "top": 214,
+                              "right": 1218,
+                              "bottom": 352,
+                              "width": 150,
+                              "height": 138
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -6797240901195816758,
+        "text": "",
+        "resource_id": "bottomBar",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 2461,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 339
+        },
+        "children": [
+          {
+            "id": 5048669099812136288,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2461,
+              "right": 1260,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 213
+            },
+            "children": [
+              {
+                "id": -1708707909686738511,
+                "text": "Photos",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 2461,
+                  "right": 315,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -5687343722510380360,
+                "text": "Albums",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 315,
+                  "top": 2461,
+                  "right": 630,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": 7293276879699767525,
+                "text": "Recommended",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 630,
+                  "top": 2461,
+                  "right": 945,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -9215929244925978088,
+                "text": "Search",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 945,
+                  "top": 2461,
+                  "right": 1260,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

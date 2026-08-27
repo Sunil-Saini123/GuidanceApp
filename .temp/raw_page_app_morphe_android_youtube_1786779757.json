@@ -1,0 +1,1202 @@
+{
+  "meta": {
+    "package": "app.morphe.android.youtube",
+    "root_name": "Main",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779757465,
+    "total_nodes": 72
+  },
+  "tree": {
+    "id": -4035765964222467619,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 4299529477749461426,
+        "text": "",
+        "resource_id": "more_drawer_container",
+        "class": "DrawerLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": 4586862462745889073,
+            "text": "",
+            "resource_id": "slim_status_bar_player_container",
+            "class": "FrameLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 2800
+            },
+            "children": [
+              {
+                "id": -9052586906500181985,
+                "text": "",
+                "resource_id": "accessibility_layer_container",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 2800
+                },
+                "children": [
+                  {
+                    "id": -6898657385089516823,
+                    "text": "",
+                    "resource_id": "watch_while_layout_coordinator_layout",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 0,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 2800
+                    },
+                    "children": [
+                      {
+                        "id": 5862302147994036382,
+                        "text": "",
+                        "resource_id": "browse_fragment_layout_coordinator_layout",
+                        "class": "ScrollView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 0,
+                          "right": 1260,
+                          "bottom": 2800,
+                          "width": 1260,
+                          "height": 2800
+                        },
+                        "children": [
+                          {
+                            "id": -995752868363914112,
+                            "text": "",
+                            "resource_id": "toolbar_container",
+                            "class": "FrameLayout",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 0,
+                              "right": 1260,
+                              "bottom": 267,
+                              "width": 1260,
+                              "height": 267
+                            },
+                            "children": [
+                              {
+                                "id": -3497195134744809186,
+                                "text": "",
+                                "resource_id": "collapsing_header_container",
+                                "class": "FrameLayout",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 123,
+                                  "right": 1260,
+                                  "bottom": 123,
+                                  "width": 1260,
+                                  "height": 0
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": 5142560764424648791,
+                                "text": "",
+                                "resource_id": "toolbar",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 123,
+                                  "right": 1260,
+                                  "bottom": 267,
+                                  "width": 1260,
+                                  "height": 144
+                                },
+                                "children": [
+                                  {
+                                    "id": 6819030096194379309,
+                                    "text": "YouTube",
+                                    "resource_id": "youtube_logo",
+                                    "class": "ImageView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 0,
+                                      "top": 123,
+                                      "right": 366,
+                                      "bottom": 267,
+                                      "width": 366,
+                                      "height": 144
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "id": 5601299414072180458,
+                                    "text": "Create video or post",
+                                    "resource_id": "menu_item_view",
+                                    "class": "ImageView",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 972,
+                                      "top": 123,
+                                      "right": 1116,
+                                      "bottom": 267,
+                                      "width": 144,
+                                      "height": 144
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "id": 2258915991698402092,
+                                    "text": "Search",
+                                    "resource_id": "menu_item_view",
+                                    "class": "ImageView",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 1116,
+                                      "top": 123,
+                                      "right": 1260,
+                                      "bottom": 267,
+                                      "width": 144,
+                                      "height": 144
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": 2130241983500617841,
+                            "text": "filters",
+                            "resource_id": "",
+                            "class": "RecyclerView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 267,
+                              "right": 1260,
+                              "bottom": 411,
+                              "width": 1260,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 2629994167243292592,
+                                "text": "Explore Menu",
+                                "resource_id": "",
+                                "class": "Button",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 36,
+                                  "top": 291,
+                                  "right": 162,
+                                  "bottom": 387,
+                                  "width": 126,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": 236767147369978835,
+                                    "text": "",
+                                    "resource_id": "",
+                                    "class": "ImageView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 63,
+                                      "top": 303,
+                                      "right": 135,
+                                      "bottom": 375,
+                                      "width": 72,
+                                      "height": 72
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 8131385297558490296,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "View",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 186,
+                                  "top": 291,
+                                  "right": 186,
+                                  "bottom": 387,
+                                  "width": 0,
+                                  "height": 96
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": 1261383915051168941,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 210,
+                                  "top": 291,
+                                  "right": 318,
+                                  "bottom": 387,
+                                  "width": 108,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": 3676085105946237203,
+                                    "text": "All",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 210,
+                                      "top": 291,
+                                      "right": 318,
+                                      "bottom": 387,
+                                      "width": 108,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 7719343582462955043,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 342,
+                                  "top": 291,
+                                  "right": 519,
+                                  "bottom": 387,
+                                  "width": 177,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -8312699300351528311,
+                                    "text": "Gaming",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 342,
+                                      "top": 291,
+                                      "right": 519,
+                                      "bottom": 387,
+                                      "width": 177,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -1054762239513465646,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 543,
+                                  "top": 291,
+                                  "right": 801,
+                                  "bottom": 387,
+                                  "width": 258,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": 1359938951381602616,
+                                    "text": "Tarak Mehta",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 543,
+                                      "top": 291,
+                                      "right": 801,
+                                      "bottom": 387,
+                                      "width": 258,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 7105410674055107436,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 825,
+                                  "top": 291,
+                                  "right": 989,
+                                  "bottom": 387,
+                                  "width": 164,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -8926632208759375918,
+                                    "text": "Hyped",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 825,
+                                      "top": 291,
+                                      "right": 989,
+                                      "bottom": 387,
+                                      "width": 164,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -5965373131213219381,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1013,
+                                  "top": 291,
+                                  "right": 1240,
+                                  "bottom": 387,
+                                  "width": 227,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -3550671940318151119,
+                                    "text": "Speedruns",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1013,
+                                      "top": 291,
+                                      "right": 1240,
+                                      "bottom": 387,
+                                      "width": 227,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -3459203794846578442,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1264,
+                                  "top": 291,
+                                  "right": 1260,
+                                  "bottom": 387,
+                                  "width": -4,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -1044502603951510180,
+                                    "text": "Los Santos",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1264,
+                                      "top": 291,
+                                      "right": 1260,
+                                      "bottom": 387,
+                                      "width": -4,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -6080652862336332147,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1530,
+                                  "top": 291,
+                                  "right": 1260,
+                                  "bottom": 387,
+                                  "width": -270,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -3665951671441263885,
+                                    "text": "Music",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1530,
+                                      "top": 291,
+                                      "right": 1260,
+                                      "bottom": 387,
+                                      "width": -270,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -6321637719187652738,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1707,
+                                  "top": 291,
+                                  "right": 1260,
+                                  "bottom": 387,
+                                  "width": -447,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -3906936528292584476,
+                                    "text": "Mixes",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1707,
+                                      "top": 291,
+                                      "right": 1260,
+                                      "bottom": 387,
+                                      "width": -447,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 7291837788182170267,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1881,
+                                  "top": 291,
+                                  "right": 1260,
+                                  "bottom": 387,
+                                  "width": -621,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": -8740205094632313087,
+                                    "text": "Mods",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1881,
+                                      "top": 291,
+                                      "right": 1260,
+                                      "bottom": 387,
+                                      "width": -621,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 1703477403366238837,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 2052,
+                                  "top": 291,
+                                  "right": 1260,
+                                  "bottom": 387,
+                                  "width": -792,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": 4118178594261307099,
+                                    "text": "Computer Hardware",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 2052,
+                                      "top": 291,
+                                      "right": 1260,
+                                      "bottom": 387,
+                                      "width": -792,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 3806824041230821049,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "LinearLayout",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 2446,
+                                  "top": 291,
+                                  "right": 1260,
+                                  "bottom": 387,
+                                  "width": -1186,
+                                  "height": 96
+                                },
+                                "children": [
+                                  {
+                                    "id": 6221525232125889311,
+                                    "text": "Audio commentaries",
+                                    "resource_id": "chip_cloud_chip_modern_text",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 2446,
+                                      "top": 291,
+                                      "right": 1260,
+                                      "bottom": 387,
+                                      "width": -1186,
+                                      "height": 96
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": -1474400103885781848,
+                            "text": "",
+                            "resource_id": "results",
+                            "class": "RecyclerView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 411,
+                              "right": 1260,
+                              "bottom": 2800,
+                              "width": 1260,
+                              "height": 2389
+                            },
+                            "children": [
+                              {
+                                "id": 3980449628162151126,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 411,
+                                  "right": 1260,
+                                  "bottom": 1408,
+                                  "width": 1260,
+                                  "height": 997
+                                },
+                                "children": [
+                                  {
+                                    "id": 6689056495270928241,
+                                    "text": "Big Mistakes Were Made Today | Shift At Midnight - Part 3 - 51 minutes, 38 seconds - Go to channel BeastBoyShub - BeastBoyShub - 28 thousand views - 55 minutes ago - play video",
+                                    "resource_id": "",
+                                    "class": "Button",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 0,
+                                      "top": 411,
+                                      "right": 1260,
+                                      "bottom": 1336,
+                                      "width": 1260,
+                                      "height": 925
+                                    },
+                                    "children": [
+                                      {
+                                        "id": -4900192271926895972,
+                                        "text": "",
+                                        "resource_id": "",
+                                        "class": "ViewGroup",
+                                        "clickable": false,
+                                        "bounds": {
+                                          "left": 0,
+                                          "top": 411,
+                                          "right": 1260,
+                                          "bottom": 1120,
+                                          "width": 1260,
+                                          "height": 709
+                                        },
+                                        "children": [
+                                          {
+                                            "id": -2191585404818118857,
+                                            "text": "",
+                                            "resource_id": "",
+                                            "class": "ViewGroup",
+                                            "clickable": false,
+                                            "bounds": {
+                                              "left": 0,
+                                              "top": 411,
+                                              "right": 1260,
+                                              "bottom": 1120,
+                                              "width": 1260,
+                                              "height": 709
+                                            },
+                                            "children": [
+                                              {
+                                                "id": 517021462290658258,
+                                                "text": "51 minutes, 38 seconds",
+                                                "resource_id": "",
+                                                "class": "ViewGroup",
+                                                "clickable": false,
+                                                "bounds": {
+                                                  "left": 1160,
+                                                  "top": 1048,
+                                                  "right": 1224,
+                                                  "bottom": 1084,
+                                                  "width": 64,
+                                                  "height": 36
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "id": -5524854883909622636,
+                                        "text": "",
+                                        "resource_id": "",
+                                        "class": "ViewGroup",
+                                        "clickable": false,
+                                        "bounds": {
+                                          "left": 0,
+                                          "top": 1120,
+                                          "right": 1260,
+                                          "bottom": 1336,
+                                          "width": 1260,
+                                          "height": 216
+                                        },
+                                        "children": [
+                                          {
+                                            "id": 3822186234405505012,
+                                            "text": "Go to channel BeastBoyShub",
+                                            "resource_id": "",
+                                            "class": "Button",
+                                            "clickable": true,
+                                            "bounds": {
+                                              "left": 36,
+                                              "top": 1156,
+                                              "right": 144,
+                                              "bottom": 1264,
+                                              "width": 108,
+                                              "height": 108
+                                            },
+                                            "children": []
+                                          },
+                                          {
+                                            "id": -3152327122689084211,
+                                            "text": "Action menu for Big Mistakes Were Made Today | Shift At Midnight - Part 3",
+                                            "resource_id": "",
+                                            "class": "Button",
+                                            "clickable": true,
+                                            "bounds": {
+                                              "left": 1140,
+                                              "top": 1156,
+                                              "right": 1212,
+                                              "bottom": 1228,
+                                              "width": 72,
+                                              "height": 72
+                                            },
+                                            "children": []
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 511297227272012774,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 1432,
+                                  "right": 1260,
+                                  "bottom": 2429,
+                                  "width": 1260,
+                                  "height": 997
+                                },
+                                "children": [
+                                  {
+                                    "id": 3219904094380789889,
+                                    "text": "Daya Pe Ayi Nayi Musibat! I FULL MOVIE | PART 8 I Taarak Mehta Ka Ooltah Chashmah Ep 1053 to 1055 - 55 minutes, 22 seconds - Go to channel Taarak Mehta Ka Ooltah Chashmah - Taarak Mehta Ka Ooltah Chashmah - 13 million views - 1 year ago - play video",
+                                    "resource_id": "",
+                                    "class": "Button",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 0,
+                                      "top": 1432,
+                                      "right": 1260,
+                                      "bottom": 2357,
+                                      "width": 1260,
+                                      "height": 925
+                                    },
+                                    "children": [
+                                      {
+                                        "id": -6732357030649564857,
+                                        "text": "",
+                                        "resource_id": "",
+                                        "class": "ViewGroup",
+                                        "clickable": false,
+                                        "bounds": {
+                                          "left": 0,
+                                          "top": 1432,
+                                          "right": 1260,
+                                          "bottom": 2141,
+                                          "width": 1260,
+                                          "height": 709
+                                        },
+                                        "children": [
+                                          {
+                                            "id": -4023750163540787742,
+                                            "text": "",
+                                            "resource_id": "",
+                                            "class": "ViewGroup",
+                                            "clickable": false,
+                                            "bounds": {
+                                              "left": 0,
+                                              "top": 1432,
+                                              "right": 1260,
+                                              "bottom": 2141,
+                                              "width": 1260,
+                                              "height": 709
+                                            },
+                                            "children": [
+                                              {
+                                                "id": -1315143296432010627,
+                                                "text": "55 minutes, 22 seconds",
+                                                "resource_id": "",
+                                                "class": "ViewGroup",
+                                                "clickable": false,
+                                                "bounds": {
+                                                  "left": 1152,
+                                                  "top": 2069,
+                                                  "right": 1224,
+                                                  "bottom": 2105,
+                                                  "width": 72,
+                                                  "height": 36
+                                                },
+                                                "children": []
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "id": -773145416413853386,
+                                        "text": "Go to channel Taarak Mehta Ka Ooltah Chashmah",
+                                        "resource_id": "",
+                                        "class": "Button",
+                                        "clickable": true,
+                                        "bounds": {
+                                          "left": 36,
+                                          "top": 2177,
+                                          "right": 144,
+                                          "bottom": 2285,
+                                          "width": 108,
+                                          "height": 108
+                                        },
+                                        "children": []
+                                      },
+                                      {
+                                        "id": 1116755537722295148,
+                                        "text": "Action menu for Daya Pe Ayi Nayi Musibat! I FULL MOVIE | PART 8 I Taarak Mehta Ka Ooltah Chashmah Ep 1053 to 1055",
+                                        "resource_id": "",
+                                        "class": "Button",
+                                        "clickable": true,
+                                        "bounds": {
+                                          "left": 1140,
+                                          "top": 2177,
+                                          "right": 1212,
+                                          "bottom": 2249,
+                                          "width": 72,
+                                          "height": 72
+                                        },
+                                        "children": []
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 8243413231123385339,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 2453,
+                                  "right": 1260,
+                                  "bottom": 2453,
+                                  "width": 1260,
+                                  "height": 0
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": 1839023681609651126,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 2477,
+                                  "right": 1260,
+                                  "bottom": 2800,
+                                  "width": 1260,
+                                  "height": 323
+                                },
+                                "children": [
+                                  {
+                                    "id": 4547630548718428241,
+                                    "text": "Happiness | Tide Talcum | CHROME PICTURES Director: Hemant Bhandari - 32 seconds - Go to channel Chrome Pictures - Chrome Pictures - 109 thousand views - 13 years ago - play video",
+                                    "resource_id": "",
+                                    "class": "Button",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 0,
+                                      "top": 2477,
+                                      "right": 1260,
+                                      "bottom": 2800,
+                                      "width": 1260,
+                                      "height": 323
+                                    },
+                                    "children": [
+                                      {
+                                        "id": 5534806364014608224,
+                                        "text": "",
+                                        "resource_id": "",
+                                        "class": "ViewGroup",
+                                        "clickable": false,
+                                        "bounds": {
+                                          "left": 0,
+                                          "top": 2477,
+                                          "right": 1260,
+                                          "bottom": 2800,
+                                          "width": 1260,
+                                          "height": 323
+                                        },
+                                        "children": [
+                                          {
+                                            "id": 8243413231123385339,
+                                            "text": "",
+                                            "resource_id": "",
+                                            "class": "ViewGroup",
+                                            "clickable": false,
+                                            "bounds": {
+                                              "left": 0,
+                                              "top": 2477,
+                                              "right": 1260,
+                                              "bottom": 2800,
+                                              "width": 1260,
+                                              "height": 323
+                                            },
+                                            "children": []
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": 6906942268708310144,
+                    "text": "",
+                    "resource_id": "pivot_bar",
+                    "class": "HorizontalScrollView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2530,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 270
+                    },
+                    "children": [
+                      {
+                        "id": 3397750023209315185,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "LinearLayout",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2530,
+                          "right": 1260,
+                          "bottom": 2674,
+                          "width": 1260,
+                          "height": 144
+                        },
+                        "children": [
+                          {
+                            "id": 2695695037373646545,
+                            "text": "Home",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 2530,
+                              "right": 252,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": -6285349312548899015,
+                                "text": "Home",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 94,
+                                  "top": 2626,
+                                  "right": 158,
+                                  "bottom": 2656,
+                                  "width": 64,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": -4999698509854026431,
+                            "text": "Shorts",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 252,
+                              "top": 2530,
+                              "right": 504,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 6868979827007687721,
+                                "text": "Shorts",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 339,
+                                  "top": 2626,
+                                  "right": 417,
+                                  "bottom": 2656,
+                                  "width": 78,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": -410003251539647047,
+                            "text": "Subscriptions",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 504,
+                              "top": 2530,
+                              "right": 756,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 332610884441635838,
+                                "text": "Subscriptions",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 555,
+                                  "top": 2626,
+                                  "right": 706,
+                                  "bottom": 2656,
+                                  "width": 151,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": 2372774024931679889,
+                            "text": "Notifications",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 756,
+                              "top": 2530,
+                              "right": 1008,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": -5465011061260040924,
+                                "text": "Notifications",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 810,
+                                  "top": 2626,
+                                  "right": 954,
+                                  "bottom": 2656,
+                                  "width": 144,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": 3897677786415419487,
+                            "text": "You",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 1008,
+                              "top": 2530,
+                              "right": 1260,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 2493571649251954297,
+                                "text": "You",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 1113,
+                                  "top": 2626,
+                                  "right": 1155,
+                                  "bottom": 2656,
+                                  "width": 42,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -7959771556531130161,
+        "text": "",
+        "resource_id": "reel_time_bar",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": []
+      }
+    ]
+  }
+}

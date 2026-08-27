@@ -1,0 +1,158 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "Settings$Overlay",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779518889,
+    "total_nodes": 9
+  },
+  "tree": {
+    "id": 7360716691159949396,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 1260,
+      "top": 0,
+      "right": 2520,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": -8103191251242971948,
+        "text": "",
+        "resource_id": "content_frame",
+        "class": "FrameLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 1260,
+          "top": 0,
+          "right": 2520,
+          "bottom": 2674,
+          "width": 1260,
+          "height": 2674
+        },
+        "children": [
+          {
+            "id": -297906118396803850,
+            "text": "",
+            "resource_id": "search_move_container",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 1260,
+              "top": 0,
+              "right": 2520,
+              "bottom": 306,
+              "width": 1260,
+              "height": 306
+            },
+            "children": [
+              {
+                "id": -2791057311088729046,
+                "text": "",
+                "resource_id": "bbk_title_view",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 1260,
+                  "top": 0,
+                  "right": 2520,
+                  "bottom": 306,
+                  "width": 1260,
+                  "height": 306
+                },
+                "children": [
+                  {
+                    "id": -7539954355203933362,
+                    "text": "",
+                    "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1299,
+                      "top": 123,
+                      "right": 2502,
+                      "bottom": 306,
+                      "width": 1203,
+                      "height": 183
+                    },
+                    "children": [
+                      {
+                        "id": -7620949286317815104,
+                        "text": "Back",
+                        "resource_id": "originui_vtoolbar_navigation_view_btn_rom14_0",
+                        "class": "ImageButton",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 1299,
+                          "top": 148,
+                          "right": 1431,
+                          "bottom": 280,
+                          "width": 132,
+                          "height": 132
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 2941173051340096903,
+                        "text": "Display over other apps",
+                        "resource_id": "originui_vtoolbar_normal_title_rom14_0",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1431,
+                          "top": 180,
+                          "right": 1949,
+                          "bottom": 240,
+                          "width": 518,
+                          "height": 60
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -460067870317672458,
+                        "text": "More",
+                        "resource_id": "",
+                        "class": "Button",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 2334,
+                          "top": 145,
+                          "right": 2478,
+                          "bottom": 283,
+                          "width": 144,
+                          "height": 138
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 6091018921956004239,
+            "text": "",
+            "resource_id": "apps_list",
+            "class": "ListView",
+            "clickable": false,
+            "bounds": {
+              "left": 1260,
+              "top": 308,
+              "right": 2520,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 2366
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

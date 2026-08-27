@@ -1,0 +1,289 @@
+{
+  "meta": {
+    "package": "com.vivo.gallery",
+    "root_name": "GalleryTab",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779813366,
+    "total_nodes": 17
+  },
+  "tree": {
+    "id": 7536905328167563170,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 7476640357623506156,
+        "text": "",
+        "resource_id": "title_view_layout",
+        "class": "RelativeLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 0,
+          "width": 1260,
+          "height": 0
+        },
+        "children": []
+      },
+      {
+        "id": 4663668529966541203,
+        "text": "",
+        "resource_id": "coordinator",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 384,
+          "width": 1260,
+          "height": 384
+        },
+        "children": [
+          {
+            "id": -349903958867483662,
+            "text": "",
+            "resource_id": "orginui_vcommonlayout_toptargetview",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 384,
+              "width": 1260,
+              "height": 384
+            },
+            "children": [
+              {
+                "id": 4672416959930319659,
+                "text": "Photos",
+                "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 201,
+                  "right": 1260,
+                  "bottom": 384,
+                  "width": 1260,
+                  "height": 183
+                },
+                "children": [
+                  {
+                    "id": -8613647140487720415,
+                    "text": "",
+                    "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 39,
+                      "top": 201,
+                      "right": 1242,
+                      "bottom": 375,
+                      "width": 1203,
+                      "height": 174
+                    },
+                    "children": [
+                      {
+                        "id": 3619676104852693282,
+                        "text": "",
+                        "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                        "class": "LinearLayout",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 768,
+                          "top": 214,
+                          "right": 1218,
+                          "bottom": 352,
+                          "width": 450,
+                          "height": 138
+                        },
+                        "children": [
+                          {
+                            "id": 8606205405902799929,
+                            "text": "Search",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 768,
+                              "top": 214,
+                              "right": 918,
+                              "bottom": 352,
+                              "width": 150,
+                              "height": 138
+                            },
+                            "children": []
+                          },
+                          {
+                            "id": -6938858147310009615,
+                            "text": "Select",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 918,
+                              "top": 214,
+                              "right": 1068,
+                              "bottom": 352,
+                              "width": 150,
+                              "height": 138
+                            },
+                            "children": []
+                          },
+                          {
+                            "id": -460067870317672458,
+                            "text": "More",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 1068,
+                              "top": 214,
+                              "right": 1218,
+                              "bottom": 352,
+                              "width": 150,
+                              "height": 138
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -1520409570129797137,
+        "text": "Local and cloud items sync completed",
+        "resource_id": "tv_cloud_tips",
+        "class": "TextView",
+        "clickable": false,
+        "bounds": {
+          "left": 285,
+          "top": 291,
+          "right": 974,
+          "bottom": 343,
+          "width": 689,
+          "height": 52
+        },
+        "children": []
+      },
+      {
+        "id": -6797240901195816758,
+        "text": "",
+        "resource_id": "bottomBar",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 2461,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 339
+        },
+        "children": [
+          {
+            "id": 5048669099812136288,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2461,
+              "right": 1260,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 213
+            },
+            "children": [
+              {
+                "id": -1708707909686738511,
+                "text": "Photos",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 2461,
+                  "right": 315,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -5687343722510380360,
+                "text": "Albums",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 315,
+                  "top": 2461,
+                  "right": 630,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": 7293276879699767525,
+                "text": "Recommended",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 630,
+                  "top": 2461,
+                  "right": 945,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -9215929244925978088,
+                "text": "Search",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 945,
+                  "top": 2461,
+                  "right": 1260,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

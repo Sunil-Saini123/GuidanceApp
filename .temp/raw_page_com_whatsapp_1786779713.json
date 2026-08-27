@@ -1,0 +1,549 @@
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "Home",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779713201,
+    "total_nodes": 33
+  },
+  "tree": {
+    "id": 4759275334704625398,
+    "text": "",
+    "resource_id": "updates_list",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 1260,
+      "top": 123,
+      "right": 1260,
+      "bottom": 2432,
+      "width": 0,
+      "height": 2309
+    },
+    "children": [
+      {
+        "id": 4926338985355601068,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 1260,
+          "top": 292,
+          "right": 1260,
+          "bottom": 409,
+          "width": 0,
+          "height": 117
+        },
+        "children": [
+          {
+            "id": 7634945852464378183,
+            "text": "Status",
+            "resource_id": "header_textview",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1308,
+              "top": 328,
+              "right": 1260,
+              "bottom": 397,
+              "width": -48,
+              "height": 69
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4247509474729986594,
+        "text": "My status, tap to add new status",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 409,
+          "right": 1260,
+          "bottom": 637,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 445,
+              "right": 1260,
+              "bottom": 601,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": -2389043369467299394,
+            "text": "New status",
+            "resource_id": "badge_click_surface",
+            "class": "View",
+            "clickable": true,
+            "bounds": {
+              "left": 1368,
+              "top": 505,
+              "right": 1260,
+              "bottom": 637,
+              "width": -108,
+              "height": 132
+            },
+            "children": []
+          },
+          {
+            "id": -2713497722137841028,
+            "text": "Add status",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 466,
+              "right": 1260,
+              "bottom": 522,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4553689209757650620,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 1260,
+          "top": 637,
+          "right": 1260,
+          "bottom": 734,
+          "width": 0,
+          "height": 97
+        },
+        "children": [
+          {
+            "id": 7536525341064280892,
+            "text": "Recent updates",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1260,
+              "top": 637,
+              "right": 1260,
+              "bottom": 734,
+              "width": 0,
+              "height": 97
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6050493062401864656,
+        "text": "Niyaz Bhai HDD, 23 unread statuses",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 734,
+          "right": 1260,
+          "bottom": 962,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 770,
+              "right": 1260,
+              "bottom": 926,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": -6131508929994647738,
+            "text": "Niyaz Bhai HDD",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 791,
+              "right": 1260,
+              "bottom": 847,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2983461823053896864,
+        "text": "DIKSHA (VIT), 1 unread status",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 962,
+          "right": 1260,
+          "bottom": 1190,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 998,
+              "right": 1260,
+              "bottom": 1154,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": -6467538109047966999,
+            "text": "DIKSHA (VIT)",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 1019,
+              "right": 1260,
+              "bottom": 1075,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7556181443643236349,
+        "text": "Mami, 2 unread statuses",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 1190,
+          "right": 1260,
+          "bottom": 1418,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 1226,
+              "right": 1260,
+              "bottom": 1382,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": 2086555449907760117,
+            "text": "Mami",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 1247,
+              "right": 1260,
+              "bottom": 1303,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6510913709496877504,
+        "text": "Sanika Ghugare, 1 unread status",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 1418,
+          "right": 1260,
+          "bottom": 1646,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 1454,
+              "right": 1260,
+              "bottom": 1610,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": -8204258986411941345,
+            "text": "Sanika Ghugare",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 1475,
+              "right": 1260,
+              "bottom": 1531,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -7471773649386155373,
+        "text": "Sohan VIT, 8 unread statuses",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 1646,
+          "right": 1260,
+          "bottom": 1874,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 1682,
+              "right": 1260,
+              "bottom": 1838,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": 7092626497429282117,
+            "text": "Sohan VIT",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 1703,
+              "right": 1260,
+              "bottom": 1759,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4758747036211020702,
+        "text": "Riyaaa VIT, 3 unread statuses",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 1874,
+          "right": 1260,
+          "bottom": 2102,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 1910,
+              "right": 1260,
+              "bottom": 2066,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": -7862513696721608401,
+            "text": "Riyaaa VIT",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 1931,
+              "right": 1260,
+              "bottom": 1987,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 2793239305510664072,
+        "text": "Rohit Co, 1 unread status",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 2102,
+          "right": 1260,
+          "bottom": 2330,
+          "width": 0,
+          "height": 228
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 2138,
+              "right": 1260,
+              "bottom": 2294,
+              "width": -36,
+              "height": 156
+            },
+            "children": []
+          },
+          {
+            "id": -3912919584070898913,
+            "text": "Rohit Co",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 2159,
+              "right": 1260,
+              "bottom": 2215,
+              "width": -240,
+              "height": 56
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2924814926237330180,
+        "text": "Lata, 5 unread statuses",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1260,
+          "top": 2330,
+          "right": 1260,
+          "bottom": 2432,
+          "width": 0,
+          "height": 102
+        },
+        "children": [
+          {
+            "id": 1972110600958173762,
+            "text": "",
+            "resource_id": "wdsProfilePicture",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1296,
+              "top": 2366,
+              "right": 1260,
+              "bottom": 2432,
+              "width": -36,
+              "height": 66
+            },
+            "children": []
+          },
+          {
+            "id": 6437099807748390913,
+            "text": "Lata",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1500,
+              "top": 2387,
+              "right": 1260,
+              "bottom": 2432,
+              "width": -240,
+              "height": 45
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

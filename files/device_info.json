@@ -1,0 +1,28 @@
+{
+  "manufacturer": "vivo",
+  "brand": "iQOO",
+  "model": "I2304",
+  "device": "I2304",
+  "product": "I2304T",
+  "android_version": "16",
+  "sdk_int": 36,
+  "release_codename": "REL",
+  "build_id": "BP2A.250605.031.A3",
+  "fingerprint": "iQOO\/I2304T\/I2304:16\/BP2A.250605.031.A3\/compiler260720100839:user\/release-keys",
+  "hardware": "qcom",
+  "board": "kalama",
+  "bootloader": "unknown",
+  "host": "comdg01146230",
+  "tags": "release-keys",
+  "type": "user",
+  "supported_abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "armeabi"
+  ],
+  "is_emulator": false,
+  "custom_os": "vos",
+  "custom_os_version": "7.0",
+  "captured_at": "2026-08-23T07:35:58Z",
+  "captured_at_step": "permission_granted"
+}

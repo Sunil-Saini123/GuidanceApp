@@ -1,0 +1,140 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "VivoSub",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779533475,
+    "total_nodes": 8
+  },
+  "tree": {
+    "id": -1297655931226411820,
+    "text": "",
+    "resource_id": "recycler_view",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2674,
+      "width": 1260,
+      "height": 2674
+    },
+    "children": [
+      {
+        "id": -18440766591185397,
+        "text": "",
+        "resource_id": "entity_header_content",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 345,
+          "right": 1194,
+          "bottom": 567,
+          "width": 1128,
+          "height": 222
+        },
+        "children": [
+          {
+            "id": -3640357913395183287,
+            "text": "FloatingAssistant",
+            "resource_id": "entity_header_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 192,
+              "top": 397,
+              "right": 1122,
+              "bottom": 456,
+              "width": 930,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 558740524101816602,
+            "text": "Version 1.0",
+            "resource_id": "entity_header_summary",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 192,
+              "top": 465,
+              "right": 1122,
+              "bottom": 514,
+              "width": 930,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4682556496734882086,
+        "text": "",
+        "resource_id": "",
+        "class": "LinearLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 66,
+          "top": 567,
+          "right": 1194,
+          "bottom": 606,
+          "width": 1128,
+          "height": 39
+        },
+        "children": []
+      },
+      {
+        "id": -3499651546626800762,
+        "text": "Allow display over other apps",
+        "resource_id": "",
+        "class": "Switch",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 606,
+          "right": 1194,
+          "bottom": 792,
+          "width": 1128,
+          "height": 186
+        },
+        "children": [
+          {
+            "id": 4416818460909328724,
+            "text": "Allow display over other apps",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 111,
+              "top": 669,
+              "right": 664,
+              "bottom": 728,
+              "width": 553,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -511843619300009029,
+        "text": "Allow this app to display on top of other apps you’re using. This app will be able to see where you tap or change what’s displayed on the screen.",
+        "resource_id": "title",
+        "class": "TextView",
+        "clickable": false,
+        "bounds": {
+          "left": 84,
+          "top": 831,
+          "right": 1176,
+          "bottom": 988,
+          "width": 1092,
+          "height": 157
+        },
+        "children": []
+      }
+    ]
+  }
+}

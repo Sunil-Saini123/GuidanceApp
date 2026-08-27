@@ -15,32 +15,52 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * UiTreeAccessibilityService — Phase 6 / Phase 11
+ * UiTreeAccessibilityService — Universal OEM-Agnostic Pipeline (Phase 1 + 2 + 3)
  *
- * Full 3-tier pipeline with aggressive Tier 1 cleanup and (Phase 11)
- * static-vs-dynamic content classification before Tier 2 / Tier 3 promotion:
+ * ── Event routing ─────────────────────────────────────────────────────────────
  *
- *  ┌──────────────────────────────────────────────────────────────────────────┐
- *  │  Tier 1 Pruning Strategy:                                                │
- *  │   • App switch   → evict old package entirely from SecondaryFilter       │
- *  │                    → rewrite Tier 1 (now only has current app)           │
- *  │   • After promo  → clear raw UiNode items for the just-promoted screen   │
- *  │                    (seenIds kept for scroll dedup)                       │
- *  │                    → rewrite Tier 1 (screen entry is now near-empty)     │
- *  │   • Back-nav     → restore Tier 2 from NavGraph (not from pruned items)  │
- *  ├──────────────────────────────────────────────────────────────────────────┤
- *  │  Phase 11 — Static/Dynamic gate (before Tier 2/3 write):                │
- *  │   SecondaryFilter items → StaticDynamicFilter.classify()                 │
- *  │       → CleanPageExtractor.extract() → Tier 2 / NavGraph                │
- *  └──────────────────────────────────────────────────────────────────────────┘
+ *   TYPE_VIEW_CLICKED
+ *       • Immediate, no debounce
+ *       • Captures the tapped element's label → passed to GraphStateMachine as
+ *         the CLICK edge label for the next FORWARD navigation
  *
- * Expected Tier 1 size after pruning: <10 KB at any point in time.
+ *   TYPE_WINDOW_STATE_CHANGED  → NAVIGATION
+ *       • Immediate (no debounce)
+ *       • Resets Phase 1 accumulation for this package
+ *       • Triggers Phase 2 (extract + write clean_page.json)
+ *       • Triggers Phase 3 (NAVIGATION event → graph update)
+ *
+ *   TYPE_VIEW_SCROLLED
+ *   TYPE_WINDOW_CONTENT_CHANGED → SCROLL / CONTENT
+ *       • Debounced 300 ms
+ *       • packageName captured before debounce; rootInActiveWindow fetched fresh after
+ *       • Cross-checks active window package to guard against app switches during debounce
+ *       • Triggers Phase 2 + 3 ONLY if Phase 1 found new nodes (scroll-up = skip)
+ *
+ * ── Phase pipeline per event ──────────────────────────────────────────────────
+ *
+ *   Main thread:
+ *     RawDumpWriter.onNavigation / onScroll   [Phase 1 — synchronous tree traversal]
+ *     → rawNodes snapshot in memory
+ *
+ *   IO coroutine (launched from main thread):
+ *     CleanPageProcessor.extractSync()        [Phase 2 — CPU extraction]
+ *     CleanPageProcessor.writeToFile()        [Phase 2 — async disk write]
+ *     GraphStateMachine.onEvent()             [Phase 3 — DB update + nav_graph.json]
+ *
+ * ── Output files ──────────────────────────────────────────────────────────────
+ *   temp_tree.json   — accumulated raw nodes (Phase 1)
+ *   clean_page.json  — clean elements (Phase 2)
+ *   nav_graph.json   — human-readable graph snapshot (Phase 3)
+ *   nav_graph.db     — SQLite graph database (Phase 3, persistent)
+ *
+ *   Pull all: adb pull /sdcard/Android/data/com.example.floatingassistant/files/
  */
 class UiTreeAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG         = "UiTreeService"
-        private const val DEBOUNCE_MS = 150L
+        private const val DEBOUNCE_MS = 300L
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -48,42 +68,26 @@ class UiTreeAccessibilityService : AccessibilityService() {
     private var captureEnabled = false
     private var debounceJob: Job? = null
 
-    private val rootTracker = ContextRootTracker()
+    private lateinit var tempTreeFile:  File
+    private lateinit var cleanPageFile: File
+    private lateinit var navGraphFile:  File
 
-    // ── Output files (all 3 tiers) ────────────────────────────────────────────
-    private lateinit var jsonOutputFile: File   // Tier 1
-    private lateinit var cleanPageFile: File    // Tier 2
-    private lateinit var graphFile: File        // Tier 3
-
-    // ── Graph loading guard ───────────────────────────────────────────────────
-    private var graphLoaded = false
-
-    // ── Edge tracking ─────────────────────────────────────────────────────────
-    private var previousRoot: Pair<String, String>? = null
-
-    // ── Tier 1 pruning state ──────────────────────────────────────────────────
-    // The package we are actively capturing. When this changes, the old
-    // package's raw data is evicted from SecondaryFilter and Tier 1 is rewritten.
-    private var activePackage: String? = null
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        serviceInfo    = buildServiceInfo()
+        serviceInfo = buildServiceInfo()
+
         val extDir     = getExternalFilesDir(null) ?: cacheDir
-        jsonOutputFile = File(extDir, JsonTreeWriter.FILE_NAME)
-        cleanPageFile  = File(extDir, CleanPageWriter.FILE_NAME)
-        graphFile      = File(extDir, NavGraphWriter.FILE_NAME)
+        tempTreeFile   = File(extDir, RawDumpWriter.TEMP_FILE_NAME)
+        cleanPageFile  = File(extDir, CleanPageProcessor.CLEAN_FILE_NAME)
+        navGraphFile   = File(extDir, GraphStateMachine.NAV_GRAPH_FILE_NAME)
 
-        Log.i(TAG, "Service connected | " +
-                "T1=${jsonOutputFile.name}  T2=${cleanPageFile.name}  T3=${graphFile.name}")
+        // Initialise Phase 3 state machine (opens SQLite DB)
+        GraphStateMachine.init(this, navGraphFile)
 
-        serviceScope.launch(Dispatchers.IO) {
-            NavGraphWriter.load(graphFile)
-            graphLoaded = true
-            NavGraph.logSummary()
-        }
+        Log.i(TAG, "Service connected [Phase 1 + 2 + 3]")
+        Log.i(TAG, "Pull: adb pull /sdcard/Android/data/$packageName/files/")
 
         serviceScope.launch {
             ServiceStateManager.isServiceEnabled.collectLatest { enabled ->
@@ -97,19 +101,37 @@ class UiTreeAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (!captureEnabled) return
         if (event == null)   return
-        if (!isRelevantEvent(event)) return
 
         when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                debounceJob?.cancel()
-                processFrame(event, isNavigation = true)
+
+            // ── Click: capture label for edge annotation ───────────────────────
+            AccessibilityEvent.TYPE_VIEW_CLICKED -> {
+                val pkg   = event.packageName?.toString() ?: return
+                val label = event.contentDescription?.toString()?.trim()
+                    ?: event.text?.firstOrNull()?.toString()?.trim()
+                    ?: ""
+                if (label.isNotEmpty()) {
+                    GraphStateMachine.setLastClickedLabel(pkg, label)
+                }
             }
-            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
-            AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+
+            // ── Navigation: immediate ──────────────────────────────────────────
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                if (!isRelevantEvent(event)) return
                 debounceJob?.cancel()
+                handleNavigation(event)
+            }
+
+            // ── Scroll / content: debounced 300 ms ────────────────────────────
+            AccessibilityEvent.TYPE_VIEW_SCROLLED,
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                if (!isRelevantEvent(event)) return
+                debounceJob?.cancel()
+                val expectedPkg = event.packageName?.toString() ?: return
+                val isScroll    = event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED
                 debounceJob = serviceScope.launch {
                     delay(DEBOUNCE_MS)
-                    processFrame(event, isNavigation = false)
+                    handleScroll(expectedPkg, if (isScroll) "SCROLL" else "CONTENT_CHANGED")
                 }
             }
         }
@@ -124,187 +146,139 @@ class UiTreeAccessibilityService : AccessibilityService() {
         Log.i(TAG, "Service destroyed")
     }
 
-    // ── Core pipeline ─────────────────────────────────────────────────────────
+    // ── NAVIGATION handler ────────────────────────────────────────────────────
 
-    private fun processFrame(event: AccessibilityEvent, isNavigation: Boolean) {
+    private fun handleNavigation(event: AccessibilityEvent) {
         val packageName = event.packageName?.toString() ?: return
         val rootNode    = event.source ?: rootInActiveWindow
 
-        // ── Main Filter ───────────────────────────────────────────────────────
         val filterResult = MainFilter.apply(packageName, rootNode, this.packageName)
-        when (filterResult) {
-            is MainFilter.FilterResult.CannotAccess -> return
-            is MainFilter.FilterResult.Dropped      -> return
-            is MainFilter.FilterResult.Passed       -> Unit
-        }
-        filterResult as MainFilter.FilterResult.Passed
+        if (filterResult !is MainFilter.FilterResult.Passed) return
+        val passed = filterResult
 
-        // ── Tier 1 pruning: evict old app on package switch ───────────────────
-        val pkg = filterResult.packageName
-        if (activePackage != null && activePackage != pkg) {
-            Log.i(TAG, "[Prune] App switch: $activePackage → $pkg")
-            SecondaryFilter.prunePackage(activePackage!!)
-            triggerTier1Write()     // Tier 1 now only has the incoming app's data (initially empty)
-        }
-        activePackage = pkg
+        val rootClass = event.className?.toString()
+            ?.substringAfterLast('.')
+            ?.takeIf { it.isNotEmpty() }
+            ?: packageName.substringAfterLast('.')
 
-        // ── Inbetween Filter (parse) ──────────────────────────────────────────
-        val uiTree = UiTreeParser.parse(filterResult.rootNode, filterResult.packageName)
-        filterResult.rootNode.recycle()
-
-        // ── Context Root + edge recording ─────────────────────────────────────
-        val rootName: String = if (isNavigation) {
-            val className = event.className?.toString() ?: ""
-            val prevRoot  = rootTracker.currentRoot(pkg)
-            val navResult = rootTracker.navigate(pkg, className)
-            val newRoot   = navResult.rootName
-            if (!navResult.isBack && prevRoot != null && prevRoot != newRoot) {
-                NavGraph.addEdge(pkg, prevRoot, newRoot)
-            }
-            previousRoot = pkg to newRoot
-            newRoot
-        } else {
-            rootTracker.currentRoot(pkg) ?: rootTracker.navigate(pkg, pkg).rootName
+        // Phase 1 — synchronous tree traversal (must complete before recycle)
+        try {
+            RawDumpWriter.onNavigation(
+                scope       = serviceScope,
+                outputFile  = tempTreeFile,
+                rootNode    = passed.rootNode,
+                packageName = passed.packageName,
+                rootName    = rootClass
+            )
+        } finally {
+            passed.rootNode.recycle()
         }
 
-        // ── Secondary Filter ──────────────────────────────────────────────────
-        val result = SecondaryFilter.process(
-            uiTree       = uiTree,
-            packageName  = pkg,
-            rootName     = rootName,
-            isNavigation = isNavigation
-        )
+        // Phase 2 + 3 — on IO thread
+        triggerPipeline(passed.packageName, rootClass, "NAVIGATION")
+    }
 
-        // ── Handle result ─────────────────────────────────────────────────────
-        when (result) {
-            is SecondaryFilter.ProcessResult.Skipped -> return
+    // ── SCROLL / CONTENT handler ──────────────────────────────────────────────
 
-            is SecondaryFilter.ProcessResult.NewScreen -> {
-                Log.i(TAG, "[P4] NEW  $pkg/$rootName — ${result.items.size} items")
-                // Promote to all tiers
-                triggerTier1Write()
-                processCleanAndGraph(pkg, rootName, result.items, appendClean = false)
-                // Tier 1 pruning: raw UiNode data no longer needed for this screen
-                SecondaryFilter.pruneScreenItems(pkg, rootName)
-                triggerTier1Write()     // rewrite with the now-empty items list
-            }
+    private fun handleScroll(expectedPackage: String, eventType: String) {
+        val rootNode = rootInActiveWindow ?: return
 
-            is SecondaryFilter.ProcessResult.RootChanged -> {
-                Log.i(TAG, "[P4] BACK $pkg/$rootName — ${result.allItems.size} items")
-                triggerTier1Write()
-                // Items may have been pruned; restore Tier 2 from NavGraph instead
-                restoreTier2FromGraph(pkg, rootName)
-                // Ensure the back-navigation edge is persisted in Tier 3
-                if (graphLoaded) triggerTier3Save()
-            }
+        // Guard: active window may have changed during debounce
+        val actualPackage = rootNode.packageName?.toString()
+        if (actualPackage == null || actualPackage != expectedPackage) {
+            Log.v(TAG, "[$eventType] Debounce skip: expected=$expectedPackage actual=$actualPackage")
+            rootNode.recycle()
+            return
+        }
 
-            is SecondaryFilter.ProcessResult.ScrollAppended -> {
-                Log.i(TAG, "[P4] SCROLL $pkg/$rootName +${result.newItems.size} new (${result.totalItems} total)")
-                // Promote only the NEW items from this scroll
-                triggerTier1Write()
-                processCleanAndGraph(pkg, rootName, result.newItems, appendClean = true)
-                // Prune promoted items from Tier 1 immediately
-                SecondaryFilter.pruneScreenItems(pkg, rootName)
-                triggerTier1Write()     // rewrite — much smaller now
-            }
+        val filterResult = MainFilter.apply(actualPackage, rootNode, this.packageName)
+        if (filterResult !is MainFilter.FilterResult.Passed) return
+        val passed = filterResult
+
+        var hadNewNodes = false
+        try {
+            hadNewNodes = RawDumpWriter.onScroll(
+                scope       = serviceScope,
+                outputFile  = tempTreeFile,
+                rootNode    = passed.rootNode,
+                packageName = passed.packageName
+            )
+        } finally {
+            passed.rootNode.recycle()
+        }
+
+        // Only trigger Phase 2 + 3 if Phase 1 found genuinely new nodes
+        if (hadNewNodes) {
+            val snapshot = RawDumpWriter.getSnapshot(passed.packageName) ?: return
+            triggerPipeline(passed.packageName, snapshot.rootName, eventType)
         }
     }
 
-    // ── Tier write helpers ────────────────────────────────────────────────────
-
-    /** Tier 1: snapshot SecondaryFilter.appStates and write to disk (async). */
-    private fun triggerTier1Write() {
-        JsonTreeWriter.write(serviceScope, jsonOutputFile, SecondaryFilter.appStates)
-    }
+    // ── Phase 2 + 3 pipeline ──────────────────────────────────────────────────
 
     /**
-     * Extract clean elements from [items], write to Tier 2, and merge into Tier 3.
-     * Call with [appendClean]=false on navigation (fresh Tier 2), true on scroll (merge).
+     * Runs Phase 2 (clean extraction) and Phase 3 (graph update) on [Dispatchers.IO].
+     * The clean elements are extracted once and passed to both Phase 2 (file write)
+     * and Phase 3 (DB update + nav_graph.json) without duplication.
      */
-    private fun processCleanAndGraph(
-        packageName: String,
-        rootName: String,
-        items: List<UiNode>,
-        appendClean: Boolean
-    ) {
-        // Phase 11 (v3): Structural & Accessibility-Driven filter.
-        // packageName is forwarded for launcher-icon detection (Step 2-E).
-        val staticItems = StaticDynamicFilter.classify(items, packageName)
-        if (staticItems.isEmpty()) {
-            Log.v(TAG, "[P11] All items classified as dynamic for [$rootName] — nothing to promote")
-            return
-        }
+    private fun triggerPipeline(packageName: String, rootClass: String, eventType: String) {
+        val snapshot = RawDumpWriter.getSnapshot(packageName) ?: return
 
-        val cleanElements = CleanPageExtractor.extract(staticItems)
-        if (cleanElements.isEmpty()) {
-            Log.v(TAG, "[P5/P6] No clean elements for [$rootName]")
-            return
-        }
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                // Phase 2 — extract (CPU) + write clean_page.json
+                val cleanElements = CleanPageProcessor.extractSync(snapshot.nodes, packageName)
+                CleanPageProcessor.writeToFile(
+                    scope       = serviceScope,
+                    outputFile  = cleanPageFile,
+                    elements    = cleanElements,
+                    packageName = packageName,
+                    rootName    = snapshot.rootName
+                )
 
-        // Tier 2
-        CleanPageWriter.write(serviceScope, cleanPageFile, rootName, cleanElements, appendClean)
-
-        // Tier 3
-        val added = NavGraph.mergeScreen(packageName, rootName, cleanElements)
-        if (added > 0) {
-            Log.i(TAG, "[P6] Graph +$added → ${NavGraph.totalNodes()} total nodes")
-            triggerTier3Save()
-        } else if (!appendClean) {
-            triggerTier3Save()  // persist any new edge recorded before this call
+                // Phase 3 — update navigation graph + write nav_graph.json
+                GraphStateMachine.onEvent(
+                    cleanElements = cleanElements,
+                    packageName   = packageName,
+                    rootClass     = rootClass,
+                    eventType     = eventType
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Pipeline failed [$eventType] $packageName: ${e.message}", e)
+            }
         }
     }
 
-    /**
-     * Restore the Tier 2 clean file for a screen the user navigated BACK to.
-     *
-     * The screen's [SecondaryFilter.ScreenState.items] list was pruned after the
-     * initial promotion, so we reconstruct Tier 2 from the persistent NavGraph
-     * (which always has the full set of clean elements for every visited screen).
-     */
-    private fun restoreTier2FromGraph(packageName: String, rootName: String) {
-        val screen = NavGraph.apps[packageName]?.screens?.get(rootName)
-        if (screen == null || screen.nodeIds.isEmpty()) {
-            Log.v(TAG, "[P5] No NavGraph data for [$packageName/$rootName] — Tier 2 not restored")
-            return
-        }
-        val elements = screen.nodeIds.mapNotNull { id ->
-            val name = NavGraph.nodes[id] ?: return@mapNotNull null
-            CleanPageExtractor.CleanElement(id, name)
-        }
-        if (elements.isNotEmpty()) {
-            CleanPageWriter.write(serviceScope, cleanPageFile, rootName, elements, append = false)
-            Log.i(TAG, "[P5] Restored Tier 2 from NavGraph: [$rootName] (${elements.size} elements)")
-        }
-    }
-
-    /** Tier 3: snapshot NavGraph and write to disk (async). Guard: only after graph is loaded. */
-    private fun triggerTier3Save() {
-        if (!graphLoaded) return
-        NavGraphWriter.save(serviceScope, graphFile)
-    }
-
-    // ── Service config ────────────────────────────────────────────────────────
+    // ── Service configuration ──────────────────────────────────────────────────
 
     private fun buildServiceInfo(): AccessibilityServiceInfo =
         AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
-                    AccessibilityEvent.TYPE_VIEW_SCROLLED
+                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED    or
+                    AccessibilityEvent.TYPE_VIEW_SCROLLED             or
+                    AccessibilityEvent.TYPE_VIEW_CLICKED
             feedbackType        = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            flags               = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
-                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            flags               = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS              or
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS               or
+                    // Critical for OEM devices (Vivo OriginUI, Samsung OneUI, MIUI, OPPO):
+                    // many OEMs mark their inner TextViews/ImageViews as
+                    // importantForAccessibility=false to improve performance.
+                    // Without this flag those child views — including the text labels
+                    // for Bluetooth, Mobile Network, etc. in Settings — are completely
+                    // invisible to getChild() traversal.
+                    AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
             notificationTimeout = 100
         }
 
     private fun isRelevantEvent(event: AccessibilityEvent): Boolean =
         when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED   -> true
-            AccessibilityEvent.TYPE_VIEW_SCROLLED          -> true
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> true
+            AccessibilityEvent.TYPE_VIEW_SCROLLED        -> true
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                 val sub = event.contentChangeTypes
                 sub and (AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE or
                         AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) != 0
             }
-            else -> false
+            else -> false   // TYPE_VIEW_CLICKED is handled separately without this check
         }
 }

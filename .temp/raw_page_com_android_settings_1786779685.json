@@ -1,0 +1,657 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "SettingsHomepage",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779685678,
+    "total_nodes": 39
+  },
+  "tree": {
+    "id": -4362935931386285087,
+    "text": "",
+    "resource_id": "dashboard_container",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1259,
+      "bottom": 2674,
+      "width": 1259,
+      "height": 2674
+    },
+    "children": [
+      {
+        "id": 2001349913814017194,
+        "text": "",
+        "resource_id": "account_category",
+        "class": "LinearLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 564,
+          "right": 1193,
+          "bottom": 804,
+          "width": 1127,
+          "height": 240
+        },
+        "children": [
+          {
+            "id": -4072586181299354475,
+            "text": "sawa**7@gmail.com",
+            "resource_id": "account_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 282,
+              "top": 630,
+              "right": 597,
+              "bottom": 686,
+              "width": 315,
+              "height": 56
+            },
+            "children": []
+          },
+          {
+            "id": 4460983527460741833,
+            "text": "Account password & security",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 282,
+              "top": 686,
+              "right": 724,
+              "bottom": 735,
+              "width": 442,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -3267754711208340329,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 855,
+          "right": 1193,
+          "bottom": 1029,
+          "width": 1127,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": -284918579901710057,
+            "text": "Wi-Fi, Off",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 855,
+              "right": 1193,
+              "bottom": 1029,
+              "width": 1127,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": -3918788929107277829,
+                "text": "Wi-Fi",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 918,
+                  "right": 314,
+                  "bottom": 977,
+                  "width": 89,
+                  "height": 59
+                },
+                "children": []
+              },
+              {
+                "id": -8957514298808719860,
+                "text": "Off",
+                "resource_id": "summary",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 1038,
+                  "top": 923,
+                  "right": 1089,
+                  "bottom": 972,
+                  "width": 51,
+                  "height": 49
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3657823171885473099,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1029,
+          "right": 1193,
+          "bottom": 1191,
+          "width": 1127,
+          "height": 162
+        },
+        "children": [
+          {
+            "id": 6640659303192103371,
+            "text": "Bluetooth, Off",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 1029,
+              "right": 1193,
+              "bottom": 1191,
+              "width": 1127,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 8169037923770994403,
+                "text": "Bluetooth",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 1080,
+                  "right": 405,
+                  "bottom": 1139,
+                  "width": 180,
+                  "height": 59
+                },
+                "children": []
+              },
+              {
+                "id": -8957514298808719860,
+                "text": "Off",
+                "resource_id": "summary",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 1038,
+                  "top": 1085,
+                  "right": 1089,
+                  "bottom": 1134,
+                  "width": 51,
+                  "height": 49
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 3234927042632278298,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1191,
+          "right": 1193,
+          "bottom": 1353,
+          "width": 1127,
+          "height": 162
+        },
+        "children": [
+          {
+            "id": 6217763173938908570,
+            "text": "Mobile network",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 1191,
+              "right": 1193,
+              "bottom": 1353,
+              "width": 1127,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 1339277358649720543,
+                "text": "Mobile network",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 1242,
+                  "right": 499,
+                  "bottom": 1301,
+                  "width": 274,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -3066619496473665730,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1353,
+          "right": 1193,
+          "bottom": 1527,
+          "width": 1127,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": -83783365167035458,
+            "text": "More connections",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 1353,
+              "right": 1193,
+              "bottom": 1527,
+              "width": 1127,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": -2169889937680359649,
+                "text": "More connections",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 1404,
+                  "right": 548,
+                  "bottom": 1463,
+                  "width": 323,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -3103554618686942284,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1578,
+          "right": 1193,
+          "bottom": 1752,
+          "width": 1127,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": -120718487380312012,
+            "text": "Notifications & status bar",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 1578,
+              "right": 1193,
+              "bottom": 1752,
+              "width": 1127,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": -9038073398639528884,
+                "text": "Notifications & status bar",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 1641,
+                  "right": 721,
+                  "bottom": 1700,
+                  "width": 496,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 8237876398796563214,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1752,
+          "right": 1193,
+          "bottom": 1914,
+          "width": 1127,
+          "height": 162
+        },
+        "children": [
+          {
+            "id": -7226031543606358130,
+            "text": "Sounds & vibration",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 1752,
+              "right": 1193,
+              "bottom": 1914,
+              "width": 1127,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": -6129290472163993749,
+                "text": "Sounds & vibration",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 1803,
+                  "right": 580,
+                  "bottom": 1862,
+                  "width": 355,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -1307333705984565752,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1914,
+          "right": 1193,
+          "bottom": 2076,
+          "width": 1127,
+          "height": 162
+        },
+        "children": [
+          {
+            "id": 1675502425322064520,
+            "text": "Display, brightness & eye protection",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 1914,
+              "right": 1193,
+              "bottom": 2076,
+              "width": 1127,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 3409163881297687508,
+                "text": "Display, brightness & eye protection",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 1965,
+                  "right": 900,
+                  "bottom": 2024,
+                  "width": 675,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -6967230151379323966,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2076,
+          "right": 1193,
+          "bottom": 2250,
+          "width": 1127,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": -3984394020072693694,
+            "text": "Home screen, lock screen & wallpaper",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 2076,
+              "right": 1193,
+              "bottom": 2250,
+              "width": 1127,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": -7147047994298607923,
+                "text": "Home screen, lock screen & wallpaper",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 2127,
+                  "right": 930,
+                  "bottom": 2186,
+                  "width": 705,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -4385443979689400102,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2301,
+          "right": 1193,
+          "bottom": 2475,
+          "width": 1127,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": -1402607848382769830,
+            "text": "Apps",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 2301,
+              "right": 1193,
+              "bottom": 2475,
+              "width": 1127,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 8746975219011025295,
+                "text": "Apps",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 2364,
+                  "right": 312,
+                  "bottom": 2423,
+                  "width": 87,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2599166339562015802,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2475,
+          "right": 1193,
+          "bottom": 2637,
+          "width": 1127,
+          "height": 162
+        },
+        "children": [
+          {
+            "id": 5582002470868646074,
+            "text": "Security & privacy",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 2475,
+              "right": 1193,
+              "bottom": 2637,
+              "width": 1127,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": -7999492062414070533,
+                "text": "Security & privacy",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 2526,
+                  "right": 565,
+                  "bottom": 2585,
+                  "width": 340,
+                  "height": 59
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 5239114037843812964,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2637,
+          "right": 1193,
+          "bottom": 2674,
+          "width": 1127,
+          "height": 37
+        },
+        "children": [
+          {
+            "id": 8221950169150443236,
+            "text": "Location",
+            "resource_id": "vlist_content",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 66,
+              "top": 2637,
+              "right": 1193,
+              "bottom": 2674,
+              "width": 1127,
+              "height": 37
+            },
+            "children": [
+              {
+                "id": 4110318585094867246,
+                "text": "Location",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 225,
+                  "top": 2688,
+                  "right": 384,
+                  "bottom": 2674,
+                  "width": 159,
+                  "height": -14
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

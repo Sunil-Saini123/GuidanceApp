@@ -1,0 +1,307 @@
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "FrameLayout",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779732245,
+    "total_nodes": 18
+  },
+  "tree": {
+    "id": -5181339511733312127,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 660,
+      "top": 280,
+      "right": 1248,
+      "bottom": 1504,
+      "width": 588,
+      "height": 1224
+    },
+    "children": [
+      {
+        "id": -2198503380426681855,
+        "text": "",
+        "resource_id": "",
+        "class": "ListView",
+        "clickable": false,
+        "bounds": {
+          "left": 660,
+          "top": 316,
+          "right": 1248,
+          "bottom": 1468,
+          "width": 588,
+          "height": 1152
+        },
+        "children": [
+          {
+            "id": -292288937799559788,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 316,
+              "right": 1248,
+              "bottom": 460,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": 2122412253095508474,
+                "text": "New group",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 360,
+                  "right": 1200,
+                  "bottom": 416,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -6227761015413640102,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 460,
+              "right": 1248,
+              "bottom": 604,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": -3813059824518571840,
+                "text": "New community",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 504,
+                  "right": 1200,
+                  "bottom": 560,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 3422431592364598973,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 604,
+              "right": 1248,
+              "bottom": 748,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": 5837132783259667235,
+                "text": "Broadcast lists",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 648,
+                  "right": 1200,
+                  "bottom": 704,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 1382737301164852027,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 748,
+              "right": 1248,
+              "bottom": 892,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": 3797438492059920289,
+                "text": "Linked devices",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 792,
+                  "right": 1200,
+                  "bottom": 848,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 712477632439662294,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 892,
+              "right": 1248,
+              "bottom": 1036,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": 3127178823334730556,
+                "text": "Starred",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 936,
+                  "right": 1200,
+                  "bottom": 992,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -7796649881281473240,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 1036,
+              "right": 1248,
+              "bottom": 1180,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": -5381948690386404978,
+                "text": "Payments",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 1080,
+                  "right": 1200,
+                  "bottom": 1136,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -3235938603751813552,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 1180,
+              "right": 1248,
+              "bottom": 1324,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": -821237412856745290,
+                "text": "Read all",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 1224,
+                  "right": 1200,
+                  "bottom": 1280,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -2742214622093014529,
+            "text": "Settings",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 660,
+              "top": 1324,
+              "right": 1248,
+              "bottom": 1468,
+              "width": 588,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": 411255751034034988,
+                "text": "Settings",
+                "resource_id": "title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 708,
+                  "top": 1368,
+                  "right": 1200,
+                  "bottom": 1424,
+                  "width": 492,
+                  "height": 56
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

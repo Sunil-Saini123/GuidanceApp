@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "FrameLayout",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779726598,
+    "total_nodes": 5
+  },
+  "tree": {
+    "id": -6506090318802454917,
+    "text": "",
+    "resource_id": "",
+    "class": "ViewGroup",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 2434,
+      "right": 1260,
+      "bottom": 2674,
+      "width": 1260,
+      "height": 240
+    },
+    "children": [
+      {
+        "id": -8427008166556140416,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 2434,
+          "right": 315,
+          "bottom": 2674,
+          "width": 315,
+          "height": 240
+        },
+        "children": []
+      },
+      {
+        "id": -8427008166556140416,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 315,
+          "top": 2434,
+          "right": 630,
+          "bottom": 2674,
+          "width": 315,
+          "height": 240
+        },
+        "children": []
+      },
+      {
+        "id": -8427008166556140416,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 630,
+          "top": 2434,
+          "right": 945,
+          "bottom": 2674,
+          "width": 315,
+          "height": 240
+        },
+        "children": []
+      },
+      {
+        "id": -8427008166556140416,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 945,
+          "top": 2434,
+          "right": 1260,
+          "bottom": 2674,
+          "width": 315,
+          "height": 240
+        },
+        "children": []
+      }
+    ]
+  }
+}

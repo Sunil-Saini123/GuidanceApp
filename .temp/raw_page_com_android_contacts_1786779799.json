@@ -1,0 +1,301 @@
+{
+  "meta": {
+    "package": "com.android.contacts",
+    "root_name": "ContactEditor",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779799380,
+    "total_nodes": 18
+  },
+  "tree": {
+    "id": 5441147693597404118,
+    "text": "",
+    "resource_id": "scrollview",
+    "class": "ScrollView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 380,
+      "right": 1260,
+      "bottom": 2748,
+      "width": 1260,
+      "height": 2368
+    },
+    "children": [
+      {
+        "id": -1626918847551291806,
+        "text": "Contact profile picture",
+        "resource_id": "",
+        "class": "ImageView",
+        "clickable": true,
+        "bounds": {
+          "left": 495,
+          "top": 477,
+          "right": 765,
+          "bottom": 747,
+          "width": 270,
+          "height": 270
+        },
+        "children": []
+      },
+      {
+        "id": 1372935998958101543,
+        "text": "Name",
+        "resource_id": "",
+        "class": "EditText",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 887,
+          "right": 1194,
+          "bottom": 1034,
+          "width": 969,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": 2877134928721949765,
+        "text": "",
+        "resource_id": "expansion_view_container",
+        "class": "LinearLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1050,
+          "top": 902,
+          "right": 1194,
+          "bottom": 1010,
+          "width": 144,
+          "height": 108
+        },
+        "children": [
+          {
+            "id": -5401248567810229666,
+            "text": "Expand",
+            "resource_id": "expansion_view",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1050,
+              "top": 902,
+              "right": 1194,
+              "bottom": 1010,
+              "width": 144,
+              "height": 108
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 3802981743125103749,
+        "text": "Company",
+        "resource_id": "",
+        "class": "EditText",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 1106,
+          "right": 1040,
+          "bottom": 1253,
+          "width": 815,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": -8201072782961236830,
+        "text": "Title",
+        "resource_id": "",
+        "class": "EditText",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 1255,
+          "right": 1040,
+          "bottom": 1402,
+          "width": 815,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": 4740310650052603865,
+        "text": "Phone",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 1474,
+          "right": 411,
+          "bottom": 1621,
+          "width": 186,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": 6148923241604273732,
+        "text": "Phone",
+        "resource_id": "",
+        "class": "EditText",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 1621,
+          "right": 1040,
+          "bottom": 1768,
+          "width": 815,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": 3284128348810660383,
+        "text": "Personal",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 1840,
+          "right": 448,
+          "bottom": 1987,
+          "width": 223,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": -4963645693210201580,
+        "text": "Email",
+        "resource_id": "",
+        "class": "EditText",
+        "clickable": true,
+        "bounds": {
+          "left": 225,
+          "top": 1987,
+          "right": 1040,
+          "bottom": 2134,
+          "width": 815,
+          "height": 147
+        },
+        "children": []
+      },
+      {
+        "id": -2850242409325596277,
+        "text": "",
+        "resource_id": "group",
+        "class": "ViewGroup",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2194,
+          "right": 1194,
+          "bottom": 2368,
+          "width": 1128,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": 49704017137088608,
+            "text": "Group",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 111,
+              "top": 2257,
+              "right": 217,
+              "bottom": 2316,
+              "width": 106,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": -6388814972886100153,
+            "text": "None",
+            "resource_id": "summary",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1012,
+              "top": 2262,
+              "right": 1087,
+              "bottom": 2311,
+              "width": 75,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -7579793753908672097,
+        "text": "",
+        "resource_id": "save_location",
+        "class": "ViewGroup",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2368,
+          "right": 1194,
+          "bottom": 2542,
+          "width": 1128,
+          "height": 174
+        },
+        "children": [
+          {
+            "id": 1127538918403892629,
+            "text": "Save location",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 111,
+              "top": 2419,
+              "right": 362,
+              "bottom": 2478,
+              "width": 251,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": -1739590392548264074,
+            "text": "sawantmayuresh00@gmail.com",
+            "resource_id": "summary",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 649,
+              "top": 2424,
+              "right": 1087,
+              "bottom": 2473,
+              "width": 438,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2455192005155837022,
+        "text": "Expand",
+        "resource_id": "button_add_field",
+        "class": "Button",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2590,
+          "right": 1194,
+          "bottom": 2737,
+          "width": 1128,
+          "height": 147
+        },
+        "children": []
+      }
+    ]
+  }
+}

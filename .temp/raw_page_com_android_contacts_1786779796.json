@@ -1,0 +1,736 @@
+{
+  "meta": {
+    "package": "com.android.contacts",
+    "root_name": "BBKTwelveKeyDialer",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779796752,
+    "total_nodes": 44
+  },
+  "tree": {
+    "id": 716001755432450723,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 3815628673402370685,
+        "text": "",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": -9098277341075955856,
+            "text": "",
+            "resource_id": "root_common_layout_coordinator",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 2674
+            },
+            "children": [
+              {
+                "id": 8643513038963298445,
+                "text": "",
+                "resource_id": "search_list_container",
+                "class": "LinearLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 2674,
+                  "width": 1260,
+                  "height": 2674
+                },
+                "children": []
+              },
+              {
+                "id": -6439632510257073755,
+                "text": "",
+                "resource_id": "recycler_view_nested_layout_container",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 2674,
+                  "width": 1260,
+                  "height": 2674
+                },
+                "children": [
+                  {
+                    "id": -416095786960115268,
+                    "text": "",
+                    "resource_id": "slip_recyclerview",
+                    "class": "RecyclerView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 0,
+                      "right": 1260,
+                      "bottom": 2674,
+                      "width": 1260,
+                      "height": 2674
+                    },
+                    "children": [
+                      {
+                        "id": -2931864535514827078,
+                        "text": "",
+                        "resource_id": "default_head_view",
+                        "class": "RelativeLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 564,
+                          "right": 1260,
+                          "bottom": 1018,
+                          "width": 1260,
+                          "height": 454
+                        },
+                        "children": [
+                          {
+                            "id": -945434753306203319,
+                            "text": "",
+                            "resource_id": "personal_layout",
+                            "class": "ViewGroup",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 582,
+                              "right": 1260,
+                              "bottom": 783,
+                              "width": 1260,
+                              "height": 201
+                            },
+                            "children": [
+                              {
+                                "id": 2095194789736723561,
+                                "text": "Mr.Hitman",
+                                "resource_id": "title",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 234,
+                                  "top": 653,
+                                  "right": 415,
+                                  "bottom": 712,
+                                  "width": 181,
+                                  "height": 59
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": -8532062853038911574,
+                            "text": "",
+                            "resource_id": "group_layout",
+                            "class": "ViewGroup",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 785,
+                              "right": 1260,
+                              "bottom": 986,
+                              "width": 1260,
+                              "height": 201
+                            },
+                            "children": [
+                              {
+                                "id": 1448498114258521491,
+                                "text": "Groups",
+                                "resource_id": "title",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 234,
+                                  "top": 856,
+                                  "right": 358,
+                                  "bottom": 915,
+                                  "width": 124,
+                                  "height": 59
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": -8713289871454555983,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1018,
+                          "right": 1260,
+                          "bottom": 1398,
+                          "width": 1260,
+                          "height": 380
+                        },
+                        "children": [
+                          {
+                            "id": 6517352299738240809,
+                            "text": "#",
+                            "resource_id": "section_header",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 78,
+                              "top": 1096,
+                              "right": 189,
+                              "bottom": 1207,
+                              "width": 111,
+                              "height": 111
+                            },
+                            "children": []
+                          },
+                          {
+                            "id": 3890231695597457237,
+                            "text": "unknown",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 1285,
+                              "right": 382,
+                              "bottom": 1344,
+                              "width": 151,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 5297101830210239312,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1398,
+                          "right": 1260,
+                          "bottom": 1562,
+                          "width": 1260,
+                          "height": 164
+                        },
+                        "children": [
+                          {
+                            "id": 3890231695597457237,
+                            "text": "unknown",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 1449,
+                              "right": 382,
+                              "bottom": 1508,
+                              "width": 151,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 5067414006639280199,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1562,
+                          "right": 1260,
+                          "bottom": 1726,
+                          "width": 1260,
+                          "height": 164
+                        },
+                        "children": [
+                          {
+                            "id": 3660543872026498124,
+                            "text": "+919372638787",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 1613,
+                              "right": 518,
+                              "bottom": 1672,
+                              "width": 287,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -257433697444282871,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1726,
+                          "right": 1260,
+                          "bottom": 1890,
+                          "width": 1260,
+                          "height": 164
+                        },
+                        "children": [
+                          {
+                            "id": -1664303832057064946,
+                            "text": "123456789",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 1777,
+                              "right": 431,
+                              "bottom": 1836,
+                              "width": 200,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -257433697444282871,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1890,
+                          "right": 1260,
+                          "bottom": 2054,
+                          "width": 1260,
+                          "height": 164
+                        },
+                        "children": [
+                          {
+                            "id": -1664303832057064946,
+                            "text": "123456789",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 1941,
+                              "right": 431,
+                              "bottom": 2000,
+                              "width": 200,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -8196101679349998323,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2054,
+                          "right": 1260,
+                          "bottom": 2218,
+                          "width": 1260,
+                          "height": 164
+                        },
+                        "children": [
+                          {
+                            "id": 8843772259746771218,
+                            "text": "913-779-9068",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 2105,
+                              "right": 497,
+                              "bottom": 2164,
+                              "width": 266,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -8196101679349998323,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2218,
+                          "right": 1260,
+                          "bottom": 2382,
+                          "width": 1260,
+                          "height": 164
+                        },
+                        "children": [
+                          {
+                            "id": 8843772259746771218,
+                            "text": "913-779-9068",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 2269,
+                              "right": 497,
+                              "bottom": 2328,
+                              "width": 266,
+                              "height": 59
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -1926130513224400114,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2382,
+                          "right": 1260,
+                          "bottom": 2674,
+                          "width": 1260,
+                          "height": 292
+                        },
+                        "children": [
+                          {
+                            "id": -6430971877603063305,
+                            "text": "A",
+                            "resource_id": "section_header",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 78,
+                              "top": 2460,
+                              "right": 189,
+                              "bottom": 2571,
+                              "width": 111,
+                              "height": 111
+                            },
+                            "children": []
+                          },
+                          {
+                            "id": 6247070929797905088,
+                            "text": "Aai",
+                            "resource_id": "contact_name",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 231,
+                              "top": 2649,
+                              "right": 289,
+                              "bottom": 2674,
+                              "width": 58,
+                              "height": 25
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": 9181247164906212573,
+                "text": "",
+                "resource_id": "orginui_vcommonlayout_toptargetview",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 528,
+                  "width": 1260,
+                  "height": 528
+                },
+                "children": [
+                  {
+                    "id": -335596454456499342,
+                    "text": "",
+                    "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+                    "class": "FrameLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 201,
+                      "right": 1260,
+                      "bottom": 384,
+                      "width": 1260,
+                      "height": 183
+                    },
+                    "children": [
+                      {
+                        "id": -8380313967384270179,
+                        "text": "Contacts",
+                        "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 39,
+                          "top": 201,
+                          "right": 1242,
+                          "bottom": 375,
+                          "width": 1203,
+                          "height": 174
+                        },
+                        "children": [
+                          {
+                            "id": -3406960697545249119,
+                            "text": "",
+                            "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                            "class": "LinearLayout",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 918,
+                              "top": 214,
+                              "right": 1218,
+                              "bottom": 352,
+                              "width": 300,
+                              "height": 138
+                            },
+                            "children": [
+                              {
+                                "id": -6938858147310009615,
+                                "text": "Select",
+                                "resource_id": "",
+                                "class": "Button",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 918,
+                                  "top": 214,
+                                  "right": 1068,
+                                  "bottom": 352,
+                                  "width": 150,
+                                  "height": 138
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": -460067870317672458,
+                                "text": "More",
+                                "resource_id": "",
+                                "class": "Button",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1068,
+                                  "top": 214,
+                                  "right": 1218,
+                                  "bottom": 352,
+                                  "width": 150,
+                                  "height": 138
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": -9190755001305921034,
+                    "text": "",
+                    "resource_id": "orginui_vcommonlayout_toptargetview_addmoreview_vsearchview",
+                    "class": "RelativeLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 384,
+                      "right": 1260,
+                      "bottom": 528,
+                      "width": 1260,
+                      "height": 144
+                    },
+                    "children": [
+                      {
+                        "id": -2326323579902511030,
+                        "text": "536 contacts",
+                        "resource_id": "vigour_search_content",
+                        "class": "LinearLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 78,
+                          "top": 384,
+                          "right": 1182,
+                          "bottom": 486,
+                          "width": 1104,
+                          "height": 102
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 5668747801502391977,
+            "text": "number sign",
+            "resource_id": "alphabet_indexer",
+            "class": "SeekBar",
+            "clickable": true,
+            "bounds": {
+              "left": 1176,
+              "top": 810,
+              "right": 1260,
+              "bottom": 2160,
+              "width": 84,
+              "height": 1350
+            },
+            "children": []
+          },
+          {
+            "id": 1053168086571486486,
+            "text": "New contact",
+            "resource_id": "floating_action_button",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 1008,
+              "top": 2167,
+              "right": 1182,
+              "bottom": 2341,
+              "width": 174,
+              "height": 174
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -6653822975825950464,
+        "text": "",
+        "resource_id": "bottom_navigation_view",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 2461,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 339
+        },
+        "children": [
+          {
+            "id": -5796600688480011426,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2461,
+              "right": 1260,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 213
+            },
+            "children": [
+              {
+                "id": 5939620960718484994,
+                "text": "Dial",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2461,
+                  "right": 420,
+                  "bottom": 2674,
+                  "width": 420,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": 1383109080764804473,
+                "text": "Contacts",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 420,
+                  "top": 2461,
+                  "right": 840,
+                  "bottom": 2674,
+                  "width": 420,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -5026483282515828965,
+                "text": "Favorites",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 840,
+                  "top": 2461,
+                  "right": 1260,
+                  "bottom": 2674,
+                  "width": 420,
+                  "height": 213
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

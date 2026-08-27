@@ -1,0 +1,893 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "SettingsHomepage",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779682148,
+    "total_nodes": 53
+  },
+  "tree": {
+    "id": -8567952639227545260,
+    "text": "",
+    "resource_id": "home_dashboard_rootview",
+    "class": "ViewGroup",
+    "clickable": false,
+    "bounds": {
+      "left": -377,
+      "top": 0,
+      "right": 881,
+      "bottom": 2674,
+      "width": 1258,
+      "height": 2674
+    },
+    "children": [
+      {
+        "id": 2312630445544953898,
+        "text": "",
+        "resource_id": "dashboard_container",
+        "class": "RecyclerView",
+        "clickable": false,
+        "bounds": {
+          "left": -377,
+          "top": 0,
+          "right": 881,
+          "bottom": 2674,
+          "width": 1258,
+          "height": 2674
+        },
+        "children": [
+          {
+            "id": -6967230151379323966,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 0,
+              "right": 815,
+              "bottom": 25,
+              "width": 1126,
+              "height": 25
+            },
+            "children": [
+              {
+                "id": -3984394020072693694,
+                "text": "Home screen, lock screen & wallpaper",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": -311,
+                  "top": 0,
+                  "right": 815,
+                  "bottom": 25,
+                  "width": 1126,
+                  "height": 25
+                },
+                "children": [
+                  {
+                    "id": -7147047994298607923,
+                    "text": "Home screen, lock screen & wallpaper",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": -152,
+                      "top": -38,
+                      "right": 552,
+                      "bottom": 0,
+                      "width": 704,
+                      "height": 38
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": -4385443979689400102,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 76,
+              "right": 815,
+              "bottom": 250,
+              "width": 1126,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": -1402607848382769830,
+                "text": "Apps",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": -311,
+                  "top": 76,
+                  "right": 815,
+                  "bottom": 250,
+                  "width": 1126,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": 8746975219011025295,
+                    "text": "Apps",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": -152,
+                      "top": 139,
+                      "right": -65,
+                      "bottom": 198,
+                      "width": 87,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 2599166339562015802,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 250,
+              "right": 815,
+              "bottom": 412,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 5582002470868646074,
+                "text": "Security & privacy",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": -311,
+                  "top": 250,
+                  "right": 815,
+                  "bottom": 412,
+                  "width": 1126,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": -7999492062414070533,
+                    "text": "Security & privacy",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": -152,
+                      "top": 301,
+                      "right": 187,
+                      "bottom": 360,
+                      "width": 339,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 5239114037843812964,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 412,
+              "right": 815,
+              "bottom": 574,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 8221950169150443236,
+                "text": "Location",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": -311,
+                  "top": 412,
+                  "right": 815,
+                  "bottom": 574,
+                  "width": 1126,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": 4110318585094867246,
+                    "text": "Location",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": -152,
+                      "top": 463,
+                      "right": 6,
+                      "bottom": 522,
+                      "width": 158,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 908417162788985888,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 574,
+              "right": 815,
+              "bottom": 736,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 3891253294095616160,
+                "text": "RAM & storage",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": -311,
+                  "top": 574,
+                  "right": 815,
+                  "bottom": 736,
+                  "width": 1126,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": -4030543180666315796,
+                    "text": "RAM & storage",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": -152,
+                      "top": 625,
+                      "right": 129,
+                      "bottom": 684,
+                      "width": 281,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 395710549225627120,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 736,
+              "right": 815,
+              "bottom": 910,
+              "width": 1126,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 3378546680532257392,
+                "text": "Battery",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": -311,
+                  "top": 736,
+                  "right": 815,
+                  "bottom": 910,
+                  "width": 1126,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": 2561469441923636378,
+                    "text": "Battery",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 787,
+                      "right": 367,
+                      "bottom": 846,
+                      "width": 142,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 4137354456742564940,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 961,
+              "right": 815,
+              "bottom": 1135,
+              "width": 1126,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 7120190588049195212,
+                "text": "Ultra Game Mode",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 961,
+                  "right": 1193,
+                  "bottom": 1135,
+                  "width": 1127,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": -4282443365545616244,
+                    "text": "Ultra Game Mode",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 1024,
+                      "right": 544,
+                      "bottom": 1083,
+                      "width": 319,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 947011634426501040,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 1135,
+              "right": 815,
+              "bottom": 1297,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 3929847765733131312,
+                "text": "Safety & emergency",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 1135,
+                  "right": 1193,
+                  "bottom": 1297,
+                  "width": 1127,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": -3336610857448966772,
+                    "text": "Safety & emergency",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 1186,
+                      "right": 598,
+                      "bottom": 1245,
+                      "width": 373,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 1779348992099571010,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 1297,
+              "right": 815,
+              "bottom": 1459,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 4762185123406201282,
+                "text": "Digital Wellbeing & parental controls",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 1297,
+                  "right": 1193,
+                  "bottom": 1459,
+                  "width": 1127,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": 8742024825860709137,
+                    "text": "Digital Wellbeing & parental controls",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 1348,
+                      "right": 910,
+                      "bottom": 1407,
+                      "width": 685,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 81699846460014572,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 1459,
+              "right": 815,
+              "bottom": 1633,
+              "width": 1126,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 3064535977766644844,
+                "text": "Shortcuts & accessibility",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 1459,
+                  "right": 1193,
+                  "bottom": 1633,
+                  "width": 1127,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": -7152345487319951858,
+                    "text": "Shortcuts & accessibility",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 1510,
+                      "right": 695,
+                      "bottom": 1569,
+                      "width": 470,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 5018522527865034565,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 1684,
+              "right": 815,
+              "bottom": 1858,
+              "width": 1126,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 8001358659171664837,
+                "text": "System update,1",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 1684,
+                  "right": 1193,
+                  "bottom": 1858,
+                  "width": 1127,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": 2599811345885551719,
+                    "text": "System update",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 1747,
+                      "right": 496,
+                      "bottom": 1806,
+                      "width": 271,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 3084174321980599294,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 1858,
+              "right": 815,
+              "bottom": 2020,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 6067010453287229566,
+                "text": "System management",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 1858,
+                  "right": 1193,
+                  "bottom": 2020,
+                  "width": 1127,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": -1134569109854122415,
+                    "text": "System management",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 1909,
+                      "right": 593,
+                      "bottom": 1968,
+                      "width": 368,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": -2356638549257418646,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 2020,
+              "right": 815,
+              "bottom": 2182,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 626197582049211626,
+                "text": "Users & accounts",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 2020,
+                  "right": 1193,
+                  "bottom": 2182,
+                  "width": 1127,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": -5438975289661441215,
+                    "text": "Users & accounts",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 2071,
+                      "right": 548,
+                      "bottom": 2130,
+                      "width": 323,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 1662155624901562564,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 2182,
+              "right": 815,
+              "bottom": 2344,
+              "width": 1126,
+              "height": 162
+            },
+            "children": [
+              {
+                "id": 4644991756208192836,
+                "text": "Google",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 2182,
+                  "right": 1193,
+                  "bottom": 2344,
+                  "width": 1127,
+                  "height": 162
+                },
+                "children": [
+                  {
+                    "id": -837824821493479962,
+                    "text": "Google",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 2233,
+                      "right": 350,
+                      "bottom": 2292,
+                      "width": 125,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 4187424760432314320,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": -311,
+              "top": 2344,
+              "right": 815,
+              "bottom": 2518,
+              "width": 1126,
+              "height": 174
+            },
+            "children": [
+              {
+                "id": 7170260891738944592,
+                "text": "About phone",
+                "resource_id": "vlist_content",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 66,
+                  "top": 2344,
+                  "right": 1193,
+                  "bottom": 2518,
+                  "width": 1127,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": -8471295508258040458,
+                    "text": "About phone",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 225,
+                      "top": 2395,
+                      "right": 464,
+                      "bottom": 2454,
+                      "width": 239,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 4601392882073028861,
+        "text": "",
+        "resource_id": "orginui_vcommonlayout_toptargetview",
+        "class": "LinearLayout",
+        "clickable": true,
+        "bounds": {
+          "left": -377,
+          "top": 0,
+          "right": 881,
+          "bottom": 450,
+          "width": 1258,
+          "height": 450
+        },
+        "children": [
+          {
+            "id": 219277276108954544,
+            "text": "",
+            "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+            "class": "FrameLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 123,
+              "right": 1259,
+              "bottom": 306,
+              "width": 1259,
+              "height": 183
+            },
+            "children": [
+              {
+                "id": -7825440236818816293,
+                "text": "",
+                "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 39,
+                  "top": 123,
+                  "right": 1241,
+                  "bottom": 306,
+                  "width": 1202,
+                  "height": 183
+                },
+                "children": [
+                  {
+                    "id": 4407883008521597404,
+                    "text": "Settings",
+                    "resource_id": "originui_vtoolbar_normal_title_rom14_0",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 180,
+                      "right": 264,
+                      "bottom": 240,
+                      "width": 186,
+                      "height": 60
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 5921793215750928020,
+            "text": "",
+            "resource_id": "orginui_vcommonlayout_toptargetview_addmoreview_vsearchview",
+            "class": "RelativeLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 306,
+              "right": 1259,
+              "bottom": 450,
+              "width": 1259,
+              "height": 144
+            },
+            "children": [
+              {
+                "id": -5660519436555213592,
+                "text": "Search settings",
+                "resource_id": "vigour_search_content",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 78,
+                  "top": 306,
+                  "right": 1181,
+                  "bottom": 408,
+                  "width": 1103,
+                  "height": 102
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

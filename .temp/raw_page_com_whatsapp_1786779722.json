@@ -1,0 +1,2398 @@
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "FrameLayout",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779722820,
+    "total_nodes": 146
+  },
+  "tree": {
+    "id": -6013323933263764794,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 3060978110212904040,
+        "text": "",
+        "resource_id": "pager",
+        "class": "ViewPager",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 123,
+          "right": 1260,
+          "bottom": 2432,
+          "width": 1260,
+          "height": 2309
+        },
+        "children": [
+          {
+            "id": -5225432835135652675,
+            "text": "",
+            "resource_id": "conversations_coordinator_layout",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 123,
+              "right": -1260,
+              "bottom": 2432,
+              "width": -1260,
+              "height": 2309
+            },
+            "children": [
+              {
+                "id": 5028626461962573448,
+                "text": "Ask Meta AI or Search",
+                "resource_id": "search_bar_inner_layout",
+                "class": "LinearLayoutCompat",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 303,
+                  "right": -1296,
+                  "bottom": 447,
+                  "width": -1296,
+                  "height": 144
+                },
+                "children": [
+                  {
+                    "id": -989701758838997011,
+                    "text": "",
+                    "resource_id": "search_icon",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 315,
+                      "right": -2316,
+                      "bottom": 435,
+                      "width": -2316,
+                      "height": 120
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 2069019026743078808,
+                    "text": "Ask Meta AI or Search",
+                    "resource_id": "search_text",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 347,
+                      "right": -1296,
+                      "bottom": 403,
+                      "width": -1296,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -3551386655507436658,
+                "text": "Swipe down to reveal additional actions",
+                "resource_id": "list",
+                "class": "RecyclerView",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 471,
+                  "right": -1260,
+                  "bottom": 2432,
+                  "width": -1260,
+                  "height": 1961
+                },
+                "children": [
+                  {
+                    "id": -696781975424871440,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 471,
+                      "right": -1260,
+                      "bottom": 555,
+                      "width": -1260,
+                      "height": 84
+                    },
+                    "children": [
+                      {
+                        "id": -4081472078152630662,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 471,
+                          "right": -2304,
+                          "bottom": 543,
+                          "width": -2304,
+                          "height": 72
+                        },
+                        "children": [
+                          {
+                            "id": 1042915399038258550,
+                            "text": "Rohit Co's status. 1 new update",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 471,
+                              "right": -2334,
+                              "bottom": 519,
+                              "width": -2334,
+                              "height": 48
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -7195440812324258653,
+                        "text": "Rohit Co",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 471,
+                          "right": -2150,
+                          "bottom": 432,
+                          "width": -2150,
+                          "height": -39
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -2689060789284015127,
+                        "text": "Yesterday",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 471,
+                          "right": -1308,
+                          "bottom": 425,
+                          "width": -1308,
+                          "height": -46
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 1218652536572666053,
+                        "text": "👍",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 471,
+                          "right": -2230,
+                          "bottom": 506,
+                          "width": -2230,
+                          "height": 35
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -5494497193357212511,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 555,
+                      "right": -1260,
+                      "bottom": 783,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": -2300402603729394230,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 567,
+                          "right": -2304,
+                          "bottom": 771,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": 2823984873461494982,
+                            "text": "Sunil VIT picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 591,
+                              "right": -2334,
+                              "bottom": 747,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 7913005056748908143,
+                        "text": "Sunil VIT",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 609,
+                          "right": -2146,
+                          "bottom": 665,
+                          "width": -2146,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -2689060789284015127,
+                        "text": "Yesterday",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 616,
+                          "right": -1308,
+                          "bottom": 658,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 6234030668487609338,
+                        "text": ":2526DTR1002496078",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 671,
+                          "right": -1866,
+                          "bottom": 729,
+                          "width": -1866,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -8981242008333260264,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 783,
+                      "right": -1260,
+                      "bottom": 1011,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": 4331900477927339590,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 795,
+                          "right": -2304,
+                          "bottom": 999,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": -8990456118591322814,
+                            "text": "PLACEMENT BATCH OF - 2027 picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 819,
+                              "right": -2334,
+                              "bottom": 975,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 7408901695737834467,
+                        "text": "PLACEMENT BATCH OF - 2027",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 836,
+                          "right": -1740,
+                          "bottom": 892,
+                          "width": -1740,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -2689060789284015127,
+                        "text": "Yesterday",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 843,
+                          "right": -1308,
+                          "bottom": 885,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -7462776543500524397,
+                        "text": "~ SACHIN:",
+                        "resource_id": "msg_from_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 898,
+                          "right": -2126,
+                          "bottom": 958,
+                          "width": -2126,
+                          "height": 60
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 1921639964741635978,
+                        "text": "Destination Dr. Reddy’s 3.0, an exclusive Interview drive for Internships is now LIVE and registrations are open till 20th Aug (",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 899,
+                          "right": -1308,
+                          "bottom": 957,
+                          "width": -1308,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 2815464357380389678,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1011,
+                      "right": -1260,
+                      "bottom": 1239,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": 4951136954960055019,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1023,
+                          "right": -2304,
+                          "bottom": 1227,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": -8371219641558607385,
+                            "text": "27P42 Final Year Project picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 1047,
+                              "right": -2334,
+                              "bottom": 1203,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -7151149065895534634,
+                        "text": "27P42 Final Year Project",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1064,
+                          "right": -1850,
+                          "bottom": 1120,
+                          "width": -1850,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -2689060789284015127,
+                        "text": "Yesterday",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1071,
+                          "right": -1308,
+                          "bottom": 1113,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 8160846105800963704,
+                        "text": "~ Pankaj Vanwari:",
+                        "resource_id": "msg_from_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1126,
+                          "right": -2007,
+                          "bottom": 1186,
+                          "width": -2007,
+                          "height": 60
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 356004071283628179,
+                        "text": "Called Sachin Deshpande Sir. He conveyed that we will start at 10am.  You'll kindly report to venue at 10am.",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1127,
+                          "right": -1308,
+                          "bottom": 1185,
+                          "width": -1308,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 7346672239065989738,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1239,
+                      "right": -1260,
+                      "bottom": 1467,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": -4083772628120689753,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1251,
+                          "right": -2304,
+                          "bottom": 1455,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": 1040614849070199459,
+                            "text": "Vicky VIT picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 1275,
+                              "right": -2334,
+                              "bottom": 1431,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 5398203051740922728,
+                        "text": "Vicky VIT",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1288,
+                          "right": -2139,
+                          "bottom": 1344,
+                          "width": -2139,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -1200523122872996197,
+                        "text": "8\/13\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1295,
+                          "right": -1308,
+                          "bottom": 1337,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -6668005969822229895,
+                        "text": "Okay 👍",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1350,
+                          "right": -2136,
+                          "bottom": 1418,
+                          "width": -2136,
+                          "height": 68
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -7968568950868758113,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1467,
+                      "right": -1260,
+                      "bottom": 1695,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": -8314080927919431393,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1479,
+                          "right": -2304,
+                          "bottom": 1683,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": -3189693450728542181,
+                            "text": "Hasnain VIT picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 1503,
+                              "right": -2334,
+                              "bottom": 1659,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -5969825632977317128,
+                        "text": "Hasnain VIT",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1521,
+                          "right": -2087,
+                          "bottom": 1577,
+                          "width": -2087,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -1200523122872996197,
+                        "text": "8\/13\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1528,
+                          "right": -1308,
+                          "bottom": 1570,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -2374380987217924458,
+                        "text": "Voice call",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1583,
+                          "right": -2066,
+                          "bottom": 1641,
+                          "width": -2066,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -564266992909290505,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1695,
+                      "right": -1260,
+                      "bottom": 1923,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": 4076266640436497710,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1707,
+                          "right": -2304,
+                          "bottom": 1911,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": 9200654117627386922,
+                            "text": "MyJio picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 1731,
+                              "right": -2334,
+                              "bottom": 1887,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 6664443487671458655,
+                        "text": "MyJio",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1749,
+                          "right": -2220,
+                          "bottom": 1805,
+                          "width": -2220,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3817362127548599028,
+                        "text": "8\/12\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1756,
+                          "right": -1308,
+                          "bottom": 1798,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 7294435414902388999,
+                        "text": "Update: Your request for JioHome connection with Digital TV Channels, OTT & Wi-Fi is pending.",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1811,
+                          "right": -1308,
+                          "bottom": 1869,
+                          "width": -1308,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -4235771751956804282,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1923,
+                      "right": -1260,
+                      "bottom": 2151,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": 2332414252317989665,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1935,
+                          "right": -2304,
+                          "bottom": 2139,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": 7456801729508878877,
+                            "text": "MKRS picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 1959,
+                              "right": -2334,
+                              "bottom": 2115,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": -928398554705507552,
+                        "text": "MKRS",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1977,
+                          "right": -2210,
+                          "bottom": 2033,
+                          "width": -2210,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3817362127548599028,
+                        "text": "8\/12\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1984,
+                          "right": -1308,
+                          "bottom": 2026,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 2107136744078640785,
+                        "text": "Sam:",
+                        "resource_id": "msg_from_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2039,
+                          "right": -2215,
+                          "bottom": 2097,
+                          "width": -2215,
+                          "height": 58
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 2193909229130461238,
+                        "text": "GIF",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2039,
+                          "right": -2075,
+                          "bottom": 2097,
+                          "width": -2075,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 110841521794815417,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2151,
+                      "right": -1260,
+                      "bottom": 2379,
+                      "width": -1260,
+                      "height": 228
+                    },
+                    "children": [
+                      {
+                        "id": -8609518323846431805,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2163,
+                          "right": -2304,
+                          "bottom": 2367,
+                          "width": -2304,
+                          "height": 204
+                        },
+                        "children": [
+                          {
+                            "id": -3485130846655542593,
+                            "text": "Ku Na L picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 2187,
+                              "right": -2334,
+                              "bottom": 2343,
+                              "width": -2334,
+                              "height": 156
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 654225501680472796,
+                        "text": "Ku Na L",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2205,
+                          "right": -2156,
+                          "bottom": 2261,
+                          "width": -2156,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3817362127548599028,
+                        "text": "8\/12\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2212,
+                          "right": -1308,
+                          "bottom": 2254,
+                          "width": -1308,
+                          "height": 42
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -4714577812686077631,
+                        "text": "Sticker",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2267,
+                          "right": -2107,
+                          "bottom": 2325,
+                          "width": -2107,
+                          "height": 58
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 364072009752619167,
+                    "text": "",
+                    "resource_id": "contact_row_container",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2379,
+                      "right": -1260,
+                      "bottom": 2432,
+                      "width": -1260,
+                      "height": 53
+                    },
+                    "children": [
+                      {
+                        "id": 4341190659274849189,
+                        "text": "",
+                        "resource_id": "contact_selector",
+                        "class": "FrameLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2391,
+                          "right": -2304,
+                          "bottom": 2432,
+                          "width": -2304,
+                          "height": 41
+                        },
+                        "children": [
+                          {
+                            "id": -8981165937243813215,
+                            "text": "The Debuggers✍🏻 picture",
+                            "resource_id": "contact_photo",
+                            "class": "ImageView",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 2415,
+                              "right": -2334,
+                              "bottom": 2432,
+                              "width": -2334,
+                              "height": 17
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 1344560000630382664,
+                        "text": "The Debuggers✍🏻",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2428,
+                          "right": -1977,
+                          "bottom": 2432,
+                          "width": -1977,
+                          "height": 4
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3817362127548599028,
+                        "text": "8\/12\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2440,
+                          "right": -1308,
+                          "bottom": 2432,
+                          "width": -1308,
+                          "height": -8
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 6368723626770036405,
+                        "text": "You:",
+                        "resource_id": "msg_from_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2500,
+                          "right": -2159,
+                          "bottom": 2432,
+                          "width": -2159,
+                          "height": -68
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3844344800561339338,
+                        "text": ".",
+                        "resource_id": "single_msg_tv",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2500,
+                          "right": -2131,
+                          "bottom": 2432,
+                          "width": -2131,
+                          "height": -68
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 5521492025488725196,
+            "text": "",
+            "resource_id": "updates_list",
+            "class": "RecyclerView",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 123,
+              "right": 0,
+              "bottom": 2432,
+              "width": 0,
+              "height": 2309
+            },
+            "children": [
+              {
+                "id": 4926338985355601068,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 292,
+                  "right": 0,
+                  "bottom": 409,
+                  "width": 0,
+                  "height": 117
+                },
+                "children": [
+                  {
+                    "id": 7634945852464378183,
+                    "text": "Status",
+                    "resource_id": "header_textview",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 328,
+                      "right": -48,
+                      "bottom": 397,
+                      "width": -48,
+                      "height": 69
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -4247509474729986594,
+                "text": "My status, tap to add new status",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 409,
+                  "right": 0,
+                  "bottom": 637,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 445,
+                      "right": -1068,
+                      "bottom": 601,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -2389043369467299394,
+                    "text": "New status",
+                    "resource_id": "badge_click_surface",
+                    "class": "View",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 0,
+                      "top": 505,
+                      "right": -1020,
+                      "bottom": 637,
+                      "width": -1020,
+                      "height": 132
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -2713497722137841028,
+                    "text": "Add status",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 466,
+                      "right": -818,
+                      "bottom": 522,
+                      "width": -818,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 4553689209757650620,
+                "text": "",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 637,
+                  "right": 0,
+                  "bottom": 734,
+                  "width": 0,
+                  "height": 97
+                },
+                "children": [
+                  {
+                    "id": 7536525341064280892,
+                    "text": "Recent updates",
+                    "resource_id": "title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 637,
+                      "right": -925,
+                      "bottom": 734,
+                      "width": -925,
+                      "height": 97
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 2793239305510664072,
+                "text": "Rohit Co, 1 unread status",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 734,
+                  "right": 0,
+                  "bottom": 962,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 770,
+                      "right": -1068,
+                      "bottom": 926,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -3912919584070898913,
+                    "text": "Rohit Co",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 791,
+                      "right": -866,
+                      "bottom": 847,
+                      "width": -866,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -2983461823053896864,
+                "text": "DIKSHA (VIT), 1 unread status",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 962,
+                  "right": 0,
+                  "bottom": 1190,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 998,
+                      "right": -1068,
+                      "bottom": 1154,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -6467538109047966999,
+                    "text": "DIKSHA (VIT)",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1019,
+                      "right": -785,
+                      "bottom": 1075,
+                      "width": -785,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -7471773649386155373,
+                "text": "Sohan VIT, 8 unread statuses",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1190,
+                  "right": 0,
+                  "bottom": 1418,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1226,
+                      "right": -1068,
+                      "bottom": 1382,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7092626497429282117,
+                    "text": "Sohan VIT",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1247,
+                      "right": -837,
+                      "bottom": 1303,
+                      "width": -837,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 6510913709496877504,
+                "text": "Sanika Ghugare, 1 unread status",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1418,
+                  "right": 0,
+                  "bottom": 1646,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1454,
+                      "right": -1068,
+                      "bottom": 1610,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -8204258986411941345,
+                    "text": "Sanika Ghugare",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1475,
+                      "right": -739,
+                      "bottom": 1531,
+                      "width": -739,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -4758747036211020702,
+                "text": "Riyaaa VIT, 3 unread statuses",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1646,
+                  "right": 0,
+                  "bottom": 1874,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1682,
+                      "right": -1068,
+                      "bottom": 1838,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7862513696721608401,
+                    "text": "Riyaaa VIT",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1703,
+                      "right": -829,
+                      "bottom": 1759,
+                      "width": -829,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 7556181443643236349,
+                "text": "Mami, 2 unread statuses",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1874,
+                  "right": 0,
+                  "bottom": 2102,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1910,
+                      "right": -1068,
+                      "bottom": 2066,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 2086555449907760117,
+                    "text": "Mami",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1931,
+                      "right": -940,
+                      "bottom": 1987,
+                      "width": -940,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 6050493062401864656,
+                "text": "Niyaz Bhai HDD, 23 unread statuses",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2102,
+                  "right": 0,
+                  "bottom": 2330,
+                  "width": 0,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2138,
+                      "right": -1068,
+                      "bottom": 2294,
+                      "width": -1068,
+                      "height": 156
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -6131508929994647738,
+                    "text": "Niyaz Bhai HDD",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2159,
+                      "right": -744,
+                      "bottom": 2215,
+                      "width": -744,
+                      "height": 56
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -2924814926237330180,
+                "text": "Lata, 5 unread statuses",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2330,
+                  "right": 0,
+                  "bottom": 2432,
+                  "width": 0,
+                  "height": 102
+                },
+                "children": [
+                  {
+                    "id": 1972110600958173762,
+                    "text": "",
+                    "resource_id": "wdsProfilePicture",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2366,
+                      "right": -1068,
+                      "bottom": 2432,
+                      "width": -1068,
+                      "height": 66
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 6437099807748390913,
+                    "text": "Lata",
+                    "resource_id": "contact_name",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2387,
+                      "right": -938,
+                      "bottom": 2432,
+                      "width": -938,
+                      "height": 45
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 5557980291134717793,
+            "text": "",
+            "resource_id": "community_recycler_view",
+            "class": "RecyclerView",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 123,
+              "right": 1260,
+              "bottom": 2432,
+              "width": 1260,
+              "height": 2309
+            },
+            "children": [
+              {
+                "id": 253723571511252583,
+                "text": "New community",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 291,
+                  "right": 1260,
+                  "bottom": 519,
+                  "width": 1260,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 8655688475435371064,
+                    "text": "New community",
+                    "resource_id": "community_subject",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 375,
+                      "right": 1260,
+                      "bottom": 434,
+                      "width": 1032,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -8293635151316067353,
+                "text": "",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 543,
+                  "right": 1260,
+                  "bottom": 771,
+                  "width": 1260,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": -5878933960420999091,
+                    "text": "ILW",
+                    "resource_id": "community_subject",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 627,
+                      "right": 1260,
+                      "bottom": 686,
+                      "width": 1032,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 3145324280681697551,
+                "text": "",
+                "resource_id": "contact_row_container",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 774,
+                  "right": 1260,
+                  "bottom": 1002,
+                  "width": 1260,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": -3639910948640394423,
+                    "text": "Announcements",
+                    "resource_id": "conversations_row_header",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 828,
+                      "right": 1212,
+                      "bottom": 884,
+                      "width": 984,
+                      "height": 56
+                    },
+                    "children": [
+                      {
+                        "id": -5526442550542585137,
+                        "text": "Announcements",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 228,
+                          "top": 828,
+                          "right": 504,
+                          "bottom": 884,
+                          "width": 276,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3817362127548599028,
+                        "text": "8\/12\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1103,
+                          "top": 835,
+                          "right": 1212,
+                          "bottom": 877,
+                          "width": 109,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 6190137138446733741,
+                    "text": "Group \"23_IL_FRI_11-15_SMART IRRIGATION\" was removed",
+                    "resource_id": "single_msg_tv",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 890,
+                      "right": 1179,
+                      "bottom": 948,
+                      "width": 951,
+                      "height": 58
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -8739062688899690531,
+                "text": "",
+                "resource_id": "contact_row_container",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1002,
+                  "right": 1260,
+                  "bottom": 1254,
+                  "width": 1260,
+                  "height": 252
+                },
+                "children": [
+                  {
+                    "id": 3477868208296026043,
+                    "text": "23_IL_TUE_ 1.45 _HA",
+                    "resource_id": "conversations_row_header",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1068,
+                      "right": 1212,
+                      "bottom": 1124,
+                      "width": 984,
+                      "height": 56
+                    },
+                    "children": [
+                      {
+                        "id": 1267282558183654492,
+                        "text": "23_IL_TUE_ 1.45 _HA",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 228,
+                          "top": 1068,
+                          "right": 624,
+                          "bottom": 1124,
+                          "width": 396,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 7255548947283167020,
+                        "text": "1\/28\/26",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1103,
+                          "top": 1075,
+                          "right": 1212,
+                          "bottom": 1117,
+                          "width": 109,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 830757605500348288,
+                    "text": "Amol Sir INNOVATION VIT, Kanhaiya (VIT), Madhura VIT, Rohit Co, Srishti (Innovation), +91 88287 37887, +91 89282 87275, +91 9082",
+                    "resource_id": "single_msg_tv",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1130,
+                      "right": 1061,
+                      "bottom": 1188,
+                      "width": 833,
+                      "height": 58
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 8112699440520561293,
+                    "text": "Archived",
+                    "resource_id": "archived_indicator",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1073,
+                      "top": 1132,
+                      "right": 1212,
+                      "bottom": 1186,
+                      "width": 139,
+                      "height": 54
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -6346793608740194667,
+                "text": "",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1254,
+                  "right": 1260,
+                  "bottom": 1422,
+                  "width": 1260,
+                  "height": 168
+                },
+                "children": [
+                  {
+                    "id": 3925271108032353180,
+                    "text": "View all",
+                    "resource_id": "view_more",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1254,
+                      "right": 1260,
+                      "bottom": 1422,
+                      "width": 1032,
+                      "height": 168
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -3483357075465920412,
+                "text": "",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1446,
+                  "right": 1260,
+                  "bottom": 1674,
+                  "width": 1260,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": -1068655884570852150,
+                    "text": "ITSA 24-25",
+                    "resource_id": "community_subject",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1530,
+                      "right": 1260,
+                      "bottom": 1589,
+                      "width": 1032,
+                      "height": 59
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 747833709239084751,
+                "text": "",
+                "resource_id": "contact_row_container",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1677,
+                  "right": 1260,
+                  "bottom": 1905,
+                  "width": 1260,
+                  "height": 228
+                },
+                "children": [
+                  {
+                    "id": 8139534318806989185,
+                    "text": "Announcements",
+                    "resource_id": "conversations_row_header",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1731,
+                      "right": 1212,
+                      "bottom": 1787,
+                      "width": 984,
+                      "height": 56
+                    },
+                    "children": [
+                      {
+                        "id": -5526442550542585137,
+                        "text": "Announcements",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 228,
+                          "top": 1731,
+                          "right": 504,
+                          "bottom": 1787,
+                          "width": 276,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 7962083139898784580,
+                        "text": "10\/5\/25",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1104,
+                          "top": 1738,
+                          "right": 1212,
+                          "bottom": 1780,
+                          "width": 108,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 7564724750326261413,
+                    "text": "Aman VIT left",
+                    "resource_id": "single_msg_tv",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1793,
+                      "right": 476,
+                      "bottom": 1851,
+                      "width": 248,
+                      "height": 58
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -3908148040384958695,
+                "text": "",
+                "resource_id": "contact_row_container",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1905,
+                  "right": 1260,
+                  "bottom": 2157,
+                  "width": 1260,
+                  "height": 252
+                },
+                "children": [
+                  {
+                    "id": 2329732895184818608,
+                    "text": "Unity Game Development Workshop (ITSA)",
+                    "resource_id": "conversations_row_header",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 1971,
+                      "right": 1212,
+                      "bottom": 2027,
+                      "width": 984,
+                      "height": 56
+                    },
+                    "children": [
+                      {
+                        "id": 5358771996505197976,
+                        "text": "Unity Game Development Workshop (ITSA)",
+                        "resource_id": "conversations_row_contact_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 228,
+                          "top": 1971,
+                          "right": 968,
+                          "bottom": 2027,
+                          "width": 740,
+                          "height": 56
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -2590869338753671057,
+                        "text": "4\/12\/25",
+                        "resource_id": "conversations_row_date",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1102,
+                          "top": 1978,
+                          "right": 1212,
+                          "bottom": 2020,
+                          "width": 110,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -1454853604106010306,
+                    "text": "+91 93599 80072 joined from the community",
+                    "resource_id": "single_msg_tv",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 2033,
+                      "right": 988,
+                      "bottom": 2091,
+                      "width": 760,
+                      "height": 58
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -6346793608740194667,
+                "text": "",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2157,
+                  "right": 1260,
+                  "bottom": 2325,
+                  "width": 1260,
+                  "height": 168
+                },
+                "children": [
+                  {
+                    "id": 3925271108032353180,
+                    "text": "View all",
+                    "resource_id": "view_more",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 2157,
+                      "right": 1260,
+                      "bottom": 2325,
+                      "width": 1032,
+                      "height": 168
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -4618262793684088363,
+                "text": "",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2349,
+                  "right": 1260,
+                  "bottom": 2432,
+                  "width": 1260,
+                  "height": 83
+                },
+                "children": [
+                  {
+                    "id": -2203561602789020101,
+                    "text": "VIT- DT 2024",
+                    "resource_id": "community_subject",
+                    "class": "Button",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 228,
+                      "top": 2433,
+                      "right": 1260,
+                      "bottom": 2432,
+                      "width": 1032,
+                      "height": -1
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": -806716957175740154,
+            "text": "",
+            "resource_id": "calls_progress_bar",
+            "class": "ProgressBar",
+            "clickable": false,
+            "bounds": {
+              "left": 1818,
+              "top": 1205,
+              "right": 1260,
+              "bottom": 1349,
+              "width": -558,
+              "height": 144
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7249310231721709774,
+        "text": "Communities",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": false,
+        "bounds": {
+          "left": 48,
+          "top": 169,
+          "right": 327,
+          "bottom": 245,
+          "width": 279,
+          "height": 76
+        },
+        "children": []
+      },
+      {
+        "id": 7836923426193934203,
+        "text": "More options",
+        "resource_id": "menuitem_overflow",
+        "class": "ImageView",
+        "clickable": true,
+        "bounds": {
+          "left": 1140,
+          "top": 135,
+          "right": 1260,
+          "bottom": 279,
+          "width": 120,
+          "height": 144
+        },
+        "children": []
+      },
+      {
+        "id": -6506090318802454917,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 2434,
+          "right": 1260,
+          "bottom": 2674,
+          "width": 1260,
+          "height": 240
+        },
+        "children": [
+          {
+            "id": -8427008166556140416,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 2434,
+              "right": 315,
+              "bottom": 2674,
+              "width": 315,
+              "height": 240
+            },
+            "children": []
+          },
+          {
+            "id": -8427008166556140416,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 315,
+              "top": 2434,
+              "right": 630,
+              "bottom": 2674,
+              "width": 315,
+              "height": 240
+            },
+            "children": []
+          },
+          {
+            "id": -8427008166556140416,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 630,
+              "top": 2434,
+              "right": 945,
+              "bottom": 2674,
+              "width": 315,
+              "height": 240
+            },
+            "children": []
+          },
+          {
+            "id": -8427008166556140416,
+            "text": "",
+            "resource_id": "",
+            "class": "FrameLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 945,
+              "top": 2434,
+              "right": 1260,
+              "bottom": 2674,
+              "width": 315,
+              "height": 240
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

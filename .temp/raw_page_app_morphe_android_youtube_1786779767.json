@@ -1,0 +1,357 @@
+{
+  "meta": {
+    "package": "app.morphe.android.youtube",
+    "root_name": "ViewGroup",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779767468,
+    "total_nodes": 21
+  },
+  "tree": {
+    "id": -2430922984871531761,
+    "text": "",
+    "resource_id": "results",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 711,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2089
+    },
+    "children": [
+      {
+        "id": 8243413231123385339,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 711,
+          "right": 1260,
+          "bottom": 711,
+          "width": 1260,
+          "height": 0
+        },
+        "children": []
+      },
+      {
+        "id": 2119217502425463704,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 711,
+          "right": 1260,
+          "bottom": 1708,
+          "width": 1260,
+          "height": 997
+        },
+        "children": [
+          {
+            "id": 4827824369534240819,
+            "text": "Big Mistakes Were Made Today | Shift At Midnight - Part 3 - 51 minutes, 38 seconds - Go to channel BeastBoyShub - BeastBoyShub - 28 thousand views - 55 minutes ago - play video",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 711,
+              "right": 1260,
+              "bottom": 1636,
+              "width": 1260,
+              "height": 925
+            },
+            "children": [
+              {
+                "id": -4900192271926895972,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 711,
+                  "right": 1260,
+                  "bottom": 1420,
+                  "width": 1260,
+                  "height": 709
+                },
+                "children": [
+                  {
+                    "id": -2191585404818118857,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 711,
+                      "right": 1260,
+                      "bottom": 1420,
+                      "width": 1260,
+                      "height": 709
+                    },
+                    "children": [
+                      {
+                        "id": 517021462290658258,
+                        "text": "51 minutes, 38 seconds",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1160,
+                          "top": 1348,
+                          "right": 1224,
+                          "bottom": 1384,
+                          "width": 64,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": 3822186234405505012,
+                "text": "Go to channel BeastBoyShub",
+                "resource_id": "",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 36,
+                  "top": 1456,
+                  "right": 144,
+                  "bottom": 1564,
+                  "width": 108,
+                  "height": 108
+                },
+                "children": []
+              },
+              {
+                "id": 5770888338524401892,
+                "text": "Action menu",
+                "resource_id": "",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1140,
+                  "top": 1456,
+                  "right": 1212,
+                  "bottom": 1528,
+                  "width": 72,
+                  "height": 72
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 8243413231123385339,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 1708,
+          "right": 1260,
+          "bottom": 1708,
+          "width": 1260,
+          "height": 0
+        },
+        "children": []
+      },
+      {
+        "id": 2863081113351605400,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 1708,
+          "right": 1260,
+          "bottom": 2645,
+          "width": 1260,
+          "height": 937
+        },
+        "children": [
+          {
+            "id": 5571687980460382515,
+            "text": "School Function 15 August - 15 minutes, 10 seconds - Go to channel Make Joke Of - Make Joke Of - 190 thousand views - 1 hour ago - play video",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 1708,
+              "right": 1260,
+              "bottom": 2573,
+              "width": 1260,
+              "height": 865
+            },
+            "children": [
+              {
+                "id": -6979975434405616614,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 1708,
+                  "right": 1260,
+                  "bottom": 2417,
+                  "width": 1260,
+                  "height": 709
+                },
+                "children": [
+                  {
+                    "id": -4271368567296839499,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1708,
+                      "right": 1260,
+                      "bottom": 2417,
+                      "width": 1260,
+                      "height": 709
+                    },
+                    "children": [
+                      {
+                        "id": -1562761700188062384,
+                        "text": "15 minutes, 10 seconds",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1165,
+                          "top": 2345,
+                          "right": 1224,
+                          "bottom": 2381,
+                          "width": 59,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": 7398666642752710531,
+                "text": "Go to channel Make Joke Of",
+                "resource_id": "",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 36,
+                  "top": 2453,
+                  "right": 144,
+                  "bottom": 2561,
+                  "width": 108,
+                  "height": 108
+                },
+                "children": []
+              },
+              {
+                "id": 5770888338524401892,
+                "text": "Action menu",
+                "resource_id": "",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1140,
+                  "top": 2453,
+                  "right": 1212,
+                  "bottom": 2525,
+                  "width": 72,
+                  "height": 72
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2328526983069828518,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 2645,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 155
+        },
+        "children": [
+          {
+            "id": 5037133850178605633,
+            "text": "100% GTA Online - Kortz Center Speedruns [Part 20] - 3 hours, 36 minutes, 25 seconds - Go to channel DarkViperAU - DarkViperAU - 21 thousand views - Streamed 6 hours ago - play video",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 2645,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 155
+            },
+            "children": [
+              {
+                "id": 5534806364014608224,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 2645,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 155
+                },
+                "children": [
+                  {
+                    "id": 8243413231123385339,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2645,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 155
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

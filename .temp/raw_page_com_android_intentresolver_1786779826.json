@@ -1,0 +1,622 @@
+{
+  "meta": {
+    "package": "com.android.intentresolver",
+    "root_name": "Chooser",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779826522,
+    "total_nodes": 37
+  },
+  "tree": {
+    "id": -122832816867762032,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 2860003314438868240,
+        "text": "",
+        "resource_id": "coordinator",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 633,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2167
+        },
+        "children": [
+          {
+            "id": -2153569174395156625,
+            "text": "",
+            "resource_id": "design_bottom_sheet",
+            "class": "LinearLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 1389,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 1411
+            },
+            "children": [
+              {
+                "id": -6669803180646539221,
+                "text": "1 selected",
+                "resource_id": "headline",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 90,
+                  "top": 1445,
+                  "right": 311,
+                  "bottom": 1514,
+                  "width": 221,
+                  "height": 69
+                },
+                "children": []
+              },
+              {
+                "id": -2332195921441395381,
+                "text": "Privacy and format",
+                "resource_id": "vivo_secure_protect_text",
+                "class": "TextView",
+                "clickable": true,
+                "bounds": {
+                  "left": 90,
+                  "top": 1512,
+                  "right": 337,
+                  "bottom": 1554,
+                  "width": 247,
+                  "height": 42
+                },
+                "children": []
+              },
+              {
+                "id": 4340928604437331710,
+                "text": "Close",
+                "resource_id": "v_share_sheet_dialog_close_button",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1092,
+                  "top": 1460,
+                  "right": 1170,
+                  "bottom": 1538,
+                  "width": 78,
+                  "height": 78
+                },
+                "children": []
+              },
+              {
+                "id": 3755941976294245993,
+                "text": "",
+                "resource_id": "chooser_scrollable_container",
+                "class": "ScrollView",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 1572,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 1228
+                },
+                "children": [
+                  {
+                    "id": 7643202183132107466,
+                    "text": "",
+                    "resource_id": "preview_gallery_recyclerview",
+                    "class": "RecyclerView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1620,
+                      "right": 1260,
+                      "bottom": 2418,
+                      "width": 1260,
+                      "height": 798
+                    },
+                    "children": [
+                      {
+                        "id": -4716079249217543866,
+                        "text": "",
+                        "resource_id": "select_item",
+                        "class": "RelativeLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 0,
+                          "top": 1620,
+                          "right": 144,
+                          "bottom": 2418,
+                          "width": 144,
+                          "height": 798
+                        },
+                        "children": [
+                          {
+                            "id": 2095069974895153629,
+                            "text": "Image. Not selected",
+                            "resource_id": "select_picture",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 1620,
+                              "right": 144,
+                              "bottom": 2418,
+                              "width": 144,
+                              "height": 798
+                            },
+                            "children": []
+                          }
+                        ]
+                      },
+                      {
+                        "id": 3945679331995295607,
+                        "text": "",
+                        "resource_id": "select_item",
+                        "class": "RelativeLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 331,
+                          "top": 1620,
+                          "right": 929,
+                          "bottom": 2418,
+                          "width": 598,
+                          "height": 798
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -4716079249217543866,
+                        "text": "",
+                        "resource_id": "select_item",
+                        "class": "RelativeLayout",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 1187,
+                          "top": 1620,
+                          "right": 1260,
+                          "bottom": 2418,
+                          "width": 73,
+                          "height": 798
+                        },
+                        "children": [
+                          {
+                            "id": 2095069974895153629,
+                            "text": "Image. Not selected",
+                            "resource_id": "select_picture",
+                            "class": "TextView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 1187,
+                              "top": 1620,
+                              "right": 1260,
+                              "bottom": 2418,
+                              "width": 73,
+                              "height": 798
+                            },
+                            "children": []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": 6126901525517650209,
+                    "text": "",
+                    "resource_id": "profile_tabhost",
+                    "class": "TabHost",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2468,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 332
+                    },
+                    "children": [
+                      {
+                        "id": -2339710740945592410,
+                        "text": "",
+                        "resource_id": "profile_pager",
+                        "class": "h",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2468,
+                          "right": 1260,
+                          "bottom": 2800,
+                          "width": 1260,
+                          "height": 332
+                        },
+                        "children": [
+                          {
+                            "id": -6541417289999100067,
+                            "text": "",
+                            "resource_id": "v_chooser_recyclerview_direct_share",
+                            "class": "RecyclerView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 2468,
+                              "right": 1260,
+                              "bottom": 2800,
+                              "width": 1260,
+                              "height": 332
+                            },
+                            "children": [
+                              {
+                                "id": -8074663739761229045,
+                                "text": "Rohit Co",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 60,
+                                  "top": 2534,
+                                  "right": 276,
+                                  "bottom": 2786,
+                                  "width": 216,
+                                  "height": 252
+                                },
+                                "children": [
+                                  {
+                                    "id": 4695758636906580759,
+                                    "text": "Rohit Co",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 60,
+                                      "top": 2708,
+                                      "right": 276,
+                                      "bottom": 2786,
+                                      "width": 216,
+                                      "height": 78
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -3539379057804788663,
+                                "text": "Sunil VIT",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 309,
+                                  "top": 2534,
+                                  "right": 525,
+                                  "bottom": 2786,
+                                  "width": 216,
+                                  "height": 252
+                                },
+                                "children": [
+                                  {
+                                    "id": -4167707109240683253,
+                                    "text": "Sunil VIT",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 309,
+                                      "top": 2708,
+                                      "right": 525,
+                                      "bottom": 2786,
+                                      "width": 216,
+                                      "height": 78
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": 7876188587886485655,
+                                "text": "Domino’s Pizza India",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 558,
+                                  "top": 2534,
+                                  "right": 774,
+                                  "bottom": 2786,
+                                  "width": 216,
+                                  "height": 252
+                                },
+                                "children": [
+                                  {
+                                    "id": 6278332198697747928,
+                                    "text": "Domino’s Pizza India",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 558,
+                                      "top": 2708,
+                                      "right": 774,
+                                      "bottom": 2786,
+                                      "width": 216,
+                                      "height": 78
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -3592278626836504865,
+                                "text": "Baba",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 807,
+                                  "top": 2534,
+                                  "right": 1023,
+                                  "bottom": 2786,
+                                  "width": 216,
+                                  "height": 252
+                                },
+                                "children": [
+                                  {
+                                    "id": 7297520679187808189,
+                                    "text": "Baba",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 807,
+                                      "top": 2708,
+                                      "right": 1023,
+                                      "bottom": 2786,
+                                      "width": 216,
+                                      "height": 78
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -4837923566635803733,
+                                "text": "Windows PC",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1056,
+                                  "top": 2534,
+                                  "right": 1260,
+                                  "bottom": 2786,
+                                  "width": 204,
+                                  "height": 252
+                                },
+                                "children": [
+                                  {
+                                    "id": -5297703777175265341,
+                                    "text": "Windows PC",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1056,
+                                      "top": 2708,
+                                      "right": 1260,
+                                      "bottom": 2786,
+                                      "width": 204,
+                                      "height": 78
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "id": 4174847703291396945,
+                            "text": "",
+                            "resource_id": "v_chooser_recyclerview_target_app",
+                            "class": "RecyclerView",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 2890,
+                              "right": 1260,
+                              "bottom": 2800,
+                              "width": 1260,
+                              "height": -90
+                            },
+                            "children": [
+                              {
+                                "id": -594379273893389383,
+                                "text": "Quick Share",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 60,
+                                  "top": 2956,
+                                  "right": 276,
+                                  "bottom": 2800,
+                                  "width": 216,
+                                  "height": -156
+                                },
+                                "children": [
+                                  {
+                                    "id": 609547778070793095,
+                                    "text": "Quick Share",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 60,
+                                      "top": 3043,
+                                      "right": 276,
+                                      "bottom": 2800,
+                                      "width": 216,
+                                      "height": -243
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -5555039918320772021,
+                                "text": "",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 309,
+                                  "top": 2956,
+                                  "right": 525,
+                                  "bottom": 2800,
+                                  "width": 216,
+                                  "height": -156
+                                },
+                                "children": [
+                                  {
+                                    "id": 7991371762887140829,
+                                    "text": "No pinned services. Tap Edit to add",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 309,
+                                      "top": 3043,
+                                      "right": 525,
+                                      "bottom": 2800,
+                                      "width": 216,
+                                      "height": -243
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -5555039918320772021,
+                                "text": "",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 558,
+                                  "top": 2956,
+                                  "right": 774,
+                                  "bottom": 2800,
+                                  "width": 216,
+                                  "height": -156
+                                },
+                                "children": [
+                                  {
+                                    "id": 7991371762887140829,
+                                    "text": "No pinned services. Tap Edit to add",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 558,
+                                      "top": 3043,
+                                      "right": 774,
+                                      "bottom": 2800,
+                                      "width": 216,
+                                      "height": -243
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -5555039918320772021,
+                                "text": "",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 807,
+                                  "top": 2956,
+                                  "right": 1023,
+                                  "bottom": 2800,
+                                  "width": 216,
+                                  "height": -156
+                                },
+                                "children": [
+                                  {
+                                    "id": 7991371762887140829,
+                                    "text": "No pinned services. Tap Edit to add",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 807,
+                                      "top": 3043,
+                                      "right": 1023,
+                                      "bottom": 2800,
+                                      "width": 216,
+                                      "height": -243
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              },
+                              {
+                                "id": -5555039918320772021,
+                                "text": "",
+                                "resource_id": "content",
+                                "class": "ViewGroup",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1056,
+                                  "top": 2869,
+                                  "right": 1260,
+                                  "bottom": 2800,
+                                  "width": 204,
+                                  "height": -69
+                                },
+                                "children": [
+                                  {
+                                    "id": 7991371762887140829,
+                                    "text": "No pinned services. Tap Edit to add",
+                                    "resource_id": "appInfoText",
+                                    "class": "TextView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 1056,
+                                      "top": 3043,
+                                      "right": 1260,
+                                      "bottom": 2800,
+                                      "width": 204,
+                                      "height": -243
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

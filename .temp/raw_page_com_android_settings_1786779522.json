@@ -1,0 +1,712 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "FrameLayout",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779522975,
+    "total_nodes": 43
+  },
+  "tree": {
+    "id": -3259911339432415116,
+    "text": "",
+    "resource_id": "apps_list",
+    "class": "ListView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 452,
+      "right": 1260,
+      "bottom": 2674,
+      "width": 1260,
+      "height": 2222
+    },
+    "children": [
+      {
+        "id": 312434990326146691,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 452,
+          "right": 1167,
+          "bottom": 491,
+          "width": 1101,
+          "height": 39
+        },
+        "children": [
+          {
+            "id": 3528209223632874714,
+            "text": "Notes",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 452,
+              "right": 342,
+              "bottom": 434,
+              "width": 105,
+              "height": -18
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 452,
+              "right": 1051,
+              "bottom": 429,
+              "width": 74,
+              "height": -23
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 2294020801547662286,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 491,
+          "right": 1167,
+          "bottom": 664,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -7189980613935402731,
+            "text": "Origin Health",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 548,
+              "right": 487,
+              "bottom": 607,
+              "width": 250,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 553,
+              "right": 1051,
+              "bottom": 602,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 8246550242969383728,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 664,
+          "right": 1167,
+          "bottom": 837,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -2761470439533635955,
+            "text": "Phone and Contacts",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 721,
+              "right": 619,
+              "bottom": 780,
+              "width": 382,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 726,
+              "right": 1051,
+              "bottom": 775,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -1284505902666485477,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 837,
+          "right": 1167,
+          "bottom": 1010,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -7305416959232633304,
+            "text": "Photos",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 894,
+              "right": 360,
+              "bottom": 953,
+              "width": 123,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 899,
+              "right": 1051,
+              "bottom": 948,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -865319802873609693,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1010,
+          "right": 1167,
+          "bottom": 1183,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -151219701674327008,
+            "text": "PowerPoint",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1067,
+              "right": 435,
+              "bottom": 1126,
+              "width": 198,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1072,
+              "right": 1051,
+              "bottom": 1121,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6069295139403518641,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1183,
+          "right": 1167,
+          "bottom": 1356,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 8403265200719571410,
+            "text": "Rapido",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1240,
+              "right": 360,
+              "bottom": 1299,
+              "width": 123,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1245,
+              "right": 1051,
+              "bottom": 1294,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -7391681245132072507,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1356,
+          "right": 1167,
+          "bottom": 1529,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -5717253834114469826,
+            "text": "redBus",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1413,
+              "right": 362,
+              "bottom": 1472,
+              "width": 125,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1418,
+              "right": 1051,
+              "bottom": 1467,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -6828819493064633165,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1529,
+          "right": 1167,
+          "bottom": 1702,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -6818110251736581974,
+            "text": "RustDesk",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1586,
+              "right": 405,
+              "bottom": 1645,
+              "width": 168,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1591,
+              "right": 1051,
+              "bottom": 1640,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 77077201096998685,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1702,
+          "right": 1167,
+          "bottom": 1875,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 4710729557768034560,
+            "text": "Scan",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1759,
+              "right": 326,
+              "bottom": 1818,
+              "width": 89,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1764,
+              "right": 1051,
+              "bottom": 1813,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4473334967102140374,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1875,
+          "right": 1167,
+          "bottom": 2048,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -3242888589828400839,
+            "text": "soundcore",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1932,
+              "right": 424,
+              "bottom": 1991,
+              "width": 187,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1937,
+              "right": 1051,
+              "bottom": 1986,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -1059114673429502069,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2048,
+          "right": 1167,
+          "bottom": 2272,
+          "width": 1101,
+          "height": 224
+        },
+        "children": [
+          {
+            "id": -6108033753534049864,
+            "text": "Speech Recognition and Synthesis from Google",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2105,
+              "right": 852,
+              "bottom": 2215,
+              "width": 615,
+              "height": 110
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2135,
+              "right": 1051,
+              "bottom": 2184,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4001082019210660689,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2272,
+          "right": 1167,
+          "bottom": 2445,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 4171154825359580466,
+            "text": "Speedometer",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2329,
+              "right": 474,
+              "bottom": 2388,
+              "width": 237,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2334,
+              "right": 1051,
+              "bottom": 2383,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6803831689215269613,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2445,
+          "right": 1167,
+          "bottom": 2618,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -8163516091699444944,
+            "text": "Super Battery Saver",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2502,
+              "right": 627,
+              "bottom": 2561,
+              "width": 390,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 2507,
+              "right": 1051,
+              "bottom": 2556,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -8539871088137846451,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2618,
+          "right": 1167,
+          "bottom": 2674,
+          "width": 1101,
+          "height": 56
+        },
+        "children": [
+          {
+            "id": 4361664211371227062,
+            "text": "super.money",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2675,
+              "right": 454,
+              "bottom": 2674,
+              "width": 217,
+              "height": -1
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2680,
+              "right": 1051,
+              "bottom": 2674,
+              "width": 163,
+              "height": -6
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

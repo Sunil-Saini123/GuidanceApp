@@ -1,0 +1,980 @@
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "SettingsTab",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779736668,
+    "total_nodes": 59
+  },
+  "tree": {
+    "id": -8282686145907512034,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 1157,
+      "top": 0,
+      "right": 2417,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": -5299850014600881762,
+        "text": "",
+        "resource_id": "me_tab_root_layout",
+        "class": "ScrollView",
+        "clickable": false,
+        "bounds": {
+          "left": 1157,
+          "top": 0,
+          "right": 2417,
+          "bottom": 2674,
+          "width": 1260,
+          "height": 2674
+        },
+        "children": [
+          {
+            "id": -7498406683761055781,
+            "text": "Edit profile",
+            "resource_id": "me_tab_cover_photo",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 1157,
+              "top": 0,
+              "right": 2417,
+              "bottom": 720,
+              "width": 1260,
+              "height": 720
+            },
+            "children": []
+          },
+          {
+            "id": -4380157696415107247,
+            "text": "Back",
+            "resource_id": "",
+            "class": "ImageButton",
+            "clickable": true,
+            "bounds": {
+              "left": 1157,
+              "top": 123,
+              "right": 1301,
+              "bottom": 291,
+              "width": 144,
+              "height": 168
+            },
+            "children": []
+          },
+          {
+            "id": 3200982238693384594,
+            "text": "Search",
+            "resource_id": "menuitem_search",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 1986,
+              "top": 135,
+              "right": 2130,
+              "bottom": 279,
+              "width": 144,
+              "height": 144
+            },
+            "children": []
+          },
+          {
+            "id": 1428503029424327541,
+            "text": "QR code",
+            "resource_id": "menuitem_qr_code",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 2130,
+              "top": 135,
+              "right": 2274,
+              "bottom": 279,
+              "width": 144,
+              "height": 144
+            },
+            "children": []
+          },
+          {
+            "id": 3026535423538416727,
+            "text": "Edit profile",
+            "resource_id": "menuitem_edit_profile",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 2274,
+              "top": 135,
+              "right": 2417,
+              "bottom": 279,
+              "width": 143,
+              "height": 144
+            },
+            "children": []
+          },
+          {
+            "id": 5517153365229570624,
+            "text": ".",
+            "resource_id": "toolbar_profile_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1325,
+              "top": 123,
+              "right": 1985,
+              "bottom": 291,
+              "width": 660,
+              "height": 168
+            },
+            "children": []
+          },
+          {
+            "id": -6562146372088547609,
+            "text": "",
+            "resource_id": "me_tab_profile_picture_container",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 1157,
+              "top": 291,
+              "right": 2417,
+              "bottom": 786,
+              "width": 1260,
+              "height": 495
+            },
+            "children": [
+              {
+                "id": 5637856806568576574,
+                "text": "Profile picture",
+                "resource_id": "me_tab_profile_info_photo",
+                "class": "ImageView",
+                "clickable": true,
+                "bounds": {
+                  "left": 1595,
+                  "top": 402,
+                  "right": 1979,
+                  "bottom": 786,
+                  "width": 384,
+                  "height": 384
+                },
+                "children": []
+              },
+              {
+                "id": -4067756480536974026,
+                "text": ".",
+                "resource_id": "me_tab_about_bubble",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1565,
+                  "top": 291,
+                  "right": 2009,
+                  "bottom": 498,
+                  "width": 444,
+                  "height": 207
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 6348593202477018228,
+            "text": "Add WhatsApp account",
+            "resource_id": "me_tab_profile_info_name_area",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1157,
+              "top": 786,
+              "right": 2417,
+              "bottom": 918,
+              "width": 1260,
+              "height": 132
+            },
+            "children": [
+              {
+                "id": 214501721222701640,
+                "text": ".",
+                "resource_id": "me_tab_profile_info_name",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 1781,
+                  "top": 798,
+                  "right": 1795,
+                  "bottom": 882,
+                  "width": 14,
+                  "height": 84
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": 6128715644685748820,
+            "text": "",
+            "resource_id": "settings_nested_scroll_view",
+            "class": "ScrollView",
+            "clickable": false,
+            "bounds": {
+              "left": 1157,
+              "top": 918,
+              "right": 2417,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 1756
+            },
+            "children": [
+              {
+                "id": -2762777071354061147,
+                "text": "Payments",
+                "resource_id": "setting_payments",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 918,
+                  "right": 2417,
+                  "bottom": 1134,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 966,
+                      "right": 1325,
+                      "bottom": 1086,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -5575180402631529233,
+                "text": "Subscriptions,Explore premium benefits",
+                "resource_id": "subscriptions_row_item",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 1134,
+                  "right": 2417,
+                  "bottom": 1350,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 1182,
+                      "right": 1325,
+                      "bottom": 1302,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -162202538756899256,
+                "text": "Account,Security notifications, change number",
+                "resource_id": "settings_account_info",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 1350,
+                  "right": 2417,
+                  "bottom": 1566,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 1398,
+                      "right": 1325,
+                      "bottom": 1518,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 8090039479718840167,
+                "text": "Privacy,Blocked accounts, disappearing messages",
+                "resource_id": "privacy_preference",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 1566,
+                  "right": 2417,
+                  "bottom": 1782,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 1614,
+                      "right": 1325,
+                      "bottom": 1734,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 7159659812260542095,
+                "text": "Lists,Manage people and groups",
+                "resource_id": "settings_lists_inflated",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 1782,
+                  "right": 2417,
+                  "bottom": 1998,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 1830,
+                      "right": 1325,
+                      "bottom": 1950,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -8663635469337738425,
+                "text": "Chats,Chat history, backup",
+                "resource_id": "settings_chat",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 1998,
+                  "right": 2417,
+                  "bottom": 2214,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2046,
+                      "right": 1325,
+                      "bottom": 2166,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 9110844569592583619,
+                "text": "Appearance,Chat theme, app icon, app theme",
+                "resource_id": "settings_appearance",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2214,
+                  "right": 2417,
+                  "bottom": 2430,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2262,
+                      "right": 1325,
+                      "bottom": 2382,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 4853566775526270915,
+                "text": "Broadcasts,Manage lists and send broadcasts",
+                "resource_id": "settings_broadcasts",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2430,
+                  "right": 2417,
+                  "bottom": 2646,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2478,
+                      "right": 1325,
+                      "bottom": 2598,
+                      "width": 120,
+                      "height": 120
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -6198577463276066259,
+                "text": "Notifications,Message, group & call tones",
+                "resource_id": "settings_notifications",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2646,
+                  "right": 2417,
+                  "bottom": 2674,
+                  "width": 1260,
+                  "height": 28
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 2694,
+                      "width": 120,
+                      "height": 20
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -2454413147413227809,
+                "text": "Storage and data,Network usage, auto-download",
+                "resource_id": "settings_data_usage",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 2862,
+                  "width": 1260,
+                  "height": 188
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 2910,
+                      "width": 120,
+                      "height": 236
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 419428369790451271,
+                "text": "Parental controls,Settings for your family",
+                "resource_id": "settings_sponsor_controls",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 3078,
+                  "width": 1260,
+                  "height": 404
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 3126,
+                      "width": 120,
+                      "height": 452
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 3762432256221683832,
+                "text": "Accessibility,Increase contrast, animation",
+                "resource_id": "settings_accessibility",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 3294,
+                  "width": 1260,
+                  "height": 620
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 3342,
+                      "width": 120,
+                      "height": 668
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -1291369917789670466,
+                "text": "App language,English (device's language)",
+                "resource_id": "settings_language",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 3510,
+                  "width": 1260,
+                  "height": 836
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 3558,
+                      "width": 120,
+                      "height": 884
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 1747197700935470980,
+                "text": "Help and feedback,Help center, contact us, privacy policy",
+                "resource_id": "settings_help",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 3726,
+                  "width": 1260,
+                  "height": 1052
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 3774,
+                      "width": 120,
+                      "height": 1100
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -7245988432231425915,
+                "text": "Invite a friend",
+                "resource_id": "setting_tell_a_friend",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 3942,
+                  "width": 1260,
+                  "height": 1268
+                },
+                "children": [
+                  {
+                    "id": 1663565437688720459,
+                    "text": "",
+                    "resource_id": "row_addon_start",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1325,
+                      "bottom": 3990,
+                      "width": 120,
+                      "height": 1316
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -3886965438665855418,
+                "text": "",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 4158,
+                  "width": 1260,
+                  "height": 1484
+                },
+                "children": [
+                  {
+                    "id": -1472264247770787156,
+                    "text": "App updates",
+                    "resource_id": "settings_row_text",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1373,
+                      "top": 2674,
+                      "right": 1595,
+                      "bottom": 4206,
+                      "width": 222,
+                      "height": 1532
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -8133654871688037995,
+                "text": "Meta Accounts CenterControl your experience across WhatsApp, Facebook, Instagram and more.",
+                "resource_id": "wfal_settings_row",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 4376,
+                  "width": 1260,
+                  "height": 1702
+                },
+                "children": [
+                  {
+                    "id": 7682920384185944595,
+                    "text": "Accounts Center",
+                    "resource_id": "wfal_title_text_view",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1373,
+                      "top": 2674,
+                      "right": 1675,
+                      "bottom": 4424,
+                      "width": 302,
+                      "height": 1750
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -2084916526505559625,
+                    "text": "Control your experience across WhatsApp, Facebook, Instagram and more.",
+                    "resource_id": "wfal_subtitle_text_view",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1373,
+                      "top": 2674,
+                      "right": 2345,
+                      "bottom": 4486,
+                      "width": 972,
+                      "height": 1812
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -6751741550608280435,
+                "text": "Also from Meta",
+                "resource_id": "display_afm_title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 1486,
+                  "bottom": 4675,
+                  "width": 329,
+                  "height": 2001
+                },
+                "children": []
+              },
+              {
+                "id": -2122579262950370199,
+                "text": "",
+                "resource_id": "",
+                "class": "HorizontalScrollView",
+                "clickable": false,
+                "bounds": {
+                  "left": 1157,
+                  "top": 2674,
+                  "right": 2417,
+                  "bottom": 4772,
+                  "width": 1260,
+                  "height": 2098
+                },
+                "children": [
+                  {
+                    "id": 84812727466917557,
+                    "text": "",
+                    "resource_id": "bookmark_ig_item",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1205,
+                      "top": 2674,
+                      "right": 1466,
+                      "bottom": 4844,
+                      "width": 261,
+                      "height": 2170
+                    },
+                    "children": [
+                      {
+                        "id": 1890388110654518448,
+                        "text": "Instagram",
+                        "resource_id": "text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1205,
+                          "top": 2674,
+                          "right": 1466,
+                          "bottom": 5036,
+                          "width": 261,
+                          "height": 2362
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 1813552924311352273,
+                    "text": "",
+                    "resource_id": "bookmark_fb_item",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1514,
+                      "top": 2674,
+                      "right": 1775,
+                      "bottom": 4844,
+                      "width": 261,
+                      "height": 2170
+                    },
+                    "children": [
+                      {
+                        "id": -3495584525329895308,
+                        "text": "Facebook",
+                        "resource_id": "text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1514,
+                          "top": 2674,
+                          "right": 1775,
+                          "bottom": 5036,
+                          "width": 261,
+                          "height": 2362
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 7189797229404066875,
+                    "text": "",
+                    "resource_id": "bookmark_threads_item",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1823,
+                      "top": 2674,
+                      "right": 2084,
+                      "bottom": 4844,
+                      "width": 261,
+                      "height": 2170
+                    },
+                    "children": [
+                      {
+                        "id": -547358730621512313,
+                        "text": "Threads",
+                        "resource_id": "text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1823,
+                          "top": 2674,
+                          "right": 2084,
+                          "bottom": 5036,
+                          "width": 261,
+                          "height": 2362
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 1139268561255124063,
+                    "text": "",
+                    "resource_id": "bookmark_meta_ai_item",
+                    "class": "LinearLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 2132,
+                      "top": 2674,
+                      "right": 2393,
+                      "bottom": 4844,
+                      "width": 261,
+                      "height": 2170
+                    },
+                    "children": [
+                      {
+                        "id": -6110701483501767434,
+                        "text": "Meta AI App",
+                        "resource_id": "text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 2132,
+                          "top": 2674,
+                          "right": 2393,
+                          "bottom": 5036,
+                          "width": 261,
+                          "height": 2362
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
