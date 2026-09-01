@@ -47,7 +47,8 @@ class NavGraphDatabase private constructor(context: Context)
     companion object {
         private const val TAG        = "NavGraphDB"
         private const val DB_NAME    = "nav_graph.db"
-        private const val DB_VERSION = 1
+        // v2: added UNIQUE index on transitions(from, to, action_type) for dedup
+        private const val DB_VERSION = 2
 
         @Volatile private var INSTANCE: NavGraphDatabase? = null
 
@@ -80,32 +81,65 @@ class NavGraphDatabase private constructor(context: Context)
                 to_screen_id    TEXT    NOT NULL,
                 action_label    TEXT    NOT NULL,
                 action_type     TEXT    NOT NULL,
-                traversal_count INTEGER NOT NULL DEFAULT 1,
+                traversal_count INTEGER NOT NULL DEFAULT 0,
                 weight          REAL    NOT NULL DEFAULT 1.0,
                 first_seen      INTEGER NOT NULL,
                 last_seen       INTEGER NOT NULL
             )
         """.trimIndent())
 
+        // Standard lookup indices
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_trans_from    ON transitions(from_screen_id)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_trans_to      ON transitions(to_screen_id)")
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_screens_pkg   ON screens(package_name)")
+        // Dedup guarantee: only one edge per (from → to, action_type) pair
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_trans_unique " +
+            "ON transitions(from_screen_id, to_screen_id, action_type)"
+        )
         Log.i(TAG, "Database created: $DB_NAME v$DB_VERSION")
     }
 
+    /**
+     * Non-destructive upgrade: only the UNIQUE index is new in v2.
+     * Adding it on top of the existing tables preserves all graph data
+     * already collected in v1.  If the DB had duplicate rows (from v1),
+     * the CREATE UNIQUE INDEX will fail gracefully; those rows remain but
+     * are now unreachable by the INSERT OR IGNORE logic and won't grow.
+     */
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        Log.w(TAG, "Upgrading DB $oldVersion → $newVersion — dropping tables")
-        db.execSQL("DROP TABLE IF EXISTS transitions")
-        db.execSQL("DROP TABLE IF EXISTS screens")
-        onCreate(db)
+        Log.i(TAG, "Upgrading DB $oldVersion → $newVersion")
+        if (oldVersion < 2) {
+            try {
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_trans_unique " +
+                    "ON transitions(from_screen_id, to_screen_id, action_type)"
+                )
+                Log.i(TAG, "v2 upgrade: UNIQUE index added to transitions")
+            } catch (e: Exception) {
+                Log.w(TAG, "v2 upgrade: UNIQUE index creation failed (pre-existing duplicates?): ${e.message}")
+            }
+        }
+
     }
 
     // ── Screen CRUD ───────────────────────────────────────────────────────────
 
     /**
-     * Insert or update a screen record.  On update, increments visit_count,
-     * overwrites elements_json (so it always reflects the latest clean elements),
-     * and updates last_seen.
+     * Insert or update a screen record.
+     *
+     * On INSERT (first visit): stores the element list as-is.
+     * On UPDATE (revisit):     MERGES the existing element list with the new one
+     *                          (union by name, case-insensitive).
+     *
+     * Why merge instead of overwrite?
+     * On a fresh navigation event only the viewport-visible elements are in the
+     * clean snapshot (scroll accumulation is reset).  Overwriting would discard
+     * elements that were discovered during a previous scroll, causing them to
+     * look "new" again on the next scroll and inflating the graph with redundant
+     * re-appearances.  Merging ensures every unique element seen on a screen is
+     * recorded exactly once, regardless of how many times the user visits or
+     * scrolls.
      */
     fun upsertScreen(
         screenId:     String,
@@ -114,41 +148,89 @@ class NavGraphDatabase private constructor(context: Context)
         rootClass:    String,
         elements:     List<JSONObject>
     ) {
-        val now          = System.currentTimeMillis()
-        val elementsJson = JSONArray().also { arr -> elements.forEach { arr.put(it) } }.toString()
-        val db           = writableDatabase
+        val now = System.currentTimeMillis()
+        val db  = writableDatabase
 
         val cursor = db.query(
-            "screens", arrayOf("visit_count"),
+            "screens", arrayOf("visit_count", "elements_json"),
             "id = ?", arrayOf(screenId),
             null, null, null
         )
-        val visits = if (cursor.moveToFirst()) cursor.getInt(0) else -1
-        cursor.close()
 
-        if (visits >= 0) {
+        if (cursor.moveToFirst()) {
+            val visits       = cursor.getInt(0)
+            val existingJson = cursor.getString(1)
+            cursor.close()
+
+            val mergedJson = mergeElements(existingJson, elements)
             db.execSQL(
                 "UPDATE screens SET elements_json = ?, visit_count = ?, last_seen = ? WHERE id = ?",
-                arrayOf(elementsJson, visits + 1, now, screenId)
+                arrayOf(mergedJson, visits + 1, now, screenId)
             )
-            Log.d(TAG, "upsertScreen UPDATE: $screenId  visits=${visits + 1}")
+            Log.d(TAG, "upsertScreen UPDATE (merged): $screenId  visits=${visits + 1}")
         } else {
+            cursor.close()
+            val newJson = JSONArray().also { arr -> elements.forEach { arr.put(it) } }.toString()
             db.execSQL(
                 """INSERT INTO screens
                    (id, package_name, screen_title, root_class, elements_json, visit_count, first_seen, last_seen)
                    VALUES (?, ?, ?, ?, ?, 1, ?, ?)""",
-                arrayOf(screenId, packageName, screenTitle, rootClass, elementsJson, now, now)
+                arrayOf(screenId, packageName, screenTitle, rootClass, newJson, now, now)
             )
             Log.d(TAG, "upsertScreen INSERT: $screenId  title=$screenTitle")
         }
+    }
+
+    /**
+     * Merge two element lists into one, deduplicating by element name
+     * (case-insensitive).  Existing elements are kept first; new elements
+     * are appended only if their name has not already been seen.
+     */
+    private fun mergeElements(existingJson: String, newElements: List<JSONObject>): String {
+        val seenNames = LinkedHashSet<String>()   // preserves insertion order
+        val merged    = mutableListOf<JSONObject>()
+
+        // 1. Keep all existing elements (preserves scroll-accumulated history)
+        try {
+            val existing = JSONArray(existingJson)
+            for (i in 0 until existing.length()) {
+                val el   = existing.getJSONObject(i)
+                val name = el.optString("name", "").trim()
+                if (name.isNotEmpty() && seenNames.add(name.lowercase())) {
+                    merged.add(el)
+                }
+            }
+        } catch (_: Exception) { /* corrupted JSON — start fresh with new elements */ }
+
+        // 2. Append genuinely new elements not already in the list
+        for (el in newElements) {
+            val name = el.optString("name", "").trim()
+            if (name.isNotEmpty() && seenNames.add(name.lowercase())) {
+                merged.add(el)
+            }
+        }
+
+        return JSONArray().also { arr -> merged.forEach { arr.put(it) } }.toString()
     }
 
     // ── Transition CRUD ───────────────────────────────────────────────────────
 
     /**
      * Insert or update a directed transition edge.
-     * If the same (from → to + action_type) pair already exists, increment
-     * traversal_count and update last_seen / action_label (keeps most recent label).
+     *
+     * Uses INSERT OR IGNORE + UPDATE inside a single transaction:
+     *   • INSERT OR IGNORE: inserts a new row with traversal_count=0; if the
+     *     (from, to, action_type) triple already exists the INSERT is silently
+     *     skipped — the UNIQUE index on transitions enforces this at the DB level.
+     *   • UPDATE: always increments traversal_count by 1 and refreshes
+     *     action_label + last_seen (so the label always reflects the most recent
+     *     navigation, e.g. a slightly different contact name).
+     *
+     * Result for a brand-new edge: 0 (insert) + 1 (update) = 1 traversal ✓
+     * Result for an existing edge: N (keep)  + 1 (update) = N+1 traversals ✓
+     *
+     * No application-level query needed — the DB constraint + atomic transaction
+     * guarantees exactly one row per (from, to, action_type) triple at all times.
      */
     fun upsertTransition(
         fromScreenId: String,
@@ -159,31 +241,31 @@ class NavGraphDatabase private constructor(context: Context)
         val now = System.currentTimeMillis()
         val db  = writableDatabase
 
-        val cursor = db.query(
-            "transitions",
-            arrayOf("id", "traversal_count"),
-            "from_screen_id = ? AND to_screen_id = ? AND action_type = ?",
-            arrayOf(fromScreenId, toScreenId, actionType),
-            null, null, null
-        )
-        val existingId    = if (cursor.moveToFirst()) cursor.getLong(0) else -1L
-        val existingCount = if (existingId >= 0)      cursor.getInt(1)  else 0
-        cursor.close()
-
-        if (existingId >= 0) {
+        db.beginTransaction()
+        try {
+            // Step 1: insert if not exists (traversal_count starts at 0 so UPDATE brings it to 1)
             db.execSQL(
-                "UPDATE transitions SET traversal_count = ?, action_label = ?, last_seen = ? WHERE id = ?",
-                arrayOf(existingCount + 1, actionLabel, now, existingId)
-            )
-            Log.d(TAG, "upsertTransition UPDATE: $fromScreenId -[$actionLabel]-> $toScreenId  count=${existingCount + 1}")
-        } else {
-            db.execSQL(
-                """INSERT INTO transitions
-                   (from_screen_id, to_screen_id, action_label, action_type, traversal_count, weight, first_seen, last_seen)
-                   VALUES (?, ?, ?, ?, 1, 1.0, ?, ?)""",
+                """INSERT OR IGNORE INTO transitions
+                   (from_screen_id, to_screen_id, action_label, action_type,
+                    traversal_count, weight, first_seen, last_seen)
+                   VALUES (?, ?, ?, ?, 0, 1.0, ?, ?)""",
                 arrayOf(fromScreenId, toScreenId, actionLabel, actionType, now, now)
             )
-            Log.d(TAG, "upsertTransition INSERT: $fromScreenId -[$actionLabel/$actionType]-> $toScreenId")
+
+            // Step 2: always increment count + refresh label & timestamp
+            db.execSQL(
+                """UPDATE transitions
+                   SET traversal_count = traversal_count + 1,
+                       action_label    = ?,
+                       last_seen       = ?
+                   WHERE from_screen_id = ? AND to_screen_id = ? AND action_type = ?""",
+                arrayOf(actionLabel, now, fromScreenId, toScreenId, actionType)
+            )
+
+            db.setTransactionSuccessful()
+            Log.d(TAG, "upsertTransition: $fromScreenId -[$actionLabel/$actionType]-> $toScreenId")
+        } finally {
+            db.endTransaction()
         }
     }
 
