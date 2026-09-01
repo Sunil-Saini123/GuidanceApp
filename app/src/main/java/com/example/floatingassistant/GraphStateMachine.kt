@@ -100,15 +100,26 @@ object GraphStateMachine {
 
     // Known app package → display name
     private val KNOWN_APP_NAMES = mapOf(
+        // ── Google / AOSP ──────────────────────────────────────────────────────
         "com.whatsapp"                        to "WhatsApp",
         "com.whatsapp.w4b"                    to "WhatsApp Business",
-        "com.android.settings"                to "Settings",
+        "com.android.settings"               to "Settings",
         "com.google.android.youtube"          to "YouTube",
         "com.google.android.gm"               to "Gmail",
         "com.google.android.apps.messaging"   to "Messages",
         "com.android.messaging"               to "Messages",
         "com.google.android.dialer"           to "Phone",
-        "com.android.contacts"                to "Contacts",
+        "com.android.contacts"               to "Contacts",
+        "com.android.phone"                   to "Phone",
+        "com.google.android.apps.photos"      to "Photos",
+        "com.google.android.apps.maps"        to "Maps",
+        "com.google.android.apps.translate"   to "Translate",
+        "com.google.android.calendar"         to "Calendar",
+        "com.google.android.calculator"       to "Calculator",
+        "com.google.android.deskclock"        to "Clock",
+        "com.google.android.apps.docs"        to "Drive",
+        "com.google.android.music"            to "Music",
+        // ── Social / Entertainment ──────────────────────────────────────────────
         "com.facebook.katana"                 to "Facebook",
         "com.instagram.android"               to "Instagram",
         "com.twitter.android"                 to "X (Twitter)",
@@ -117,13 +128,49 @@ object GraphStateMachine {
         "com.spotify.music"                   to "Spotify",
         "com.netflix.mediaclient"             to "Netflix",
         "com.amazon.mShop.android.shopping"   to "Amazon",
-        "com.google.android.apps.maps"        to "Maps",
-        "com.google.android.apps.photos"      to "Photos",
-        "com.google.android.apps.translate"   to "Translate",
         "com.zhiliaoapp.musically"            to "TikTok",
         "com.ss.android.ugc.trill"            to "TikTok",
-        "com.microsoft.teams"                 to "Teams",
         "com.linkedin.android"                to "LinkedIn",
+        "com.microsoft.teams"                 to "Teams",
+        // ── Vivo / iQOO (BBK) ──────────────────────────────────────────────────
+        "com.vivo.gallery"                    to "Photos",
+        "com.vivo.photos"                     to "Photos",
+        "com.vivo.contacts"                   to "Contacts",
+        "com.vivo.phone"                      to "Phone",
+        "com.vivo.calculator"                 to "Calculator",
+        "com.vivo.calendar"                   to "Calendar",
+        "com.vivo.filemanager"                to "Files",
+        "com.vivo.music"                      to "Music",
+        "com.vivo.notes"                      to "Notes",
+        "com.vivo.browser"                    to "Browser",
+        "com.vivo.email"                      to "Email",
+        "com.vivo.ai.assistant"               to "Jovi Assistant",
+        "com.vivo.appmarket"                  to "App Store",
+        "com.vivo.abe"                        to "App Store",
+        "com.iqoo.phonemanager"               to "Phone Manager",
+        "com.bbk.contacts"                    to "Contacts",
+        // ── Samsung / One UI ───────────────────────────────────────────────────
+        "com.samsung.android.contacts"        to "Contacts",
+        "com.samsung.android.app.contacts"    to "Contacts",
+        "com.samsung.android.gallery3d"       to "Gallery",
+        "com.sec.android.gallery3d"           to "Gallery",
+        "com.samsung.android.messaging"       to "Messages",
+        "com.samsung.android.dialer"          to "Phone",
+        "com.samsung.android.calendar"        to "Calendar",
+        "com.samsung.android.calculator"      to "Calculator",
+        // ── MIUI / Xiaomi ──────────────────────────────────────────────────────
+        "com.miui.gallery"                    to "Gallery",
+        "com.miui.contacts"                   to "Contacts",
+        "com.miui.phone"                      to "Phone",
+        "com.miui.calculator"                 to "Calculator",
+        "com.miui.calendar"                   to "Calendar",
+        "com.miui.notes"                      to "Notes",
+        // ── OPPO / OnePlus / Realme ────────────────────────────────────────────
+        "com.coloros.contacts"                to "Contacts",
+        "com.coloros.gallery3d"               to "Gallery",
+        "com.coloros.phone"                   to "Phone",
+        "com.coloros.calendar"                to "Calendar",
+        // ── Launchers (display only — should be filtered by MainFilter) ─────────
         "com.microsoft.launcher"              to "Microsoft Launcher",
         "com.vivo.launcher"                   to "Vivo Launcher",
         "com.bbk.launcher2"                   to "iQOO / Vivo Home",
@@ -132,6 +179,7 @@ object GraphStateMachine {
         "com.oppo.launcher"                   to "OPPO Home",
         "com.oneplus.launcher"                to "OnePlus Home",
     )
+
 
     // ── Singleton state ───────────────────────────────────────────────────────
 
@@ -248,17 +296,24 @@ object GraphStateMachine {
     // ── Screen title resolution ───────────────────────────────────────────────
 
     /**
-     * Find the most likely header / toolbar text from the clean elements list.
+     * Find the most likely header / toolbar text from the clean elements list
+     * and return it as a clean, single-segment screen title.
      *
-     * Passes:
-     *   1. Non-clickable, top 20%, non-spatial, static (passes dynamic filter)
-     *   2. Any element, top 20%, non-spatial, static
-     *   3. [rootClass] fallback — always used if all elements are dynamic
+     * Composite names like "Settings · Search settings" are trimmed to just
+     * "Settings" (everything before the first " · " is taken).  This keeps
+     * screen IDs stable and readable:  `com.android.settings::Settings`.
+     *
+     * Search passes:
+     *   1. Non-clickable element in the top 20% of the screen — most reliable;
+     *      toolbar titles are usually TextViews inside a non-clickable Toolbar.
+     *   2. Any element (including clickable) in the top 20% — covers OEM layouts
+     *      where the whole ActionBar is a clickable container.
+     *   3. [rootClass] cleaned via [cleanRootClass] — final fallback.
      *
      * "Static" = length ≤ 35 chars AND passes the dynamic-data guard.
      */
     private fun resolveScreenTitle(elements: List<JSONObject>, rootClass: String): String {
-        if (elements.isEmpty()) return rootClass
+        if (elements.isEmpty()) return cleanRootClass(rootClass)
 
         val sh = try {
             Resources.getSystem().displayMetrics.heightPixels
@@ -266,25 +321,67 @@ object GraphStateMachine {
 
         val topZoneLimit = sh * 0.20f
 
+        /** Primary label of an element — stripped of any composite suffix. */
+        fun primaryName(el: JSONObject): String =
+            el.optString("name", "").trim().substringBefore(" · ").trim()
+
         fun isGood(el: JSONObject): Boolean {
-            val name = el.optString("name", "").trim()
+            val name = primaryName(el)
             val top  = el.optJSONObject("bounds")?.optInt("top", sh) ?: sh
             return name.isNotEmpty()
                     && name !in SPATIAL_LABELS
-                    && top <= topZoneLimit
+                    && top.toFloat() <= topZoneLimit
                     && isStaticTitle(name)
         }
 
-        // Pass 1: non-clickable + good
+        // Pass 1: non-clickable + good  (toolbar TextViews, non-interactive headers)
         elements.firstOrNull { !it.optBoolean("is_clickable", false) && isGood(it) }
-            ?.optString("name", "")?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+            ?.let { primaryName(it) }?.takeIf { it.isNotEmpty() }?.let { return it }
 
-        // Pass 2: any (including clickable) + good
+        // Pass 2: any element in the top zone (handles OEM clickable action bars)
         elements.firstOrNull { isGood(it) }
-            ?.optString("name", "")?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+            ?.let { primaryName(it) }?.takeIf { it.isNotEmpty() }?.let { return it }
 
-        return rootClass
+        // Pass 3: clean Activity class name
+        return cleanRootClass(rootClass)
     }
+
+    /**
+     * Convert an Android Activity class name into a clean, human-readable screen title.
+     *
+     * Rules (applied in order):
+     *   1. Strip common Android suffixes: "Activity", "Fragment", "Screen"
+     *   2. Split on camelCase boundaries
+     *   3. Remove single-word noise: "Tab", "Host", "Main", "Root", "Container",
+     *      "View", "Page" — these add no semantic value
+     *   4. Join with spaces
+     *
+     * Examples:
+     *   "SettingsHomepageActivity" → "Settings Homepage"
+     *   "ConversationListActivity" → "Conversation List"
+     *   "GalleryTabActivity"       → "Gallery"
+     *   "MainActivity"             → "Main"   (last resort, rootClass should rarely reach here)
+     */
+    private fun cleanRootClass(className: String): String {
+        val NOISE_WORDS = setOf(
+            "tab", "host", "main", "root", "container",
+            "view", "page", "base", "impl"
+        )
+        val stripped = className
+            .replace(Regex("Activity$",  RegexOption.IGNORE_CASE), "")
+            .replace(Regex("Fragment$",  RegexOption.IGNORE_CASE), "")
+            .replace(Regex("Screen$",    RegexOption.IGNORE_CASE), "")
+
+        // Split on camelCase boundaries  e.g. "GalleryTab" → ["Gallery", "Tab"]
+        val words = stripped
+            .split(Regex("(?<=[a-z])(?=[A-Z])"))
+            .map    { it.trim() }
+            .filter { it.isNotEmpty() && it.lowercase() !in NOISE_WORDS }
+
+        return words.joinToString(" ").trim().ifEmpty { className }
+    }
+
+
 
     // ── Dynamic data guard ────────────────────────────────────────────────────
 

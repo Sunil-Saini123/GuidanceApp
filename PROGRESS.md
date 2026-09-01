@@ -37,8 +37,10 @@ AccessibilityService (ON/OFF via ServiceStateManager)
 | 1     | Raw Dump — Unfiltered Baseline (`temp_tree.json`) | ✅ DONE          | Scroll dedup + root tracking                |
 | 2     | Universal UI Extraction (`clean_page.json`)       | ✅ DONE          | 5 rules, OEM naming, container flatten      |
 | 3     | Dynamic State Machine & Graph (`nav_graph.db`)    | ✅ DONE          | SQLite graph, FORWARD/BACK detection        |
-| 4     | Clean Names + Hierarchical Graph + Graph Filters  | 🔬 IN PROGRESS   | Delivering code now                         |
-| —     | *(Old Phases 1–11, Phase D)*                      | 🗄 SUPERSEDED    | Files on disk, not called from service      |
+| 4     | Clean Names + Hierarchical Graph + Graph Filters  | ✅ DONE          | GENERIC_SYSTEM_IDS fix, bounds aggregation  |
+| 5     | Graph Quality & Screen Title Resolution           | 🔬 IN PROGRESS   | Strip composites, cleanRootClass, OEM names |
+| 6     | Search Path Engine                                | ⏳ PENDING       | A* / BFS on nav_graph.db after Phase 5 done |
+
 
 ---
 
