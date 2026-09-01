@@ -63,13 +63,13 @@ public class PathGenerator {
         // 3. Attempt path resolution via Groq Proxy
         try {
             String rawOutput = groqClient.sendRequest(fullRequest);
-            NavigationPath validated = PathValidator.validate(rawOutput);
+            NavigationPath parsed = GroqResponseParser.parse(rawOutput);
 
-            if (validated.isValid()) {
-                AppLogger.i(TAG, "✨ SUCCESS: Navigation Path Generated -> " + validated.toPathString());
-                return validated;
+            if (parsed.isValid()) {
+                AppLogger.i(TAG, "✨ SUCCESS: Navigation Path Generated -> " + parsed.toPathString());
+                return parsed;
             }
-            AppLogger.w(TAG, "⚠️ Groq proxy returned invalid path structure: " + validated.getErrorMessage());
+            AppLogger.w(TAG, "⚠️ Groq proxy returned unparseable path structure: " + parsed.getErrorMessage());
         } catch (Exception e) {
             AppLogger.e(TAG, "⚠️ Groq proxy request failed (" + e.getMessage() + ")");
         }

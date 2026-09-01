@@ -7,16 +7,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * PathValidator — Validates raw LLM / Groq responses, ensuring valid JSON schema,
- * non-empty steps list, correct destination, and step continuity.
+ * GroqResponseParser — Parses the raw Groq response and converts
+ * it into a NavigationPath object for the path generation module.
  */
-public class PathValidator {
+public class GroqResponseParser {
 
-    private static final String TAG = "PathValidator";
+    private static final String TAG = "GroqResponseParser";
 
-    public static NavigationPath validate(String rawGroqOutput) {
+    /**
+     * Parses the raw output from Groq into a structured NavigationPath.
+     */
+    public static NavigationPath parse(String rawGroqOutput) {
         if (rawGroqOutput == null || rawGroqOutput.trim().isEmpty()) {
-            AppLogger.w(TAG, "⚠️ Validation Failed: Raw response is null or empty");
+            AppLogger.w(TAG, "⚠️ Parse Failed: Raw response is null or empty");
             return NavigationPath.failure("Empty or null response from Groq");
         }
 
@@ -40,7 +43,7 @@ public class PathValidator {
             }
 
             if (steps.isEmpty()) {
-                AppLogger.w(TAG, "❌ Validation Failed: 'path' array is empty in JSON");
+                AppLogger.w(TAG, "❌ Parse Failed: 'path' array is empty in JSON");
                 return NavigationPath.failure("Path steps array is empty");
             }
 
@@ -49,11 +52,11 @@ public class PathValidator {
                 destination = steps.get(steps.size() - 1);
             }
 
-            AppLogger.i(TAG, "✅ VALIDATION SUCCESS: Destination=\"" + destination + "\", Steps=" + steps);
+            AppLogger.i(TAG, "✅ PARSE SUCCESS: Destination=\"" + destination + "\", Steps=" + steps);
             return NavigationPath.success(destination, steps, rawGroqOutput);
 
         } catch (Exception e) {
-            AppLogger.e(TAG, "❌ VALIDATION ERROR: Failed to parse JSON from Groq output: " + e.getMessage());
+            AppLogger.e(TAG, "❌ PARSE ERROR: Failed to parse JSON from Groq output: " + e.getMessage());
             AppLogger.d(TAG, "Raw text was: " + rawGroqOutput);
             return NavigationPath.failure("Malformed JSON response: " + e.getMessage());
         }

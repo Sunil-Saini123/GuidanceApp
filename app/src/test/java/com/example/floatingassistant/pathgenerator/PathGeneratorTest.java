@@ -56,13 +56,13 @@ public class PathGeneratorTest {
     }
 
     @Test
-    public void testPathValidatorValidJson() {
+    public void testGroqResponseParserValidJson() {
         String json = "{\n" +
                 "  \"destination\": \"Bluetooth\",\n" +
                 "  \"path\": [\"SettingsHomepage\", \"Connected devices\", \"Bluetooth\"]\n" +
                 "}";
 
-        NavigationPath path = PathValidator.validate(json);
+        NavigationPath path = GroqResponseParser.parse(json);
         assertTrue(path.isValid());
         assertEquals("Bluetooth", path.getDestination());
         assertEquals(3, path.getSteps().size());
@@ -70,7 +70,7 @@ public class PathGeneratorTest {
     }
 
     @Test
-    public void testPathValidatorJsonWithMarkdownFences() {
+    public void testGroqResponseParserJsonWithMarkdownFences() {
         String jsonWithFences = "```json\n" +
                 "{\n" +
                 "  \"destination\": \"Wi-Fi\",\n" +
@@ -78,24 +78,24 @@ public class PathGeneratorTest {
                 "}\n" +
                 "```";
 
-        NavigationPath path = PathValidator.validate(jsonWithFences);
+        NavigationPath path = GroqResponseParser.parse(jsonWithFences);
         assertTrue(path.isValid());
         assertEquals("Wi-Fi", path.getDestination());
         assertEquals("SettingsHomepage -> Network & internet -> Wi-Fi", path.toPathString());
     }
 
     @Test
-    public void testPathValidatorInvalidJson() {
+    public void testGroqResponseParserInvalidJson() {
         String invalidJson = "This is not json output";
-        NavigationPath path = PathValidator.validate(invalidJson);
+        NavigationPath path = GroqResponseParser.parse(invalidJson);
         assertFalse(path.isValid());
         assertNotNull(path.getErrorMessage());
     }
 
     @Test
-    public void testPathValidatorEmptyPathArray() {
+    public void testGroqResponseParserEmptyPathArray() {
         String emptyPathJson = "{\"destination\": \"Bluetooth\", \"path\": []}";
-        NavigationPath path = PathValidator.validate(emptyPathJson);
+        NavigationPath path = GroqResponseParser.parse(emptyPathJson);
         assertFalse(path.isValid());
     }
 
