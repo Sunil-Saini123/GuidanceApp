@@ -24,7 +24,8 @@ public class PromptBuilder {
             "3. Keep screen and item names accurate according to the specific device manufacturer, OEM ROM (One UI, MIUI, ColorOS, realme UI), and Android version.\n" +
             "4. Prefer paths supported by the provided navigation graph / Android system hierarchy. Do not invent arbitrary screen names.\n" +
             "5. Verify that each consecutive navigation step is realistically reachable from the previous step.\n" +
-            "6. Preserve user extracted parameters where applicable (e.g. target network name or value).";
+            "6. Preserve user extracted parameters where applicable (e.g. target network name or value).\n" +
+            "7. If the available information is insufficient to determine a reliable navigation path, do NOT invent steps. Return an empty path array: {\"destination\": \"Unknown\", \"path\": []}.";
 
     public static String buildUserPrompt(PathRequest request) {
         StringBuilder sb = new StringBuilder();
