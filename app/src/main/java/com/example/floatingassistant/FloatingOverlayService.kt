@@ -422,14 +422,26 @@ class FloatingOverlayService : Service() {
         applyIdleFlags()
     }
 
-    // ── Query handling: PathGenerator (Groq / Proxy / Predefined Intent) → state machine ──
+    // ── Query handling: IntentClassificationEngine → PathGenerator → NavigationStateMachine ──
 
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
-        statusText.text = "Generating path…"
+        statusText.text = "Classifying & generating path…"
         serviceScope.launch {
             val navPath = withContext(Dispatchers.IO) {
+                // 1. Classify intent via multi-factor IntentClassificationEngine
+                val intentEngine = com.example.floatingassistant.intent.IntentClassificationEngine()
+                intentEngine.isEnableGroqFallback = true
+                val matchResult = intentEngine.classify(query)
+
+                val userIntent = if (matchResult.isConfident && matchResult.userIntent != null) {
+                    matchResult.userIntent
+                } else {
+                    com.example.floatingassistant.pathgenerator.IntentProvider.findMatchingIntent(query)
+                }
+
+                // 2. Generate navigation path via PathGenerator
                 val generator = com.example.floatingassistant.pathgenerator.PathGenerator()
-                generator.generatePathForQuery(this@FloatingOverlayService, query, "SettingsHomepage")
+                generator.generatePath(this@FloatingOverlayService, userIntent, "SettingsHomepage")
             }
 
             var pathString = if (navPath.isValid) navPath.toPathString() else ""
