@@ -4,6 +4,8 @@ import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -21,12 +23,18 @@ public class PathGeneratorTest {
 
     @Before
     public void setUp() {
-        mockIntent = new UserIntent("ENABLE_BLUETOOTH", "Turn on Bluetooth", "Settings", null);
+        mockIntent = new UserIntent(
+                "CONNECT_WIFI",
+                "Connect to Rohit's Wi-Fi",
+                "Network",
+                Collections.singletonMap("network_name", "Rohit's Wi-Fi")
+        );
         JSONObject deviceInfo = new JSONObject();
         try {
             deviceInfo.put("manufacturer", "Google");
             deviceInfo.put("model", "Pixel 7");
             deviceInfo.put("android_version", "14");
+            deviceInfo.put("sdk_int", 34);
             deviceInfo.put("custom_os", "stock");
         } catch (Exception ignored) {}
 
@@ -37,11 +45,14 @@ public class PathGeneratorTest {
     public void testPromptBuilderOutput() {
         String prompt = PromptBuilder.buildUserPrompt(mockRequest);
         assertNotNull(prompt);
-        assertTrue(prompt.contains("ENABLE_BLUETOOTH"));
-        assertTrue(prompt.contains("Turn on Bluetooth"));
+        assertTrue(prompt.contains("CONNECT_WIFI"));
+        assertTrue(prompt.contains("Connect to Rohit's Wi-Fi"));
+        assertTrue(prompt.contains("network_name: Rohit's Wi-Fi"));
+        assertTrue(prompt.contains("Android SDK/API Level: 34"));
         assertTrue(prompt.contains("Google"));
         assertTrue(prompt.contains("Pixel 7"));
         assertTrue(prompt.contains("SettingsHomepage"));
+        assertTrue(prompt.contains("Treat the provided intent and parameters as candidate classification results"));
     }
 
     @Test
@@ -103,7 +114,8 @@ public class PathGeneratorTest {
     @Test
     public void testPathGeneratorFallbackResolution() {
         PathGenerator generator = new PathGenerator(new GroqProxyClient("http://invalid-host:9999/v1", 100, "model"));
-        NavigationPath path = generator.generatePath(null, mockRequest);
+        UserIntent btIntent = new UserIntent("ENABLE_BLUETOOTH", "Turn on Bluetooth");
+        NavigationPath path = generator.generatePath(null, new PathRequest(btIntent, "SettingsHomepage"));
 
         assertTrue(path.isValid());
         assertEquals("Bluetooth", path.getDestination());
