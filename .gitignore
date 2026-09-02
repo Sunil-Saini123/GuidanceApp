@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Dev/debug-only test files — never push to git
+app/src/test/java/com/example/floatingassistant/devtest/

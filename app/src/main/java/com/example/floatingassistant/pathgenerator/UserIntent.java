@@ -3,7 +3,11 @@ package com.example.floatingassistant.pathgenerator;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
+// Understanding 
+/* this is a fucntion which is being called with the intentName, rawQuery
+ and targetCategory and parameters and it will just store those data. and gives us
+ various fucntion which can be used to get and verify the data and ask about data .
+ */
 /**
  * UserIntent — Represents an intent received from the Intent Classifier.
  *
