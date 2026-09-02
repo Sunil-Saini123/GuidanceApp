@@ -422,24 +422,46 @@ class FloatingOverlayService : Service() {
         applyIdleFlags()
     }
 
-    // ── Query handling: DB lookup → state machine ───────────────────────────────
+    // ── Query handling: IntentClassificationEngine → PathGenerator → NavigationStateMachine ──
 
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
-        statusText.text = "Searching…"
+        statusText.text = "Classifying & generating path…"
         serviceScope.launch {
-            val path = withContext(Dispatchers.IO) {
-                PathDatabase.lookup(this@FloatingOverlayService, query)
+            val navPath = withContext(Dispatchers.IO) {
+                // 1. Classify intent via multi-factor IntentClassificationEngine
+                val intentEngine = com.example.floatingassistant.intent.IntentClassificationEngine()
+                intentEngine.isEnableGroqFallback = true
+                val matchResult = intentEngine.classify(query)
+
+                val userIntent = if (matchResult.isConfident && matchResult.userIntent != null) {
+                    matchResult.userIntent
+                } else {
+                    com.example.floatingassistant.pathgenerator.IntentProvider.findMatchingIntent(query)
+                }
+
+                // 2. Generate navigation path via PathGenerator
+                val generator = com.example.floatingassistant.pathgenerator.PathGenerator()
+                generator.generatePath(this@FloatingOverlayService, userIntent, "SettingsHomepage")
             }
 
-            if (path.isEmpty()) {
+            var pathString = if (navPath.isValid) navPath.toPathString() else ""
+
+            if (pathString.isEmpty()) {
+                // Fallback to legacy PathDatabase lookup if PathGenerator returns empty path
+                pathString = withContext(Dispatchers.IO) {
+                    PathDatabase.lookup(this@FloatingOverlayService, query)
+                }
+            }
+
+            if (pathString.isEmpty()) {
                 statusText.text = "Path not found for this request/device"
                 Log.w(TAG, "No path resolved for query=\"$query\"")
                 return@launch
             }
 
-            NavigationStateMachine.start(path)
-            statusText.text = "Guiding: $path"
-            Log.i(TAG, "Guide started for query=\"$query\" → $path")
+            NavigationStateMachine.start(pathString)
+            statusText.text = "Guiding: $pathString"
+            Log.i(TAG, "Guide started for query=\"$query\" → $pathString")
             hidePanelAndRestoreIdle()
         }
     }
