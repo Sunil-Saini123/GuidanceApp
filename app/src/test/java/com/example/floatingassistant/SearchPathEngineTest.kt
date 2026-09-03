@@ -208,4 +208,23 @@ class SearchPathEngineTest {
         assertNull(result.pathString)
         assertTrue(result.message.contains("No navigable path"))
     }
+
+    @Test
+    fun testCommandParserOfflineResolution() {
+        val btResult = GeminiCommandParser.resolveLocally("turn on bluetooth")
+        assertEquals("Settings", btResult.targetApp)
+        assertEquals("Bluetooth", btResult.destinationScreen)
+
+        val wifiResult = GeminiCommandParser.resolveLocally("connect to wifi")
+        assertEquals("Settings", wifiResult.targetApp)
+        assertEquals("Wi-Fi", wifiResult.destinationScreen)
+
+        val whatsappResult = GeminiCommandParser.resolveLocally("change my whatsapp profile picture")
+        assertEquals("WhatsApp", whatsappResult.targetApp)
+        assertEquals("Profile", whatsappResult.destinationScreen)
+
+        val phoneResult = GeminiCommandParser.resolveLocally("call mom")
+        assertEquals("Phone", phoneResult.targetApp)
+        assertEquals("Dialer", phoneResult.destinationScreen)
+    }
 }

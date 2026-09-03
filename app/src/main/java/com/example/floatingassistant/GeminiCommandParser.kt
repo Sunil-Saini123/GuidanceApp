@@ -181,50 +181,214 @@ Exact Task: Switch to front camera and capture photo"""
      *                   the caller switches to inside the lambda.
      * @return [ParsedCommand] on success, `null` if all retries for all models fail.
      */
+    private const val PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate"
+
+    /**
+     * Parses [userCommand] into a structured [ParsedCommand].
+     *
+     * Architecture:
+     * 1. First tries the deployed Vercel Proxy server (does NOT require any API key on the device).
+     * 2. If the proxy call fails, tries direct Gemini REST API if GEMINI_API_KEY is configured.
+     * 3. If both remote endpoints are unavailable, resolves via the local offline IntentClassificationEngine.
+     *
+     * Guaranteed to return a valid [ParsedCommand].
+     */
     suspend fun parse(
         userCommand: String,
         onProgress: suspend (String) -> Unit = {}
-    ): ParsedCommand? = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isBlank() || apiKey == "YOUR_GEMINI_API_KEY_HERE") {
-            Log.e(TAG, "Gemini API key is not set. Add GEMINI_API_KEY to local.properties.")
-            return@withContext null
+    ): ParsedCommand = withContext(Dispatchers.IO) {
+        // ── 1. Try our deployed Proxy Server (No local API key required) ───────
+        try {
+            Log.d(TAG, "Attempting intent classification via Proxy Server: $PROXY_URL")
+            onProgress("Contacting AI proxy…")
+            val proxyResponse = callProxyApi(userCommand)
+            if (!proxyResponse.isNullOrBlank()) {
+                val parsed = parseResponse(proxyResponse)
+                if (parsed != null) {
+                    Log.i(TAG, "Proxy intent classification succeeded: $parsed")
+                    return@withContext parsed
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Proxy intent classification failed: ${e.message}")
         }
 
-        for (model in MODEL_FALLBACK_LIST) {
-            Log.d(TAG, "Trying model: $model")
-            var attempt = 0
-            while (attempt < MAX_RETRIES) {
-                try {
-                    val responseText = callGeminiApi(apiKey, model, userCommand)
-                    if (responseText != null) {
-                        return@withContext parseResponse(responseText)
-                    }
-                    // null = non-retryable error → skip to next model
-                    break
-                } catch (e: QuotaExceededException) {
-                    Log.w(TAG, "Model $model hit quota limit (429). Skipping to next model.")
-                    break
-                } catch (e: RetryableException) {
-                    attempt++
-                    if (attempt >= MAX_RETRIES) {
-                        Log.w(TAG, "Model $model exhausted $MAX_RETRIES retries. Trying next model.")
+        // ── 2. Fallback to Gemini REST API if GEMINI_API_KEY is set ───────────
+        val apiKey = BuildConfig.GEMINI_API_KEY
+        if (apiKey.isNotBlank() && apiKey != "YOUR_GEMINI_API_KEY_HERE") {
+            Log.d(TAG, "Attempting direct Gemini REST API")
+            for (model in MODEL_FALLBACK_LIST) {
+                var attempt = 0
+                while (attempt < MAX_RETRIES) {
+                    try {
+                        val responseText = callGeminiApi(apiKey, model, userCommand)
+                        if (responseText != null) {
+                            val parsed = parseResponse(responseText)
+                            if (parsed != null) return@withContext parsed
+                        }
+                        break
+                    } catch (e: QuotaExceededException) {
+                        Log.w(TAG, "Model $model hit quota limit (429). Skipping.")
+                        break
+                    } catch (e: RetryableException) {
+                        attempt++
+                        if (attempt >= MAX_RETRIES) break
+                        val delayMs = RETRY_DELAY_MS * (1L shl (attempt - 1))
+                        onProgress("Server busy — retrying…")
+                        kotlinx.coroutines.delay(delayMs)
+                    } catch (e: Exception) {
                         break
                     }
-                    val delayMs = RETRY_DELAY_MS * (1L shl (attempt - 1))  // 3s, 6s, 12s, 24s
-                    val msg = "Server busy — retrying ($attempt/$MAX_RETRIES)…"
-                    Log.w(TAG, "[$model] $msg Waiting ${delayMs / 1000}s")
-                    onProgress(msg)
-                    kotlinx.coroutines.delay(delayMs)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Unexpected error with model $model: ${e.message}", e)
-                    break
                 }
             }
         }
 
-        Log.e(TAG, "All models exhausted for: \"$userCommand\"")
-        null
+        // ── 3. Offline Local Intent Classification Fallback ───────────────────
+        Log.i(TAG, "Falling back to offline IntentClassificationEngine")
+        onProgress("Resolving intent locally…")
+        val localParsed = resolveLocally(userCommand)
+        Log.i("[PathFinder]", "Parsed Intent (Offline Fallback) -> App: ${localParsed.targetApp}, Screen: ${localParsed.destinationScreen}, Task: ${localParsed.exactTask}")
+        localParsed
+    }
+
+    /**
+     * Calls our deployed proxy server (does not require any device-side API key).
+     */
+    private fun callProxyApi(userCommand: String): String? {
+        var connection: HttpURLConnection? = null
+        return try {
+            val url = URL(PROXY_URL)
+            connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setRequestProperty("Accept", "application/json")
+            connection.doOutput = true
+            connection.connectTimeout = 8_000
+            connection.readTimeout = 15_000
+
+            val requestBody = JSONObject().apply {
+                put("model", "llama-3.3-70b-versatile")
+                put("temperature", 0.0)
+                put("max_tokens", 250)
+
+                val messages = JSONArray()
+                messages.put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", SYSTEM_PROMPT)
+                })
+                messages.put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userCommand)
+                })
+                put("messages", messages)
+            }
+
+            OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { writer ->
+                writer.write(requestBody.toString())
+                writer.flush()
+            }
+
+            val statusCode = connection.responseCode
+            val stream = if (statusCode in 200..299) connection.inputStream else connection.errorStream
+            val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+
+            if (statusCode in 200..299) {
+                val root = JSONObject(responseText)
+                if (root.has("choices")) {
+                    val choices = root.getJSONArray("choices")
+                    if (choices.length() > 0) {
+                        val message = choices.getJSONObject(0).optJSONObject("message")
+                        return message?.optString("content", "")
+                    }
+                }
+                responseText
+            } else {
+                Log.w(TAG, "Proxy returned HTTP $statusCode: $responseText")
+                null
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Proxy call failed: ${e.message}")
+            null
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    /**
+     * Resolves intent locally using offline IntentClassificationEngine and IntentProvider.
+     */
+    fun resolveLocally(userCommand: String): ParsedCommand {
+        val query = userCommand.trim()
+        val queryLower = query.lowercase(java.util.Locale.US)
+
+        // 1. Try local IntentClassificationEngine
+        try {
+            val engine = com.example.floatingassistant.intent.IntentClassificationEngine()
+            val match = engine.classify(query)
+            if (match.isConfident && match.userIntent != null) {
+                return mapUserIntentToCommand(match.userIntent, query)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Local IntentClassificationEngine failed: ${e.message}")
+        }
+
+        // 2. Try IntentProvider predefined intents
+        val predefined = com.example.floatingassistant.pathgenerator.IntentProvider.findMatchingIntent(query)
+        if (predefined.intentName != "UNKNOWN" && predefined.intentName != "GENERIC_NAVIGATE") {
+            return mapUserIntentToCommand(predefined, query)
+        }
+
+        // 3. Fallback heuristics for common apps
+        return when {
+            queryLower.contains("whatsapp") -> {
+                val screen = if (queryLower.contains("profile") || queryLower.contains("dp")) "Profile" else "Chats"
+                ParsedCommand(targetApp = "WhatsApp", destinationScreen = screen, exactTask = query)
+            }
+            queryLower.contains("youtube") -> {
+                ParsedCommand(targetApp = "YouTube", destinationScreen = "Home", exactTask = query)
+            }
+            queryLower.contains("call") || queryLower.contains("dial") || queryLower.contains("phone") -> {
+                ParsedCommand(targetApp = "Phone", destinationScreen = "Dialer", exactTask = query)
+            }
+            queryLower.contains("camera") || queryLower.contains("photo") || queryLower.contains("selfie") -> {
+                ParsedCommand(targetApp = "Camera", destinationScreen = "Camera", exactTask = query)
+            }
+            queryLower.contains("map") || queryLower.contains("direction") || queryLower.contains("navigate to") -> {
+                ParsedCommand(targetApp = "Maps", destinationScreen = "Search", exactTask = query)
+            }
+            queryLower.contains("wifi") || queryLower.contains("wi-fi") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Wi-Fi", exactTask = query)
+            }
+            queryLower.contains("bluetooth") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Bluetooth", exactTask = query)
+            }
+            queryLower.contains("display") || queryLower.contains("brightness") || queryLower.contains("dark mode") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Display", exactTask = query)
+            }
+            queryLower.contains("battery") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Battery saver", exactTask = query)
+            }
+            queryLower.contains("sound") || queryLower.contains("volume") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Sound & vibration", exactTask = query)
+            }
+            else -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Settings", exactTask = query)
+            }
+        }
+    }
+
+    private fun mapUserIntentToCommand(intent: com.example.floatingassistant.pathgenerator.UserIntent, rawQuery: String): ParsedCommand {
+        return when (intent.intentName.uppercase(java.util.Locale.US)) {
+            "ENABLE_BLUETOOTH" -> ParsedCommand("Settings", "Bluetooth", "Enable Bluetooth")
+            "OPEN_WIFI_SETTINGS", "CONNECT_WIFI" -> ParsedCommand("Settings", "Wi-Fi", "Open Wi-Fi settings")
+            "OPEN_DISPLAY_SETTINGS" -> ParsedCommand("Settings", "Display", "Open display settings")
+            "OPEN_SECURITY_PRIVACY" -> ParsedCommand("Settings", "Security & privacy", "Open security settings")
+            "CHANGE_WALLPAPER" -> ParsedCommand("Settings", "Wallpaper & style", "Change wallpaper")
+            "OPEN_BATTERY_SAVER" -> ParsedCommand("Settings", "Battery saver", "Turn on battery saver")
+            "OPEN_ACCESSIBILITY_SETTINGS" -> ParsedCommand("Settings", "Accessibility", "Open accessibility settings")
+            "OPEN_SOUND_SETTINGS" -> ParsedCommand("Settings", "Sound & vibration", "Adjust sound settings")
+            else -> ParsedCommand(intent.targetCategory.ifEmpty { "Settings" }, intent.intentName, rawQuery)
+        }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

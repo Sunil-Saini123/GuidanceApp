@@ -455,26 +455,12 @@ class FloatingOverlayService : Service() {
         statusText.text = "Analysing…"
 
         serviceScope.launch {
-            if (BuildConfig.GEMINI_API_KEY.isBlank() ||
-                BuildConfig.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE") {
-                statusText.text =
-                    "Gemini API key is not set.\nAdd GEMINI_API_KEY to local.properties."
-                Log.e("[PathFinder]", "Gemini API key missing — aborting")
-                return@launch
-            }
-
-            // ── PHASE 1 STEP A: Gemini intent classification ──────────────────
-            Log.d("[PathFinder]", "Phase 1 — calling GeminiCommandParser")
+            // ── PHASE 1 STEP A: Intent classification (Proxy Server -> Gemini -> Local Fallback) ──
+            Log.d("[PathFinder]", "Phase 1 — calling Command Parser")
             val parsed = withContext(Dispatchers.IO) {
                 GeminiCommandParser.parse(query) { progressMsg ->
                     withContext(Dispatchers.Main) { statusText.text = progressMsg }
                 }
-            }
-
-            if (parsed == null) {
-                Log.w("[PathFinder]", "Phase 1 — GeminiCommandParser returned null (server busy or bad format)")
-                statusText.text = "Server is busy — please try again in a moment."
-                return@launch
             }
 
             // GeminiCommandParser already emits the [PathFinder] log:
