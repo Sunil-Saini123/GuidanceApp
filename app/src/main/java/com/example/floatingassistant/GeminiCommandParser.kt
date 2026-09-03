@@ -372,7 +372,9 @@ Exact Task: Switch to front camera and capture photo"""
                 ParsedCommand(targetApp = "Settings", destinationScreen = "Sound & vibration", exactTask = query)
             }
             else -> {
-                ParsedCommand(targetApp = "Settings", destinationScreen = "Settings", exactTask = query)
+                val feature = query.replace(Regex("^(open|go to|change|set|turn on|turn off|show|view)\\s+", RegexOption.IGNORE_CASE), "").trim()
+                val dest = if (feature.isNotBlank()) feature else "Settings"
+                ParsedCommand(targetApp = "Settings", destinationScreen = dest, exactTask = query)
             }
         }
     }
