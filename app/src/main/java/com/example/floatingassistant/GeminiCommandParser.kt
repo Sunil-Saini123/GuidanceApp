@@ -224,7 +224,7 @@ Intent: Enable dark mode"""
             }
 
             val httpCode = connection.responseCode
-            Log.d(TAG, "[$model] HTTP $httpCode for: \"$userCommand\"")
+            if (BuildConfig.DEBUG) Log.d(TAG, "[$model] HTTP $httpCode")
 
             if (httpCode != HttpURLConnection.HTTP_OK) {
                 val errorBody = connection.errorStream?.let {
