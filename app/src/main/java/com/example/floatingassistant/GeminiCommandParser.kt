@@ -80,13 +80,14 @@ object GeminiCommandParser {
      *     by the deprecation messages of all other models). Retry aggressively when busy.
      */
     private val MODEL_FALLBACK_LIST = listOf(
-        "gemini-3.6-flash",
-        "gemini-3.7-flash",
-        "gemini-3.8-flash",
-        "gemini-3.5-flash",
         "gemini-flash-latest",
-        "gemini-3.1-pro-preview"
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash"
     )
+
+    private const val DEFAULT_GEMINI_KEY = "YOUR_GEMINI_API_KEY_HERE"
 
     private const val GEMINI_BASE =
         "https://generativelanguage.googleapis.com/v1beta/models"
@@ -167,29 +168,11 @@ Exact Task: Switch to front camera and capture photo"""
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Parses [userCommand] using the Gemini AI.
-     *
-     * For each model in [MODEL_FALLBACK_LIST]:
-     *   • 503 / timeout → retry up to [MAX_RETRIES] times with exponential
-     *     back-off (3 s → 6 s → 12 s → 24 s), calling [onProgress] before each wait
-     *     so the UI can show live status.
-     *   • 429          → treated as quota/rate-limit; skip to next model immediately.
-     *   • 404 / other non-200 → skip to next model immediately.
-     *
-     * @param onProgress Optional suspend callback invoked with a human-readable status
-     *                   string just before each retry delay. Runs on whatever dispatcher
-     *                   the caller switches to inside the lambda.
-     * @return [ParsedCommand] on success, `null` if all retries for all models fail.
-     */
-    private const val PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate"
-
-    /**
      * Parses [userCommand] into a structured [ParsedCommand].
      *
      * Architecture:
-     * 1. First tries the deployed Vercel Proxy server (does NOT require any API key on the device).
-     * 2. If the proxy call fails, tries direct Gemini REST API if GEMINI_API_KEY is configured.
-     * 3. If both remote endpoints are unavailable, resolves via the local offline IntentClassificationEngine.
+     * 1. First tries direct Google Gemini REST API using the configured Gemini key.
+     * 2. If Gemini API is unreachable, falls back to the local offline IntentClassificationEngine.
      *
      * Guaranteed to return a valid [ParsedCommand].
      */
@@ -197,26 +180,13 @@ Exact Task: Switch to front camera and capture photo"""
         userCommand: String,
         onProgress: suspend (String) -> Unit = {}
     ): ParsedCommand = withContext(Dispatchers.IO) {
-        // ── 1. Try our deployed Proxy Server (No local API key required) ───────
-        try {
-            Log.d(TAG, "Attempting intent classification via Proxy Server: $PROXY_URL")
-            onProgress("Contacting AI proxy…")
-            val proxyResponse = callProxyApi(userCommand)
-            if (!proxyResponse.isNullOrBlank()) {
-                val parsed = parseResponse(proxyResponse)
-                if (parsed != null) {
-                    Log.i(TAG, "Proxy intent classification succeeded: $parsed")
-                    return@withContext parsed
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Proxy intent classification failed: ${e.message}")
-        }
+        val apiKey = BuildConfig.GEMINI_API_KEY.takeIf { it.isNotBlank() && it != "YOUR_GEMINI_API_KEY_HERE" }
+            ?: DEFAULT_GEMINI_KEY
 
-        // ── 2. Fallback to Gemini REST API if GEMINI_API_KEY is set ───────────
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isNotBlank() && apiKey != "YOUR_GEMINI_API_KEY_HERE") {
-            Log.d(TAG, "Attempting direct Gemini REST API")
+        // ── 1. Direct Gemini REST API (Primary intent classification) ─────────
+        if (apiKey.isNotBlank()) {
+            Log.d(TAG, "Attempting direct Gemini REST API for intent classification")
+            onProgress("Analyzing intent with Gemini…")
             for (model in MODEL_FALLBACK_LIST) {
                 var attempt = 0
                 while (attempt < MAX_RETRIES) {
@@ -224,7 +194,10 @@ Exact Task: Switch to front camera and capture photo"""
                         val responseText = callGeminiApi(apiKey, model, userCommand)
                         if (responseText != null) {
                             val parsed = parseResponse(responseText)
-                            if (parsed != null) return@withContext parsed
+                            if (parsed != null) {
+                                Log.i(TAG, "Gemini intent classification succeeded with $model: $parsed")
+                                return@withContext parsed
+                            }
                         }
                         break
                     } catch (e: QuotaExceededException) {
@@ -234,22 +207,25 @@ Exact Task: Switch to front camera and capture photo"""
                         attempt++
                         if (attempt >= MAX_RETRIES) break
                         val delayMs = RETRY_DELAY_MS * (1L shl (attempt - 1))
-                        onProgress("Server busy — retrying…")
+                        onProgress("Gemini busy — retrying…")
                         kotlinx.coroutines.delay(delayMs)
                     } catch (e: Exception) {
+                        Log.w(TAG, "Model $model failed: ${e.message}")
                         break
                     }
                 }
             }
         }
 
-        // ── 3. Offline Local Intent Classification Fallback ───────────────────
+        // ── 2. Offline Local Intent Classification Fallback ───────────────────
         Log.i(TAG, "Falling back to offline IntentClassificationEngine")
         onProgress("Resolving intent locally…")
         val localParsed = resolveLocally(userCommand)
         Log.i("[PathFinder]", "Parsed Intent (Offline Fallback) -> App: ${localParsed.targetApp}, Screen: ${localParsed.destinationScreen}, Task: ${localParsed.exactTask}")
         localParsed
     }
+
+    private const val PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate"
 
     /**
      * Calls our deployed proxy server (does not require any device-side API key).
@@ -412,9 +388,10 @@ Exact Task: Switch to front camera and capture photo"""
         return try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setRequestProperty("x-goog-api-key", apiKey)
             connection.doOutput = true
             connection.connectTimeout = 15_000
-            connection.readTimeout = 45_000   // gemini-3.6-flash can be slow; 45 s gives it room
+            connection.readTimeout = 45_000   // gemini-flash can be slow; 45 s gives it room
 
             // Build request body
             val requestBody = buildRequestBody(userCommand)
