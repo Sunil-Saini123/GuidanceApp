@@ -86,7 +86,7 @@ object GeminiCommandParser {
         "gemini-3.8-flash"
     )
 
-    private const val DEFAULT_GEMINI_KEY = "YOUR_GEMINI_API_KEY_HERE"
+    private val DEFAULT_GEMINI_KEY = BuildConfig.GEMINI_API_KEY
 
     private const val GEMINI_BASE =
         "https://generativelanguage.googleapis.com/v1beta/models"
