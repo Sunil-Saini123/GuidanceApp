@@ -171,56 +171,27 @@ object SearchPathEngine {
         val targetScreen = targetResolution.screen
         val targetElement = targetResolution.elementName
 
-        // ── 2. Start Screen Resolution ────────────────────────────────────────
-        val startScreen = resolveStartScreen(screens, transitions, currentScreenId, appDisplayName)
+        // ── 2. Start Screen — always the app's root/home, never current screen ──
+        // We intentionally ignore currentScreenId so the path always reads as a
+        // full tutorial: "From WhatsApp home → More options → Settings → Chats → Chat backup"
+        val startScreen = resolveRootScreen(screens, transitions, appDisplayName)
             ?: return PathSearchResult.notFound(
                 toScreenId = targetScreen.id,
-                message = "Could not identify a valid starting screen"
+                message = "Could not identify the app home screen for '${appDisplayName ?: packageName ?: "unknown"}'"
             )
 
-        // ── 3. Check if already on the target screen ──────────────────────────
+        // ── 3. If root IS the target screen, just return the element ─────────
         if (startScreen.id == targetScreen.id) {
-            // Try to build a full tutorial path from the app root → current screen → element
-            val rootScreen = resolveRootScreen(screens, transitions, appDisplayName)
-            if (rootScreen != null && rootScreen.id != startScreen.id) {
-                // Build path from root to current screen
-                val outgoing = mutableMapOf<String, MutableList<NavGraphDatabase.TransitionRecord>>()
-                for (t in transitions) {
-                    outgoing.getOrPut(t.fromScreenId) { mutableListOf() }.add(t)
-                }
-                val rootToCurrentEdges = dijkstra(startId = rootScreen.id, targetId = startScreen.id, outgoing = outgoing)
-                if (rootToCurrentEdges != null) {
-                    val steps = mutableListOf<String>()
-                    for (edge in rootToCurrentEdges) {
-                        val label = if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") edge.actionLabel
-                                    else edge.toScreenId.substringAfter("::")
-                        steps.add(label)
-                    }
-                    if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
-                    else steps.add(targetScreen.screenTitle)
-                    val pathStr = steps.joinToString(" -> ")
-                    return PathSearchResult.found(
-                        pathString = pathStr,
-                        steps = steps,
-                        fromScreenId = rootScreen.id,
-                        toScreenId = targetScreen.id,
-                        targetElement = targetElement,
-                        message = "Full path from app root (currently on '${startScreen.screenTitle}')"
-                    )
-                }
-            }
-            // Fallback: just show the element/screen name
             val steps = mutableListOf<String>()
             if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
             else steps.add(targetScreen.screenTitle)
-            val pathStr = steps.joinToString(" -> ")
             return PathSearchResult.found(
-                pathString = pathStr,
+                pathString = steps.joinToString(" -> "),
                 steps = steps,
                 fromScreenId = startScreen.id,
                 toScreenId = targetScreen.id,
                 targetElement = targetElement,
-                message = "Already on target screen '${targetScreen.screenTitle}'"
+                message = "Target is on the app home screen"
             )
         }
 

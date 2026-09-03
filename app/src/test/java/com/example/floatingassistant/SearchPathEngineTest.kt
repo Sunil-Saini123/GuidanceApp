@@ -127,22 +127,23 @@ class SearchPathEngineTest {
 
     @Test
     fun testCycleAvoidanceAndShortestPath() {
-        val sA = createScreen("com.test::A", title = "A")
+        val sA = createScreen("com.test::Home", title = "Home")
         val sB = createScreen("com.test::B", title = "B")
         val sC = createScreen("com.test::C", title = "C")
         val sD = createScreen("com.test::D", title = "D")
 
-        // Cycle: A -> B -> A
+        // Cycle: Home -> B -> Home
         val tAB = createTransition(sA.id, sB.id, "Go to B")
-        val tBA = createTransition(sB.id, sA.id, "Go back to A")
+        val tBA = createTransition(sB.id, sA.id, "Go back to Home")
 
         // Direct path: B -> C
         val tBC = createTransition(sB.id, sC.id, "Go to C")
 
-        // Longer path: A -> D -> C
+        // Longer path: Home -> D -> C
         val tAD = createTransition(sA.id, sD.id, "Go to D", weight = 5.0)
         val tDC = createTransition(sD.id, sC.id, "Go from D to C", weight = 5.0)
 
+        // "Home" is a known entry title so it becomes the root
         val result = SearchPathEngine.findPathInGraph(
             screens = listOf(sA, sB, sC, sD),
             transitions = listOf(tAB, tBA, tBC, tAD, tDC),
@@ -152,25 +153,28 @@ class SearchPathEngineTest {
         )
 
         assertTrue(result.found)
+        // Path always starts from root Home: Go to B -> Go to C
         assertEquals("Go to B -> Go to C", result.pathString)
         assertEquals(listOf("Go to B", "Go to C"), result.steps)
     }
 
     @Test
     fun testAlreadyOnDestinationScreen() {
-        val s1 = createScreen("com.whatsapp::Chats", pkg = "com.whatsapp", title = "Chats")
+        // When the only screen IS the root, target == root → element is returned directly
+        val s1 = createScreen("com.whatsapp::WhatsApp", pkg = "com.whatsapp", title = "WhatsApp")
 
         val result = SearchPathEngine.findPathInGraph(
             screens = listOf(s1),
             transitions = emptyList(),
             currentScreenId = s1.id,
-            destinationScreen = "Chats",
-            exactTask = null
+            destinationScreen = "WhatsApp",
+            exactTask = null,
+            appDisplayName = "WhatsApp"
         )
 
         assertTrue(result.found)
-        assertEquals("Chats", result.pathString)
-        assertTrue(result.message.contains("Already on target screen"))
+        assertEquals("WhatsApp", result.pathString)
+        assertTrue(result.message.contains("app home screen"))
     }
 
     @Test
