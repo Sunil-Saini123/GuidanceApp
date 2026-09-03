@@ -111,22 +111,36 @@ object SearchPathEngine {
     ): PathSearchResult {
         val db = NavGraphDatabase.getInstance(context)
 
-        // Resolve package name
-        val packageName = GraphStateMachine.getPackageNameForApp(targetApp)
+        // Resolve package name — try hardcoded map first, then DB package scan
+        val knownPackage = GraphStateMachine.getPackageNameForApp(targetApp)
             ?: targetApp.trim().takeIf { it.contains('.') }
-            ?: db.getAllPackages().firstOrNull { it.contains(targetApp, ignoreCase = true) }
-            ?: targetApp.trim()
 
-        val startScreenId = currentScreenId
-            ?: GraphStateMachine.currentScreenId(packageName)
+        // Load screens for the known package
+        var packageName = knownPackage ?: targetApp.trim()
+        var screens = if (knownPackage != null) db.getScreens(knownPackage) else emptyList()
 
-        val screens = db.getScreens(packageName)
+        // If no screens found under the hardcoded package, search the DB for any installed
+        // package whose name contains the app name (handles modded / OEM variants, e.g.
+        // "app.morphe.android.youtube" for YouTube, "com.coloros.contacts" for Contacts, etc.)
+        if (screens.isEmpty()) {
+            val allPackages = db.getAllPackages()
+            val matchingPkg = allPackages.firstOrNull { pkg ->
+                pkg.contains(targetApp, ignoreCase = true) ||
+                pkg.substringAfterLast('.').contains(targetApp, ignoreCase = true)
+            }
+            if (matchingPkg != null) {
+                packageName = matchingPkg
+                screens = db.getScreens(matchingPkg)
+                Log.d(TAG, "Package fallback: '$targetApp' → found '$matchingPkg' in DB (${screens.size} screens)")
+            }
+        }
+
         val transitions = db.getTransitions(packageName)
 
         val result = findPathInGraph(
             screens = screens,
             transitions = transitions,
-            currentScreenId = startScreenId,
+            currentScreenId = currentScreenId ?: GraphStateMachine.currentScreenId(packageName),
             destinationScreen = destinationScreen,
             exactTask = exactTask,
             appDisplayName = targetApp,
