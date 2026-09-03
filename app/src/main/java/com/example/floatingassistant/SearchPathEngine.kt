@@ -325,6 +325,15 @@ object SearchPathEngine {
                 ) 80 else 60
                 candidates.add(TargetCandidate(screen, elementName = matchedElement, score = score))
             }
+
+            // D. WhatsApp Settings Heuristic
+            if (destClean.equals("Settings", ignoreCase = true) &&
+                screen.rootClass.contains("Settings", ignoreCase = true) &&
+                screen.elementsJson.contains("\"Chats\"", ignoreCase = true) &&
+                screen.elementsJson.contains("\"Privacy\"", ignoreCase = true)
+            ) {
+                candidates.add(TargetCandidate(screen, elementName = null, score = 95))
+            }
         }
 
         return candidates.sortedByDescending { it.score }
