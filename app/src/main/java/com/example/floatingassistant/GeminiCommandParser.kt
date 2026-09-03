@@ -362,8 +362,7 @@ Intent: Enable dark mode"""
             .map { it.trim() }
             .filter { it.isNotBlank() }
 
-        Log.d(TAG, "Model response lines: $lines")
-        Log.d(TAG, "Raw text: \"$rawText\"")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Model response lines: $lines")
 
         /**
          * Extract the value for a label like "Target App:" or "Intent:".
