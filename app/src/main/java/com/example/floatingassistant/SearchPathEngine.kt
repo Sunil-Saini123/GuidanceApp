@@ -176,86 +176,98 @@ object SearchPathEngine {
             )
         }
 
-        // ── 1. Target Screen & Element Resolution ─────────────────────────────
-        val targetResolution = resolveTarget(screens, destinationScreen, exactTask)
-            ?: return PathSearchResult.notFound(
+        // ── 1. Target Screen Candidates ─────────────────────────────
+        val targetCandidates = resolveTarget(screens, destinationScreen, exactTask)
+        if (targetCandidates.isEmpty()) {
+            return PathSearchResult.notFound(
                 message = "Destination '$destinationScreen' could not be mapped to any recorded screen or element"
-            )
-
-        val targetScreen = targetResolution.screen
-        val targetElement = targetResolution.elementName
-
-        // ── 2. Start Screen — always the app's root/home, never current screen ──
-        // We intentionally ignore currentScreenId so the path always reads as a
-        // full tutorial: "From WhatsApp home → More options → Settings → Chats → Chat backup"
-        val startScreen = resolveRootScreen(screens, transitions, appDisplayName)
-            ?: return PathSearchResult.notFound(
-                toScreenId = targetScreen.id,
-                message = "Could not identify the app home screen for '${appDisplayName ?: packageName ?: "unknown"}'"
-            )
-
-        // ── 3. If root IS the target screen, just return the element ─────────
-        if (startScreen.id == targetScreen.id) {
-            val steps = mutableListOf<String>()
-            if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
-            else steps.add(targetScreen.screenTitle)
-            return PathSearchResult.found(
-                pathString = steps.joinToString(" -> "),
-                steps = steps,
-                fromScreenId = startScreen.id,
-                toScreenId = targetScreen.id,
-                targetElement = targetElement,
-                message = "Target is on the app home screen"
             )
         }
 
-        // ── 4. Graph Construction & Shortest Path (Dijkstra) ──────────────────
+        // ── 2. Start Screen — always the app's root/home, never current screen ──
+        val startScreen = resolveRootScreen(screens, transitions, appDisplayName)
+            ?: return PathSearchResult.notFound(
+                toScreenId = targetCandidates.first().screen.id,
+                message = "Could not identify the app home screen for '${appDisplayName ?: packageName ?: "unknown"}'"
+            )
+
+        // ── 3. Graph Construction ──────────────────
         val outgoing = mutableMapOf<String, MutableList<NavGraphDatabase.TransitionRecord>>()
         for (t in transitions) {
             outgoing.getOrPut(t.fromScreenId) { mutableListOf() }.add(t)
         }
 
-        val shortestPathEdges = dijkstra(
-            startId = startScreen.id,
-            targetId = targetScreen.id,
-            outgoing = outgoing
-        )
+        // ── 4. Find Best Reachable Target ──────────────────
+        var bestMissMessage: String? = null
+        var bestMissTargetId: String? = null
 
-        if (shortestPathEdges == null) {
-            return PathSearchResult.notFound(
-                fromScreenId = startScreen.id,
-                toScreenId = targetScreen.id,
-                message = "No navigable path from '${startScreen.screenTitle}' to '${targetScreen.screenTitle}' in local graph"
+        for (candidate in targetCandidates) {
+            val targetScreen = candidate.screen
+            val targetElement = candidate.elementName
+
+            // If root IS the target screen, just return the element
+            if (startScreen.id == targetScreen.id) {
+                val steps = mutableListOf<String>()
+                if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
+                else steps.add(targetScreen.screenTitle)
+                return PathSearchResult.found(
+                    pathString = steps.joinToString(" -> "),
+                    steps = steps,
+                    fromScreenId = startScreen.id,
+                    toScreenId = targetScreen.id,
+                    targetElement = targetElement,
+                    message = "Target is on the app home screen"
+                )
+            }
+
+            // Otherwise run Dijkstra
+            val shortestPathEdges = dijkstra(
+                startId = startScreen.id,
+                targetId = targetScreen.id,
+                outgoing = outgoing
             )
-        }
 
-        // ── 5. Reconstruct Step Sequence ──────────────────────────────────────
-        val steps = mutableListOf<String>()
-        for (edge in shortestPathEdges) {
-            if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") {
-                steps.add(edge.actionLabel)
+            if (shortestPathEdges != null) {
+                // Reconstruct Step Sequence
+                val steps = mutableListOf<String>()
+                for (edge in shortestPathEdges) {
+                    if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") {
+                        steps.add(edge.actionLabel)
+                    } else {
+                        val toTitle = edge.toScreenId.substringAfter("::")
+                        steps.add(toTitle)
+                    }
+                }
+                
+                // If target element is present and not redundant, append as final action
+                if (!targetElement.isNullOrEmpty() && (steps.isEmpty() || !steps.last().equals(targetElement, ignoreCase = true))) {
+                    steps.add(targetElement)
+                }
+
+                val pathString = steps.joinToString(" -> ")
+
+                return PathSearchResult.found(
+                    pathString = pathString,
+                    steps = steps,
+                    fromScreenId = startScreen.id,
+                    toScreenId = targetScreen.id,
+                    targetElement = targetElement,
+                    message = "Path found in local graph (${steps.size} steps)"
+                )
             } else {
-                // Fallback to screen title derived from target
-                val toTitle = edge.toScreenId.substringAfter("::")
-                steps.add(toTitle)
+                // Track miss for the highest scoring candidate (first one)
+                if (bestMissMessage == null) {
+                    bestMissMessage = "No navigable path from '${startScreen.screenTitle}' to '${targetScreen.screenTitle}' in local graph"
+                    bestMissTargetId = targetScreen.id
+                }
             }
         }
 
-        // If target element is present and not redundant, append as final action
-        if (!targetElement.isNullOrEmpty() && (steps.isEmpty() || !steps.last().equals(targetElement, ignoreCase = true))) {
-            steps.add(targetElement)
-        }
-
-        // Human-readable path representation
-        val pathString = steps.joinToString(" -> ")
-
-        return PathSearchResult.found(
-            pathString = pathString,
-            steps = steps,
+        // If we reach here, NO target candidate was reachable
+        return PathSearchResult.notFound(
             fromScreenId = startScreen.id,
-            toScreenId = targetScreen.id,
-            targetElement = targetElement,
-            message = "Path found in local graph (${steps.size} steps)"
+            toScreenId = bestMissTargetId,
+            message = bestMissMessage ?: "No reachable target found"
         )
     }
 
@@ -285,7 +297,7 @@ object SearchPathEngine {
         screens: List<NavGraphDatabase.ScreenRecord>,
         destinationScreen: String,
         exactTask: String?
-    ): TargetCandidate? {
+    ): List<TargetCandidate> {
         val candidates = mutableListOf<TargetCandidate>()
         val destClean = destinationScreen.trim()
         val taskClean = exactTask?.trim().orEmpty()
@@ -302,7 +314,7 @@ object SearchPathEngine {
 
             // B. Substring title match
             if (title.contains(destClean, ignoreCase = true) || destClean.contains(title, ignoreCase = true)) {
-                candidates.add(TargetCandidate(screen, elementName = null, score = 70))
+                candidates.add(TargetCandidate(screen, elementName = null, score = 90))
             }
 
             // C. Search inside elements_json for matching element
@@ -310,12 +322,12 @@ object SearchPathEngine {
             if (matchedElement != null) {
                 val score = if (matchedElement.equals(destClean, ignoreCase = true) ||
                     matchedElement.equals(taskClean, ignoreCase = true)
-                ) 85 else 60
+                ) 80 else 60
                 candidates.add(TargetCandidate(screen, elementName = matchedElement, score = score))
             }
         }
 
-        return candidates.maxByOrNull { it.score }
+        return candidates.sortedByDescending { it.score }
     }
 
     /**
