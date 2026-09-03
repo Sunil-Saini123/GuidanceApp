@@ -554,4 +554,33 @@ class NavGraphDatabase private constructor(context: Context)
         cursor.close()
         return result
     }
+
+    /**
+     * Removes all screens (and their associated transitions) whose title matches
+     * an overlay screen title like "Floating Assistant" or "FloatingAssistant".
+     * Call this once on app startup to purge stale overlay captures from the DB.
+     */
+    fun pruneOverlayScreens() {
+        val overlayTitles = listOf("Floating Assistant", "FloatingAssistant")
+        val db = writableDatabase
+        var totalDeleted = 0
+        for (title in overlayTitles) {
+            // Delete outgoing transitions from these screens
+            db.execSQL(
+                "DELETE FROM transitions WHERE from_screen_id IN (SELECT id FROM screens WHERE screen_title = ?)",
+                arrayOf(title)
+            )
+            // Delete incoming transitions to these screens
+            db.execSQL(
+                "DELETE FROM transitions WHERE to_screen_id IN (SELECT id FROM screens WHERE screen_title = ?)",
+                arrayOf(title)
+            )
+            // Delete the screens themselves
+            val rows = db.delete("screens", "screen_title = ?", arrayOf(title))
+            totalDeleted += rows
+        }
+        if (totalDeleted > 0) {
+            Log.i(TAG, "pruneOverlayScreens: removed $totalDeleted overlay screen(s) from DB")
+        }
+    }
 }

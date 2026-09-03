@@ -180,12 +180,39 @@ object SearchPathEngine {
 
         // ── 3. Check if already on the target screen ──────────────────────────
         if (startScreen.id == targetScreen.id) {
-            val steps = mutableListOf<String>()
-            if (!targetElement.isNullOrEmpty()) {
-                steps.add(targetElement)
-            } else {
-                steps.add(targetScreen.screenTitle)
+            // Try to build a full tutorial path from the app root → current screen → element
+            val rootScreen = resolveRootScreen(screens, transitions, appDisplayName)
+            if (rootScreen != null && rootScreen.id != startScreen.id) {
+                // Build path from root to current screen
+                val outgoing = mutableMapOf<String, MutableList<NavGraphDatabase.TransitionRecord>>()
+                for (t in transitions) {
+                    outgoing.getOrPut(t.fromScreenId) { mutableListOf() }.add(t)
+                }
+                val rootToCurrentEdges = dijkstra(startId = rootScreen.id, targetId = startScreen.id, outgoing = outgoing)
+                if (rootToCurrentEdges != null) {
+                    val steps = mutableListOf<String>()
+                    for (edge in rootToCurrentEdges) {
+                        val label = if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") edge.actionLabel
+                                    else edge.toScreenId.substringAfter("::")
+                        steps.add(label)
+                    }
+                    if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
+                    else steps.add(targetScreen.screenTitle)
+                    val pathStr = steps.joinToString(" -> ")
+                    return PathSearchResult.found(
+                        pathString = pathStr,
+                        steps = steps,
+                        fromScreenId = rootScreen.id,
+                        toScreenId = targetScreen.id,
+                        targetElement = targetElement,
+                        message = "Full path from app root (currently on '${startScreen.screenTitle}')"
+                    )
+                }
             }
+            // Fallback: just show the element/screen name
+            val steps = mutableListOf<String>()
+            if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
+            else steps.add(targetScreen.screenTitle)
             val pathStr = steps.joinToString(" -> ")
             return PathSearchResult.found(
                 pathString = pathStr,
@@ -375,6 +402,34 @@ object SearchPathEngine {
 
         // Priority 5: Highest visit count / earliest firstSeen
         return validScreens.maxByOrNull { it.visitCount } ?: validScreens.minByOrNull { it.firstSeen }
+    }
+
+    /**
+     * Resolves the app's root / home screen unconditionally — ignoring the active stack.
+     * Used to compute a full tutorial path even when the user is already deep in the app.
+     */
+    private fun resolveRootScreen(
+        screens: List<NavGraphDatabase.ScreenRecord>,
+        transitions: List<NavGraphDatabase.TransitionRecord>,
+        appDisplayName: String? = null
+    ): NavGraphDatabase.ScreenRecord? {
+        val validScreens = screens.filter { it.screenTitle.lowercase().trim() !in OVERLAY_SCREEN_TITLES }
+        if (validScreens.isEmpty()) return null
+
+        // 1. Screen titled exactly like the app name (e.g. "WhatsApp")
+        if (!appDisplayName.isNullOrBlank()) {
+            validScreens.firstOrNull { it.screenTitle.equals(appDisplayName, ignoreCase = true) }?.let { return it }
+        }
+
+        // 2. Known entry titles
+        val knownEntryTitles = setOf("settings", "home", "whatsapp", "main", "conversations", "dialer", "camera")
+        validScreens.firstOrNull { it.screenTitle.lowercase() in knownEntryTitles }?.let { return it }
+
+        // 3. Zero in-degree (true graph root)
+        val destinations = transitions.map { it.toScreenId }.toSet()
+        validScreens.firstOrNull { it.id !in destinations }?.let { return it }
+
+        return null
     }
 
     private data class DijkstraNode(

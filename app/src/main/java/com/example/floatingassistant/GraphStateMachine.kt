@@ -198,6 +198,8 @@ object GraphStateMachine {
     fun init(context: Context, navGraphFile: File) {
         db                = NavGraphDatabase.getInstance(context)
         this.navGraphFile = navGraphFile
+        // Prune any old Floating Assistant overlay screens from previous sessions
+        db.pruneOverlayScreens()
         Log.i(TAG, "Initialised — DB: nav_graph.db  JSON: ${navGraphFile.name}")
     }
 
@@ -322,6 +324,12 @@ object GraphStateMachine {
 
         val topZoneLimit = sh * 0.20f
 
+        // Navigation-only words that should NEVER become a screen title
+        val NAV_ONLY_LABELS = setOf(
+            "back", "close", "next", "done", "cancel", "ok", "yes", "no",
+            "skip", "forward", "continue", "dismiss", "navigate up", "search"
+        )
+
         /** Primary label of an element — stripped of any composite suffix. */
         fun primaryName(el: JSONObject): String =
             el.optString("name", "").trim().substringBefore(" · ").trim()
@@ -331,6 +339,7 @@ object GraphStateMachine {
             val top  = el.optJSONObject("bounds")?.optInt("top", sh) ?: sh
             return name.isNotEmpty()
                     && name !in SPATIAL_LABELS
+                    && name.lowercase() !in NAV_ONLY_LABELS
                     && top.toFloat() <= topZoneLimit
                     && isStaticTitle(name)
         }
