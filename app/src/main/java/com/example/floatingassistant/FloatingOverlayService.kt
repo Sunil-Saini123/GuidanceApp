@@ -490,29 +490,31 @@ class FloatingOverlayService : Service() {
                 "destinationScreen=\"${parsed.destinationScreen}\" | " +
                 "exactTask=\"${parsed.exactTask}\"")
 
-            // ── PHASE 2 (Tier 1 — Local Graph BFS) — wired in Phase 2 ─────────
-            // val localPath = SearchPathEngine.find(
-            //     fromScreenId = GraphStateMachine.currentScreenId(parsed.targetApp),
-            //     toScreenTitle = parsed.destinationScreen
-            // )
-            // if (localPath != null) { … dispatch … return@launch }
+            // ── PHASE 2 (Tier 1 — Local Graph Search) ─────────────────────────
+            val searchResult = withContext(Dispatchers.IO) {
+                SearchPathEngine.findPath(
+                    context = applicationContext,
+                    targetApp = parsed.targetApp,
+                    destinationScreen = parsed.destinationScreen,
+                    exactTask = parsed.exactTask
+                )
+            }
 
-            // ── PHASE 3 (Tier 2 — Firestore) — wired in Phase 3 ─────────────
-            // val cloudPath = CloudPathDatabase.lookup(parsed.destinationScreen)
-            // if (cloudPath.isNotEmpty()) { … dispatch … return@launch }
-
-            // ── PHASE 4 (Tier 3 — Groq) — wired in Phase 4 ──────────────────
-            // val groqPath = PathGenerator(…).generatePath(parsed)
-            // CloudPathDatabase.addEntry(…)
-
-            // Phases 2-4 not yet wired — inform user what was understood.
-            Log.i("[PathFinder]", "Path resolution not yet wired (Phases 2-4 pending)")
-            statusText.text =
-                "✓ Understood:\n" +
-                "App: ${parsed.targetApp}\n" +
-                "Screen: ${parsed.destinationScreen}\n" +
-                "Task: ${parsed.exactTask}\n\n" +
-                "(Path guide coming in next phases)"
+            if (searchResult.found) {
+                statusText.text =
+                    "✓ Local Graph Match:\n" +
+                    "App: ${parsed.targetApp}\n" +
+                    "Path: ${searchResult.pathString}\n" +
+                    "Task: ${parsed.exactTask}"
+                Log.i(TAG, "Local search matched: ${searchResult.pathString}")
+            } else {
+                statusText.text =
+                    "✗ Local Graph Miss:\n" +
+                    "App: ${parsed.targetApp} -> ${parsed.destinationScreen}\n" +
+                    "Reason: ${searchResult.message}\n" +
+                    "Task: ${parsed.exactTask}"
+                Log.i(TAG, "Local search miss: ${searchResult.message}")
+            }
         }
     }
 

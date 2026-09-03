@@ -437,6 +437,28 @@ object GraphStateMachine {
                 .split(Regex("(?<=[a-z])(?=[A-Z])|_"))
                 .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
 
+    /** Returns the current active screen ID for [packageName] from the in-memory navigation stack. */
+    fun currentScreenId(packageName: String): String? =
+        navigationStacks[packageName]?.lastOrNull()
+
+    /** Reverse lookup: given an app display name (e.g. "WhatsApp", "Settings", "Phone"), find the package name. */
+    fun getPackageNameForApp(appName: String): String? {
+        val trimmed = appName.trim()
+        if (trimmed.isEmpty()) return null
+        // 1. Direct match in KNOWN_APP_NAMES values
+        KNOWN_APP_NAMES.entries.firstOrNull { it.value.equals(trimmed, ignoreCase = true) }?.key?.let { return it }
+        // 2. If it's already a package name in KNOWN_APP_NAMES
+        if (KNOWN_APP_NAMES.containsKey(trimmed)) return trimmed
+        // 3. Partial / substring match in display names
+        KNOWN_APP_NAMES.entries.firstOrNull {
+            it.value.contains(trimmed, ignoreCase = true) || trimmed.contains(it.value, ignoreCase = true)
+        }?.key?.let { return it }
+        return null
+    }
+
+    /** Returns all packages that currently have an active navigation stack in memory. */
+    fun getActivePackages(): Set<String> = navigationStacks.keys.toSet()
+
     // ── nav_graph.json hierarchical export ───────────────────────────────────
 
     /**

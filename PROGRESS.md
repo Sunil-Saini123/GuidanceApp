@@ -41,9 +41,9 @@
 - [ ] **Micro level** — Element nodes with stable unique identifiers (resource_id hash, bounds fingerprint) stored as interaction targets; currently elements are stored as name-strings only, not as queryable graph nodes
 
 ### Path Search on Local Graph (Tier 1)
-- [ ] **BFS / Dijkstra on `nav_graph.db`** — Query: given current `screenId` + target screen title/element, find shortest weighted path through recorded transitions
-- [ ] **Path serializer** — Convert DB transition rows into a human-readable step sequence (`WhatsApp → 3 dots → Settings → Profile`)
-- [ ] **"No path" detection** — Return `null` cleanly when target is unreachable in local graph to trigger Tier 2 fallback
+- [x] **BFS / Dijkstra on `nav_graph.db`** — Query: given current `screenId` + target screen title/element, find shortest weighted path through recorded transitions (`SearchPathEngine.kt`)
+- [x] **Path serializer** — Convert DB transition rows into a human-readable step sequence (`WhatsApp → 3 dots → Settings → Profile`)
+- [x] **"No path" detection** — Return `null` cleanly when target is unreachable in local graph to trigger Tier 2 fallback
 
 ---
 
@@ -110,7 +110,7 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 | Phase | Goal | Status |
 |-------|------|--------|
 | Phase 1 | Structured intent from Gemini (`target_app` + `destination_screen` + `exact_task`) | ✅ DONE |
-| Phase 2 | Tier 1 — BFS/Dijkstra on local `nav_graph.db` | ⏳ PENDING |
+| Phase 2 | Tier 1 — BFS/Dijkstra on local `nav_graph.db` | ✅ DONE |
 | Phase 3 | Tier 2 — Firestore `CloudPathDatabase.lookup()` wired as fallback | ⏳ PENDING |
 | Phase 4 | Tier 3 — Groq `PathGenerator.generatePath()` + `CloudPathDatabase.addEntry()` | ⏳ PENDING |
 
@@ -122,11 +122,11 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 - [x] `FloatingOverlayService.handleSubmittedQuery()` uses new structured payload
 
 ### Phase 2 — Tier 1: Local Graph Search
-- [ ] `SearchPathEngine.kt` — BFS on `nav_graph.db` transitions
-- [ ] Input: current `screenId` from `GraphStateMachine` + `destinationScreen` from Phase 1
-- [ ] Output: ordered list of `action_label` strings or `null`
-- [ ] `[PathFinder]` log: `Tier 1 Local DB: Path Found / Miss`
-- [ ] Wired in `handleSubmittedQuery` before Tier 2
+- [x] `SearchPathEngine.kt` — BFS / Dijkstra on `nav_graph.db` transitions
+- [x] Input: current `screenId` from `GraphStateMachine` + `destinationScreen` / `exactTask` from Phase 1
+- [x] Output: ordered list of `action_label` strings or `null`
+- [x] `[PathFinder]` log: `Tier 1 Local DB: Path Found / Miss`
+- [x] Wired in `FloatingOverlayService.handleSubmittedQuery()` with overlay status and Logcat reporting
 
 ### Phase 3 — Tier 2: Firestore Cloud Lookup
 - [ ] `CloudPathDatabase.lookup()` called when Tier 1 returns null
