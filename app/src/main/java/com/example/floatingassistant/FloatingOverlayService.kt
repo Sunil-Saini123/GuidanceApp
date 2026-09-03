@@ -129,6 +129,11 @@ class FloatingOverlayService : Service() {
         inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         startForeground(NOTIFICATION_ID, buildNotification())
         addBubble()
+        serviceScope.launch {
+            // Firestore security rules require an authenticated (anonymous) user —
+            // sign in once up front so the first query submission isn't slowed down by it.
+            CloudPathDatabase.ensureSignedIn()
+        }
 
 
 
@@ -182,8 +187,8 @@ class FloatingOverlayService : Service() {
     private fun applyIdleFlags() {
         bubbleParams.flags =
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
         typingModeActive = false
     }
@@ -196,8 +201,8 @@ class FloatingOverlayService : Service() {
     private fun applyTypingFlags() {
         bubbleParams.flags =
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
         typingModeActive = true
     }
