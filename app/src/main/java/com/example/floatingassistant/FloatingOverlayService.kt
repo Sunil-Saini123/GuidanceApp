@@ -453,7 +453,7 @@ class FloatingOverlayService : Service() {
 
             if (parsed == null) {
                 statusText.text = "Server is busy — please try again in a moment."
-                Log.w(TAG, "GeminiCommandParser returned null for query=\"$query\"")
+                if (BuildConfig.DEBUG) Log.w(TAG, "GeminiCommandParser returned null")
                 return@launch
             }
 
