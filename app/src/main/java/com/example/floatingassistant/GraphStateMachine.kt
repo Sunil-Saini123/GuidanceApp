@@ -80,7 +80,8 @@ object GraphStateMachine {
     // Spatial label names — never valid screen titles
     private val SPATIAL_LABELS = setOf(
         "Back_Button", "Menu_Button", "Search_Bar", "Action_Bar",
-        "Bottom_Nav_Item", "Bottom_Bar", "Scrollable_List"
+        "Bottom_Nav_Item", "Bottom_Bar", "Scrollable_List",
+        "Floating Assistant", "FloatingAssistant"
     )
 
     // ── Dynamic data filters ──────────────────────────────────────────────────

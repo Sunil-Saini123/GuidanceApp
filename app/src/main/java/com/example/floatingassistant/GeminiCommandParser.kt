@@ -341,7 +341,12 @@ Exact Task: Switch to front camera and capture photo"""
         // 3. Fallback heuristics for common apps
         return when {
             queryLower.contains("whatsapp") -> {
-                val screen = if (queryLower.contains("profile") || queryLower.contains("dp")) "Profile" else "Chats"
+                val feature = query.replace(Regex("(?i)\\b(open|go to|change|set|show|view|my|whatsapp|in whatsapp|on whatsapp)\\b"), "").trim()
+                val screen = when {
+                    queryLower.contains("profile") || queryLower.contains("dp") -> "Profile"
+                    feature.isNotBlank() -> feature
+                    else -> "Chats"
+                }
                 ParsedCommand(targetApp = "WhatsApp", destinationScreen = screen, exactTask = query)
             }
             queryLower.contains("youtube") -> {

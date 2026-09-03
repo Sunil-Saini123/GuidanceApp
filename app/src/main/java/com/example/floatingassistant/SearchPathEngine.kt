@@ -172,7 +172,7 @@ object SearchPathEngine {
         val targetElement = targetResolution.elementName
 
         // ── 2. Start Screen Resolution ────────────────────────────────────────
-        val startScreen = resolveStartScreen(screens, transitions, currentScreenId)
+        val startScreen = resolveStartScreen(screens, transitions, currentScreenId, appDisplayName)
             ?: return PathSearchResult.notFound(
                 toScreenId = targetScreen.id,
                 message = "Could not identify a valid starting screen"
@@ -255,6 +255,8 @@ object SearchPathEngine {
         val score: Int
     )
 
+    private val OVERLAY_SCREEN_TITLES = setOf("floating assistant", "floatingassistant")
+
     /**
      * Resolves the target screen and optional target element from destination / task.
      */
@@ -266,8 +268,9 @@ object SearchPathEngine {
         val candidates = mutableListOf<TargetCandidate>()
         val destClean = destinationScreen.trim()
         val taskClean = exactTask?.trim().orEmpty()
+        val validScreens = screens.filter { it.screenTitle.lowercase().trim() !in OVERLAY_SCREEN_TITLES }
 
-        for (screen in screens) {
+        for (screen in validScreens) {
             val title = screen.screenTitle.trim()
 
             // A. Exact title match (highest confidence)
@@ -346,23 +349,32 @@ object SearchPathEngine {
     private fun resolveStartScreen(
         screens: List<NavGraphDatabase.ScreenRecord>,
         transitions: List<NavGraphDatabase.TransitionRecord>,
-        currentScreenId: String?
+        currentScreenId: String?,
+        appDisplayName: String? = null
     ): NavGraphDatabase.ScreenRecord? {
-        // Priority 1: Current active screen matches an existing record
+        val validScreens = screens.filter { it.screenTitle.lowercase().trim() !in OVERLAY_SCREEN_TITLES }
+        if (validScreens.isEmpty()) return null
+
+        // Priority 1: Current active screen matches an existing record (if not overlay)
         if (!currentScreenId.isNullOrBlank()) {
-            screens.firstOrNull { it.id == currentScreenId }?.let { return it }
+            validScreens.firstOrNull { it.id == currentScreenId }?.let { return it }
         }
 
-        // Priority 2: Look for root screen (common entry points like "Settings", "Home", "Chats")
-        val knownEntryTitles = setOf("settings", "home", "chats", "main", "conversations", "dialer", "camera")
-        screens.firstOrNull { it.screenTitle.lowercase() in knownEntryTitles }?.let { return it }
+        // Priority 2: Screen title matches the app display name (e.g. "WhatsApp", "Settings")
+        if (!appDisplayName.isNullOrBlank()) {
+            validScreens.firstOrNull { it.screenTitle.equals(appDisplayName, ignoreCase = true) }?.let { return it }
+        }
 
-        // Priority 3: Screen with 0 in-degree in recorded transitions (true graph entry node)
+        // Priority 3: Look for root screen (common entry points like "Settings", "Home", "WhatsApp")
+        val knownEntryTitles = setOf("settings", "home", "whatsapp", "main", "conversations", "dialer", "camera")
+        validScreens.firstOrNull { it.screenTitle.lowercase() in knownEntryTitles }?.let { return it }
+
+        // Priority 4: Screen with 0 in-degree in recorded transitions (true graph entry node)
         val destinations = transitions.map { it.toScreenId }.toSet()
-        screens.firstOrNull { it.id !in destinations }?.let { return it }
+        validScreens.firstOrNull { it.id !in destinations }?.let { return it }
 
-        // Priority 4: Highest visit count / earliest firstSeen
-        return screens.maxByOrNull { it.visitCount } ?: screens.minByOrNull { it.firstSeen }
+        // Priority 5: Highest visit count / earliest firstSeen
+        return validScreens.maxByOrNull { it.visitCount } ?: validScreens.minByOrNull { it.firstSeen }
     }
 
     private data class DijkstraNode(

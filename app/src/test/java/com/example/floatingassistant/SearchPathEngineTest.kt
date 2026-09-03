@@ -223,8 +223,40 @@ class SearchPathEngineTest {
         assertEquals("WhatsApp", whatsappResult.targetApp)
         assertEquals("Profile", whatsappResult.destinationScreen)
 
+        val backupResult = GeminiCommandParser.resolveLocally("open whatsapp chat backup")
+        assertEquals("WhatsApp", backupResult.targetApp)
+        assertEquals("chat backup", backupResult.destinationScreen)
+
         val phoneResult = GeminiCommandParser.resolveLocally("call mom")
         assertEquals("Phone", phoneResult.targetApp)
         assertEquals("Dialer", phoneResult.destinationScreen)
+    }
+
+    @Test
+    fun testWhatsAppChatBackupGraphSearch() {
+        val sHome = createScreen("com.whatsapp::WhatsApp", pkg = "com.whatsapp", title = "WhatsApp")
+        val sSettings = createScreen("com.whatsapp::Settings", pkg = "com.whatsapp", title = "Settings")
+        val sChats = createScreen(
+            "com.whatsapp::Chats",
+            pkg = "com.whatsapp",
+            title = "Chats",
+            elements = listOf("Chat backup", "Chat history")
+        )
+
+        val t1 = createTransition(sHome.id, sSettings.id, "Settings")
+        val t2 = createTransition(sSettings.id, sChats.id, "Chats")
+
+        val result = SearchPathEngine.findPathInGraph(
+            screens = listOf(sHome, sSettings, sChats),
+            transitions = listOf(t1, t2),
+            currentScreenId = sHome.id,
+            destinationScreen = "chat backup",
+            exactTask = "open whatsapp chat backup",
+            appDisplayName = "WhatsApp"
+        )
+
+        assertTrue("Path to chat backup should be found", result.found)
+        assertEquals("Settings -> Chats -> Chat backup", result.pathString)
+        assertEquals(listOf("Settings", "Chats", "Chat backup"), result.steps)
     }
 }
