@@ -37,12 +37,16 @@ import java.util.Locale
  * device_paths (collection)
  *   └─ <signature> (document, one per unique device signature)
  *        entries: {
- *          "change_whatsapp_profile_picture": "WhatsApp -> 3 dots -> Settings -> Profile -> Change Profile",
+ *          "whatsapp": {                                        ← app key
+ *            "change_profile_picture": "WhatsApp -> 3 dots -> Settings -> Profile -> Change Profile",
+ *            ...
+ *          },
+ *          "settings": { ... },
  *          ...
  *        }
  * ```
- * `entries` is a flat map: sanitized intent key → path string directly. No
- * per-entry metadata — the key/path pair is all a lookup needs.
+ * `entries` is a two-level map: sanitized app key → { sanitized task key → path string }.
+ * Lookup path: `entries.<appKey>.<taskKey>`. Both keys are lowercased + sanitized.
  *
  * All calls are suspend functions — run them from a coroutine (they do not
  * block a thread while waiting on network I/O, so Dispatchers.IO is optional
@@ -68,21 +72,25 @@ object CloudPathDatabase {
     // ── Public API ───────────────────────────────────────────────────────────
 
     /**
-     * Resolve [intent] (already normalized by your intent-extraction model)
-     * against Firestore for [deviceInfo] (defaults to the current device's
-     * live signature, built the same way [DeviceInfoWriter] builds its
-     * snapshot).
+     * Look up a stored path for the given [targetApp] and [exactTask] on [deviceInfo].
      *
-     * @return the stored path string if this exact intent is present for
-     *         this exact device signature, otherwise "".
+     * Firestore path: `entries.<appKey>.<taskKey>`
+     *   - appKey  = sanitizeIntentKey(targetApp)   e.g. "whatsapp"
+     *   - taskKey = sanitizeIntentKey(exactTask)   e.g. "change_profile_picture"
+     *
+     * @return the stored path string on a hit, or "" on any miss / error.
      */
     suspend fun lookup(
-        intent: String,
+        targetApp: String,
+        exactTask: String,
         deviceInfo: DeviceSignatureInfo = currentDeviceSignatureInfo()
     ): String {
         val signature = buildSignature(deviceInfo)
-        val key = sanitizeIntentKey(intent)
-        val docRef = firestore.collection(COLLECTION).document(signature)
+        val appKey    = sanitizeIntentKey(targetApp)
+        val taskKey   = sanitizeIntentKey(exactTask)
+        val docRef    = firestore.collection(COLLECTION).document(signature)
+
+        Log.d(TAG, "Tier 2 Firestore lookup — signature=$signature, app=$appKey, task=$taskKey")
 
         val snapshot = try {
             docRef.get().await()
@@ -91,62 +99,69 @@ object CloudPathDatabase {
             return ""
         }
 
-        // "Has anyone done this before?" (on THIS exact device signature)
         if (!snapshot.exists()) {
-            Log.w(TAG, "Path not found — no document for signature=$signature")
+            Log.w(TAG, "Tier 2 Firestore: Miss — no document for signature=$signature")
             return ""
         }
 
-        // "Is the query present?" — direct field lookup on entries.<key>, exact match only.
-        val path = snapshot.get("entries.$key") as? String
+        // Level 1: check app sub-map exists
+        @Suppress("UNCHECKED_CAST")
+        val appMap = snapshot.get("entries.$appKey") as? Map<String, Any>
+        if (appMap == null) {
+            Log.w(TAG, "Tier 2 Firestore: Miss — no app entry for appKey=$appKey (signature=$signature)")
+            return ""
+        }
 
+        // Level 2: check task key inside the app sub-map
+        val path = appMap[taskKey] as? String
         if (path.isNullOrEmpty()) {
-            Log.w(TAG, "Path not found — no entry for intent=\"$intent\" (key=$key, signature=$signature)")
+            Log.w(TAG, "Tier 2 Firestore: Miss — no task entry for taskKey=$taskKey (app=$appKey, signature=$signature)")
             return ""
         }
 
-        Log.i(TAG, "Resolved \"$intent\" → \"$path\" (signature=$signature)")
+        Log.i(TAG, "Tier 2 Firestore: Match Found — \"$targetApp / $exactTask\" → \"$path\" (signature=$signature)")
         return path
     }
 
     /**
-     * Stores [path] under the exact-match key derived from [intent] for
-     * [deviceInfo]'s signature. Uses a dotted-path [DocumentReference.update]
-     * targeting `entries.<key>` so sibling entries are never touched —
-     * `set(..., merge = true)` would NOT be safe here, since Firestore's
-     * merge only preserves *sibling top-level fields*; a nested map field
-     * (like `entries`) passed to a merge-set is replaced wholesale, not
-     * merged key-by-key.
+     * Stores [path] under the two-level key derived from [targetApp] and [exactTask] for
+     * [deviceInfo]'s signature.
      *
-     * Not wired into any UI flow yet (per the "store after a successful,
-     * previously-unmapped task" step, which is future work) — but the
-     * schema and this function are ready for it.
+     * Firestore path written: `entries.<appKey>.<taskKey>`
+     *
+     * Uses `update()` with a dotted field path to surgically write only this single
+     * leaf — sibling apps and sibling tasks are never touched. Falls back to `set(merge)`
+     * if the document doesn't exist yet.
+     *
+     * Not yet called from any active pipeline (wired in Phase 4 after Groq generates a path).
      */
     suspend fun addEntry(
-        intent: String,
+        targetApp: String,
+        exactTask: String,
         path: String,
         deviceInfo: DeviceSignatureInfo = currentDeviceSignatureInfo()
     ) {
         val signature = buildSignature(deviceInfo)
-        val key = sanitizeIntentKey(intent)
-        val docRef = firestore.collection(COLLECTION).document(signature)
+        val appKey    = sanitizeIntentKey(targetApp)
+        val taskKey   = sanitizeIntentKey(exactTask)
+        val fieldPath = "entries.$appKey.$taskKey"
+        val docRef    = firestore.collection(COLLECTION).document(signature)
 
         try {
-            // Use SetOptions.mergeFields to perform a deep merge on the 'entries' map.
-            // This creates the document if it doesn't exist AND updates only the 
-            // specific nested key 'entries.<key>' without overwriting other entries.
-            val data = mapOf(
-                "entries" to mapOf(key to path)
-            )
-
-            docRef.set(
-                data,
-                SetOptions.mergeFields("entries.$key")
-            ).await()
-
-            Log.i(TAG, "Entry added for signature=$signature, key=$key → \"$path\"")
+            // Try update() first (doc exists) — only touches this single leaf key.
+            docRef.update(fieldPath, path).await()
+            Log.i(TAG, "Entry updated — signature=$signature, $fieldPath → \"$path\"")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to add entry for signature=$signature, key=$key: ${e.message}", e)
+            // update() fails if document doesn't exist yet → fall back to set(merge).
+            try {
+                val data = mapOf(
+                    "entries" to mapOf(appKey to mapOf(taskKey to path))
+                )
+                docRef.set(data, SetOptions.merge()).await()
+                Log.i(TAG, "Entry created (set/merge) — signature=$signature, $fieldPath → \"$path\"")
+            } catch (e2: Exception) {
+                Log.e(TAG, "Failed to add entry — signature=$signature, $fieldPath: ${e2.message}", e2)
+            }
         }
     }
 

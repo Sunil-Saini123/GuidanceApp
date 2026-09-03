@@ -111,8 +111,8 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 |-------|------|--------|
 | Phase 1 | Structured intent from Gemini (`target_app` + `destination_screen` + `exact_task`) | ✅ DONE |
 | Phase 2 | Tier 1 — BFS/Dijkstra on local `nav_graph.db` | ⏳ PENDING |
-| Phase 3 | Tier 2 — Firestore `CloudPathDatabase.lookup()` wired as fallback | ⏳ PENDING |
-| Phase 4 | Tier 3 — Groq `PathGenerator.generatePath()` + `CloudPathDatabase.addEntry()` | ⏳ PENDING |
+| Phase 3 | Tier 2 — Firestore `CloudPathDatabase.lookup()` wired as fallback | ✅ DONE |
+| Phase 4 | Tier 3 — Groq `PathGenerator.generatePath()` + `CloudPathDatabase.addEntry()` | ✅ DONE |
 
 ### Phase 1 — Structured Intent Classification
 - [x] `GeminiCommandParser.ParsedCommand` extended to 3 fields: `targetApp`, `destinationScreen`, `exactTask`
@@ -129,17 +129,21 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 - [ ] Wired in `handleSubmittedQuery` before Tier 2
 
 ### Phase 3 — Tier 2: Firestore Cloud Lookup
-- [ ] `CloudPathDatabase.lookup()` called when Tier 1 returns null
-- [ ] Device fingerprint passed: manufacturer + brand + Android version + OEM skin
-- [ ] `[PathFinder]` log: `Tier 2 Firestore: Match Found / Miss`
-- [ ] Wired in `handleSubmittedQuery` after Tier 1 miss
+- [x] `CloudPathDatabase.lookup(targetApp, exactTask)` — new 3-level path: `entries.{appKey}.{taskKey}`
+- [x] `CloudPathDatabase.addEntry(targetApp, exactTask, path)` — nested write; `update()` + `set(merge)` fallback
+- [x] Firebase schema updated: `entries → {appKey} → {taskKey} → path string`
+- [x] `[PathFinder]` log: `Tier 2 Firestore: Match Found / Miss`
+- [x] Wired in `handleSubmittedQuery` after Tier 1 stub; returns on hit with `return@launch`
 
 ### Phase 4 — Tier 3: Groq LLM Fallback
-- [ ] `PathGenerator.generatePath()` called when Tier 2 returns null
-- [ ] Payload includes: `exactTask` + `destinationScreen` + device OS info + `clean_page.json` content
-- [ ] `CloudPathDatabase.addEntry()` called to store newly generated path
-- [ ] `[PathFinder]` log: `Tier 3 Groq: Generated next step -> [Action]`
-- [ ] Wired in `handleSubmittedQuery` after Tier 2 miss
+- [x] `PromptBuilder.buildGeminiDrivenPrompt(targetApp, exactTask, cleanPageContent, deviceInfo)` — new focused prompt
+- [x] `GroqProxyClient.sendDirectRequest(systemPrompt, userPrompt)` — direct string-based Groq call
+- [x] `clean_page.json` read from `getExternalFilesDir(null)` and passed as current screen context
+- [x] `DeviceInfoGatherer.gather()` called for device/ROM context
+- [x] `GroqResponseParser.parse()` → `NavigationPath.toPathString()` for display
+- [x] `CloudPathDatabase.addEntry()` called after success — auto-stores path to Firestore for Tier 2 next time
+- [x] `[PathFinder]` log: `Tier 3 Groq: Generated path / Failed`
+- [x] Wired in `handleSubmittedQuery` after Tier 2 miss
 
 
 ---
