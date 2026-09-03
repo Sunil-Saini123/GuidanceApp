@@ -80,7 +80,6 @@ object GeminiCommandParser {
      *     by the deprecation messages of all other models). Retry aggressively when busy.
      */
     private val MODEL_FALLBACK_LIST = listOf(
-        "gemini-flash-latest",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3.7-flash",

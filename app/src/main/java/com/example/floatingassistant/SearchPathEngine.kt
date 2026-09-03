@@ -177,7 +177,7 @@ object SearchPathEngine {
         }
 
         // ── 1. Target Screen Candidates ─────────────────────────────
-        val targetCandidates = resolveTarget(screens, destinationScreen, exactTask)
+        val targetCandidates = resolveTarget(screens, destinationScreen)
         if (targetCandidates.isEmpty()) {
             return PathSearchResult.notFound(
                 message = "Destination '$destinationScreen' could not be mapped to any recorded screen or element"
@@ -295,12 +295,10 @@ object SearchPathEngine {
      */
     private fun resolveTarget(
         screens: List<NavGraphDatabase.ScreenRecord>,
-        destinationScreen: String,
-        exactTask: String?
+        destinationScreen: String
     ): List<TargetCandidate> {
         val candidates = mutableListOf<TargetCandidate>()
         val destClean = destinationScreen.trim()
-        val taskClean = exactTask?.trim().orEmpty()
         val validScreens = screens.filter { it.screenTitle.lowercase().trim() !in OVERLAY_SCREEN_TITLES }
 
         for (screen in validScreens) {
@@ -318,11 +316,9 @@ object SearchPathEngine {
             }
 
             // C. Search inside elements_json for matching element
-            val matchedElement = findMatchingElement(screen.elementsJson, destClean, taskClean)
+            val matchedElement = findMatchingElement(screen.elementsJson, destClean)
             if (matchedElement != null) {
-                val score = if (matchedElement.equals(destClean, ignoreCase = true) ||
-                    matchedElement.equals(taskClean, ignoreCase = true)
-                ) 80 else 60
+                val score = if (matchedElement.equals(destClean, ignoreCase = true)) 80 else 60
                 candidates.add(TargetCandidate(screen, elementName = matchedElement, score = score))
             }
 
@@ -344,8 +340,7 @@ object SearchPathEngine {
      */
     private fun findMatchingElement(
         elementsJson: String,
-        destClean: String,
-        taskClean: String
+        destClean: String
     ): String? {
         if (elementsJson.isBlank()) return null
         return try {
@@ -358,22 +353,15 @@ object SearchPathEngine {
                 val name = obj.optString("name", "").trim()
                 if (name.isEmpty()) continue
 
-                // 1. Exact match with destination or task
-                if (name.equals(destClean, ignoreCase = true) ||
-                    (taskClean.isNotEmpty() && name.equals(taskClean, ignoreCase = true))
-                ) {
+                // 1. Exact match with destination
+                if (name.equals(destClean, ignoreCase = true)) {
                     return name
                 }
 
                 // 2. Substring match
-                if (destClean.length >= 3 && (name.contains(destClean, ignoreCase = true) || destClean.contains(name, ignoreCase = true))) {
+                if (destClean.length >= 3 && name.length >= 3 && (name.contains(destClean, ignoreCase = true) || destClean.contains(name, ignoreCase = true))) {
                     if (bestScore < 30) {
                         bestScore = 30
-                        bestMatch = name
-                    }
-                } else if (taskClean.length >= 3 && (name.contains(taskClean, ignoreCase = true) || taskClean.contains(name, ignoreCase = true))) {
-                    if (bestScore < 20) {
-                        bestScore = 20
                         bestMatch = name
                     }
                 }
