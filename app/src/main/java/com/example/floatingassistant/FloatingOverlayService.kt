@@ -27,7 +27,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
-import com.example.floatingassistant.intent.IntentClassifier
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -130,13 +130,7 @@ class FloatingOverlayService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         addBubble()
 
-        // Warm up the on-device intent classifier now (loads the ONNX model +
-        // precomputes example embeddings) so the first user query isn't slow.
-        // Runs off the main thread; failures are logged and handled inside
-        // IntentClassifier itself (classify() just reports UNKNOWN_INTENT).
-        serviceScope.launch(Dispatchers.IO) {
-            IntentClassifier.ensureInitialized(applicationContext)
-        }
+
 
         Log.i(TAG, "Overlay service started")
     }
@@ -335,7 +329,7 @@ class FloatingOverlayService : Service() {
         }
 
         val input = EditText(this).apply {
-            hint = "e.g. I want to change whatsapp dp"
+            hint = "Enter a command such as:\n\"Call Mom\"\n\"Send a WhatsApp message to John\"\n\"Play music on Spotify\"\n\"Navigate to the airport in Maps\"\n\"Set an alarm for 7 AM in Clock\""
             setHintTextColor(Color.parseColor("#8A8A8A"))
             setTextColor(Color.WHITE)
             background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(10).toFloat())
@@ -354,10 +348,15 @@ class FloatingOverlayService : Service() {
             background = roundedRectDrawable(Color.parseColor("#00D4C0"), dp(50).toFloat())
             setOnClickListener {
                 val query = input.text?.toString()?.trim().orEmpty()
-                if (query.isEmpty()) {
-                    statusText.text = "Type a request first"
+
+                // ── Step 1: client-side validation ────────────────────────────
+                val validationResult = CommandValidator.validate(query)
+                if (validationResult is ValidationResult.Invalid) {
+                    statusText.text = validationResult.reason
                     return@setOnClickListener
                 }
+
+                // ── Step 2: send to AI ────────────────────────────────────────
                 stopTapCount = 0  // reset on new submission
                 handleSubmittedQuery(query, statusText)
             }
@@ -432,141 +431,57 @@ class FloatingOverlayService : Service() {
         applyIdleFlags()
     }
 
-    // ── Query handling: intent classifier → DB lookup → state machine ────────
+    // ── Query handling: AI parse → DB lookup → state machine ───────────────────
 
     /**
-     * Entry point for the Submit button.
-     *
-     * 1. Run the on-device MiniLM intent classifier on [query] first. If it
-     *    confidently recognizes one of the fixed IntentExamples intents
-     *    (dark mode, volume, music, etc.), handle it directly.
-     * 2. Otherwise (UNKNOWN_INTENT — including when the model failed to load,
-     *    or confidence was too low) fall back to the existing PathDatabase
-     *    keyword lookup + NavigationStateMachine flow, unchanged from before
-     *    this feature was added.
+     * Handles a validated user command:
+     *  1. Calls [GeminiCommandParser] on IO to identify the target app + intent.
+     *  2. Displays the AI result in [statusText].
+     *  3. Passes the result to [PathDatabase] and [NavigationStateMachine].
      */
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
-        statusText.text = "Thinking…"
+        statusText.text = "Analysing…"
         serviceScope.launch {
-            val classification = withContext(Dispatchers.Default) {
-                IntentClassifier.classify(this@FloatingOverlayService, query)
+            // ── Step A: call Gemini AI ─────────────────────────────────────────
+            val parsed = withContext(Dispatchers.IO) {
+                GeminiCommandParser.parse(query) { progressMsg ->
+                    withContext(Dispatchers.Main) {
+                        statusText.text = progressMsg
+                    }
+                }
             }
-            Log.i(
-                TAG,
-                "Intent classification for \"$query\" → ${classification.intent} " +
-                    "(confidence=${"%.2f".format(classification.confidence)})"
-            )
 
-            if (classification.intent != IntentClassifier.UNKNOWN_INTENT) {
-                statusText.text =
-                    "Intent: ${classification.intent} (${(classification.confidence * 100).toInt()}%)"
-                executeRecognizedIntent(classification.intent)
-                hidePanelAndRestoreIdle()
+            if (parsed == null) {
+                statusText.text = "Server is busy — please try again in a moment."
+                Log.w(TAG, "GeminiCommandParser returned null for query=\"$query\"")
                 return@launch
             }
 
-            // No confident intent match — fall back to device-specific
-            // navigation-path lookup (e.g. "change my WhatsApp DP").
-            statusText.text = "Searching…"
+            Log.i(TAG, "AI result → targetApp=\"${parsed.targetApp}\", intent=\"${parsed.intent}\"")
+
+            // ── Step B: show AI result to user ────────────────────────────────
+            statusText.text = "Target App: ${parsed.targetApp}\nIntent: ${parsed.intent}"
+
+            // ── Step C: look up a navigation path ─────────────────────────────
+            // Build a combined lookup string so the keyword matcher gets both
+            // the target app name and the intent description.
+            val lookupQuery = "${parsed.targetApp} ${parsed.intent}"
             val path = withContext(Dispatchers.IO) {
-                PathDatabase.lookup(this@FloatingOverlayService, query)
+                PathDatabase.lookup(this@FloatingOverlayService, lookupQuery)
             }
 
             if (path.isEmpty()) {
-                statusText.text = "Path not found for this request/device"
-                Log.w(TAG, "No path resolved for query=\"$query\"")
+                // Path not yet stored for this device — keep the status showing
+                // the AI result so the user can see what was understood.
+                Log.w(TAG, "No path found for targetApp=\"${parsed.targetApp}\" intent=\"${parsed.intent}\"")
+                statusText.text = "Target App: ${parsed.targetApp}\nIntent: ${parsed.intent}\n\n(No guide path found for your device yet)"
                 return@launch
             }
 
+            // ── Step D: start guided navigation ────────────────────────────────
             NavigationStateMachine.start(path)
-            statusText.text = "Guiding: $path"
-            Log.i(TAG, "Guide started for query=\"$query\" → $path")
+            Log.i(TAG, "Guide started: targetApp=${parsed.targetApp}, intent=${parsed.intent}, path=$path")
             hidePanelAndRestoreIdle()
-        }
-    }
-
-    /**
-     * Runs the app action tied to a recognized intent, if one exists yet.
-     * None of these intents have a real app action wired up in this project
-     * today, so this is a clearly-marked extension point — add a `when`
-     * branch here as each action gets implemented, without touching the
-     * classifier or the fallback path-lookup flow above.
-     */
-    private fun executeRecognizedIntent(intent: String) {
-        when (intent) {
-            "TURN_ON_DARK_MODE" -> Log.i(TAG, "TODO: wire up dark-mode action for $intent")
-            "TURN_ON_LIGHT_MODE" -> Log.i(TAG, "TODO: wire up light-mode action for $intent")
-            "OPEN_SETTINGS" -> Log.i(TAG, "TODO: wire up open-settings action for $intent")
-            "CLOSE_SETTINGS" -> Log.i(TAG, "TODO: wire up close-settings action for $intent")
-            "INCREASE_VOLUME" -> Log.i(TAG, "TODO: wire up volume-up action for $intent")
-            "DECREASE_VOLUME" -> Log.i(TAG, "TODO: wire up volume-down action for $intent")
-            "PLAY_MUSIC" -> Log.i(TAG, "TODO: wire up play-music action for $intent")
-            "PAUSE_MUSIC" -> Log.i(TAG, "TODO: wire up pause-music action for $intent")
-            "STOP_MUSIC" -> Log.i(TAG, "TODO: wire up stop-music action for $intent")
-
-            // ── Mobile Settings ─────────────────────────────────────────
-            "TURN_ON_WIFI" -> Log.i(TAG, "TODO: wire up wifi-on action for $intent")
-            "TURN_OFF_WIFI" -> Log.i(TAG, "TODO: wire up wifi-off action for $intent")
-            "TURN_ON_BLUETOOTH" -> Log.i(TAG, "TODO: wire up bluetooth-on action for $intent")
-            "TURN_OFF_BLUETOOTH" -> Log.i(TAG, "TODO: wire up bluetooth-off action for $intent")
-            "TURN_ON_AIRPLANE_MODE" -> Log.i(TAG, "TODO: wire up airplane-mode-on action for $intent")
-            "TURN_OFF_AIRPLANE_MODE" -> Log.i(TAG, "TODO: wire up airplane-mode-off action for $intent")
-            "INCREASE_BRIGHTNESS" -> Log.i(TAG, "TODO: wire up brightness-up action for $intent")
-            "DECREASE_BRIGHTNESS" -> Log.i(TAG, "TODO: wire up brightness-down action for $intent")
-            "TURN_ON_DO_NOT_DISTURB" -> Log.i(TAG, "TODO: wire up DND-on action for $intent")
-            "TURN_OFF_DO_NOT_DISTURB" -> Log.i(TAG, "TODO: wire up DND-off action for $intent")
-            "TURN_ON_FLASHLIGHT" -> Log.i(TAG, "TODO: wire up flashlight-on action for $intent")
-            "TURN_OFF_FLASHLIGHT" -> Log.i(TAG, "TODO: wire up flashlight-off action for $intent")
-            "CHECK_BATTERY_STATUS" -> Log.i(TAG, "TODO: wire up battery-status action for $intent")
-            "CHECK_STORAGE" -> Log.i(TAG, "TODO: wire up storage-check action for $intent")
-            "LOCK_SCREEN" -> Log.i(TAG, "TODO: wire up lock-screen action for $intent")
-            "CHANGE_WALLPAPER" -> Log.i(TAG, "TODO: wire up change-wallpaper action for $intent")
-
-            // ── WhatsApp ─────────────────────────────────────────────────
-            "OPEN_WHATSAPP" -> Log.i(TAG, "TODO: wire up open-whatsapp action for $intent")
-            "CHANGE_WHATSAPP_PROFILE_PICTURE" -> Log.i(TAG, "TODO: wire up whatsapp-dp-change action for $intent")
-            "SEND_WHATSAPP_MESSAGE" -> Log.i(TAG, "TODO: wire up send-whatsapp-message action for $intent")
-            "MAKE_WHATSAPP_CALL" -> Log.i(TAG, "TODO: wire up whatsapp-voice-call action for $intent")
-            "MAKE_WHATSAPP_VIDEO_CALL" -> Log.i(TAG, "TODO: wire up whatsapp-video-call action for $intent")
-            "MUTE_WHATSAPP_CHAT" -> Log.i(TAG, "TODO: wire up mute-whatsapp-chat action for $intent")
-            "UNMUTE_WHATSAPP_CHAT" -> Log.i(TAG, "TODO: wire up unmute-whatsapp-chat action for $intent")
-            "ARCHIVE_WHATSAPP_CHAT" -> Log.i(TAG, "TODO: wire up archive-whatsapp-chat action for $intent")
-            "DELETE_WHATSAPP_CHAT" -> Log.i(TAG, "TODO: wire up delete-whatsapp-chat action for $intent")
-            "BLOCK_WHATSAPP_CONTACT" -> Log.i(TAG, "TODO: wire up block-whatsapp-contact action for $intent")
-            "OPEN_WHATSAPP_STATUS" -> Log.i(TAG, "TODO: wire up open-whatsapp-status action for $intent")
-            "CLEAR_WHATSAPP_CHAT_HISTORY" -> Log.i(TAG, "TODO: wire up clear-whatsapp-history action for $intent")
-
-            // ── YouTube ──────────────────────────────────────────────────
-            "SEARCH_YOUTUBE_VIDEO" -> Log.i(TAG, "TODO: wire up youtube-search action for $intent")
-            "PLAY_YOUTUBE_VIDEO" -> Log.i(TAG, "TODO: wire up youtube-play action for $intent")
-            "PAUSE_YOUTUBE_VIDEO" -> Log.i(TAG, "TODO: wire up youtube-pause action for $intent")
-            "SUBSCRIBE_YOUTUBE_CHANNEL" -> Log.i(TAG, "TODO: wire up youtube-subscribe action for $intent")
-            "UNSUBSCRIBE_YOUTUBE_CHANNEL" -> Log.i(TAG, "TODO: wire up youtube-unsubscribe action for $intent")
-            "LIKE_YOUTUBE_VIDEO" -> Log.i(TAG, "TODO: wire up youtube-like action for $intent")
-            "DISLIKE_YOUTUBE_VIDEO" -> Log.i(TAG, "TODO: wire up youtube-dislike action for $intent")
-            "OPEN_YOUTUBE_HISTORY" -> Log.i(TAG, "TODO: wire up youtube-history-open action for $intent")
-            "CLEAR_YOUTUBE_HISTORY" -> Log.i(TAG, "TODO: wire up youtube-history-clear action for $intent")
-            "ADD_TO_WATCH_LATER" -> Log.i(TAG, "TODO: wire up youtube-watch-later action for $intent")
-            "TURN_ON_YOUTUBE_CAPTIONS" -> Log.i(TAG, "TODO: wire up youtube-captions-on action for $intent")
-            "TURN_OFF_YOUTUBE_CAPTIONS" -> Log.i(TAG, "TODO: wire up youtube-captions-off action for $intent")
-            "CHANGE_YOUTUBE_PLAYBACK_SPEED" -> Log.i(TAG, "TODO: wire up youtube-playback-speed action for $intent")
-
-            // ── Email ────────────────────────────────────────────────────
-            "COMPOSE_EMAIL" -> Log.i(TAG, "TODO: wire up compose-email action for $intent")
-            "SEND_EMAIL" -> Log.i(TAG, "TODO: wire up send-email action for $intent")
-            "DELETE_EMAIL" -> Log.i(TAG, "TODO: wire up delete-email action for $intent")
-            "ARCHIVE_EMAIL" -> Log.i(TAG, "TODO: wire up archive-email action for $intent")
-            "MARK_EMAIL_AS_READ" -> Log.i(TAG, "TODO: wire up mark-email-read action for $intent")
-            "MARK_EMAIL_AS_UNREAD" -> Log.i(TAG, "TODO: wire up mark-email-unread action for $intent")
-            "OPEN_EMAIL_INBOX" -> Log.i(TAG, "TODO: wire up open-inbox action for $intent")
-            "OPEN_SENT_EMAILS" -> Log.i(TAG, "TODO: wire up open-sent-emails action for $intent")
-            "OPEN_EMAIL_DRAFTS" -> Log.i(TAG, "TODO: wire up open-drafts action for $intent")
-            "SEARCH_EMAIL" -> Log.i(TAG, "TODO: wire up search-email action for $intent")
-            "REPLY_TO_EMAIL" -> Log.i(TAG, "TODO: wire up reply-email action for $intent")
-            "FORWARD_EMAIL" -> Log.i(TAG, "TODO: wire up forward-email action for $intent")
-            "STAR_EMAIL" -> Log.i(TAG, "TODO: wire up star-email action for $intent")
-
-            else -> Log.w(TAG, "Recognized intent \"$intent\" has no registered action yet")
         }
     }
 
