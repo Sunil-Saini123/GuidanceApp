@@ -27,6 +27,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -128,6 +129,9 @@ class FloatingOverlayService : Service() {
         inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         startForeground(NOTIFICATION_ID, buildNotification())
         addBubble()
+
+
+
         Log.i(TAG, "Overlay service started")
     }
 
@@ -325,7 +329,7 @@ class FloatingOverlayService : Service() {
         }
 
         val input = EditText(this).apply {
-            hint = "e.g. I want to change whatsapp dp"
+            hint = "Enter a command such as:\n\"Call Mom\"\n\"Send a WhatsApp message to John\"\n\"Play music on Spotify\"\n\"Navigate to the airport in Maps\"\n\"Set an alarm for 7 AM in Clock\""
             setHintTextColor(Color.parseColor("#8A8A8A"))
             setTextColor(Color.WHITE)
             background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(10).toFloat())
@@ -344,10 +348,15 @@ class FloatingOverlayService : Service() {
             background = roundedRectDrawable(Color.parseColor("#00D4C0"), dp(50).toFloat())
             setOnClickListener {
                 val query = input.text?.toString()?.trim().orEmpty()
-                if (query.isEmpty()) {
-                    statusText.text = "Type a request first"
+
+                // ── Step 1: client-side validation ────────────────────────────
+                val validationResult = CommandValidator.validate(query)
+                if (validationResult is ValidationResult.Invalid) {
+                    statusText.text = validationResult.reason
                     return@setOnClickListener
                 }
+
+                // ── Step 2: send to AI ────────────────────────────────────────
                 stopTapCount = 0  // reset on new submission
                 handleSubmittedQuery(query, statusText)
             }
@@ -422,49 +431,65 @@ class FloatingOverlayService : Service() {
         applyIdleFlags()
     }
 
-    // ── Query handling: IntentClassificationEngine → PathGenerator → NavigationStateMachine ──
+    // ── Query handling: AI parse → DB lookup → state machine ───────────────────
 
+    /**
+     * Handles a validated user command:
+     *  1. Calls [GeminiCommandParser] on IO to identify the target app + intent.
+     *  2. Displays the AI result in [statusText].
+     *  3. Passes the result to [PathDatabase] and [NavigationStateMachine].
+     */
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
-        statusText.text = "Classifying & generating path…"
+        statusText.text = "Analysing…"
         serviceScope.launch {
-            val navPath = withContext(Dispatchers.IO) {
-                // 1. Classify intent via multi-factor IntentClassificationEngine
-                val intentEngine = com.example.floatingassistant.intent.IntentClassificationEngine()
-                intentEngine.isEnableGroqFallback = true
-                val matchResult = intentEngine.classify(query)
-
-                val userIntent = if (matchResult.isConfident && matchResult.userIntent != null) {
-                    matchResult.userIntent
-                } else {
-                    com.example.floatingassistant.pathgenerator.IntentProvider.findMatchingIntent(query)
-                }
-
-                // 2. Generate navigation path via PathGenerator
-                val generator = com.example.floatingassistant.pathgenerator.PathGenerator()
-                generator.generatePath(this@FloatingOverlayService, userIntent, "SettingsHomepage")
+            if (BuildConfig.GEMINI_API_KEY.isBlank() || BuildConfig.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE") {
+                statusText.text = "Gemini API key is not set. Add GEMINI_API_KEY to local.properties."
+                Log.e(TAG, "Gemini API key is not set.")
+                return@launch
             }
-
-            var pathString = if (navPath.isValid) navPath.toPathString() else ""
-
-            if (pathString.isEmpty()) {
-                // Fallback to legacy PathDatabase lookup if PathGenerator returns empty path
-                pathString = withContext(Dispatchers.IO) {
-                    PathDatabase.lookup(this@FloatingOverlayService, query)
+            // ── Step A: call Gemini AI ─────────────────────────────────────────
+            val parsed = withContext(Dispatchers.IO) {
+                GeminiCommandParser.parse(query) { progressMsg ->
+                    withContext(Dispatchers.Main) {
+                        statusText.text = progressMsg
+                    }
                 }
             }
 
-            if (pathString.isEmpty()) {
-                statusText.text = "Path not found for this request/device"
-                Log.w(TAG, "No path resolved for query=\"$query\"")
+            if (parsed == null) {
+                statusText.text = "Server is busy — please try again in a moment."
+                if (BuildConfig.DEBUG) Log.w(TAG, "GeminiCommandParser returned null")
                 return@launch
             }
 
-            NavigationStateMachine.start(pathString)
-            statusText.text = "Guiding: $pathString"
-            Log.i(TAG, "Guide started for query=\"$query\" → $pathString")
+            Log.i(TAG, "AI result → targetApp=\"${parsed.targetApp}\", intent=\"${parsed.intent}\"")
+
+            // ── Step B: show AI result to user ────────────────────────────────
+            statusText.text = "Target App: ${parsed.targetApp}\nIntent: ${parsed.intent}"
+
+            // ── Step C: look up a navigation path ─────────────────────────────
+            // Build a combined lookup string so the keyword matcher gets both
+            // the target app name and the intent description.
+            val lookupQuery = "${parsed.targetApp} ${parsed.intent}"
+            val path = withContext(Dispatchers.IO) {
+                PathDatabase.lookup(this@FloatingOverlayService, lookupQuery)
+            }
+
+            if (path.isEmpty()) {
+                // Path not yet stored for this device — keep the status showing
+                // the AI result so the user can see what was understood.
+                Log.w(TAG, "No path found for targetApp=\"${parsed.targetApp}\" intent=\"${parsed.intent}\"")
+                statusText.text = "Target App: ${parsed.targetApp}\nIntent: ${parsed.intent}\n\n(No guide path found for your device yet)"
+                return@launch
+            }
+
+            // ── Step D: start guided navigation ────────────────────────────────
+            NavigationStateMachine.start(path)
+            Log.i(TAG, "Guide started: targetApp=${parsed.targetApp}, intent=${parsed.intent}, path=$path")
             hidePanelAndRestoreIdle()
         }
     }
+
 
     // ── Stop button — multi-tap logic ──────────────────────────────────────────
 

@@ -18,6 +18,9 @@
         MainActivity). FOREGROUND_SERVICE(_SPECIAL_USE) is required so the
         overlay bubble's Service can keep running while the app is backgrounded.
     -->
+    <!-- Required for Gemini API calls (AI command understanding) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
