@@ -282,7 +282,16 @@ object SearchPathEngine {
         val score: Int
     )
 
-    private val OVERLAY_SCREEN_TITLES = setOf("floating assistant", "floatingassistant")
+    private val OVERLAY_SCREEN_TITLES = setOf(
+        // Our own overlay bubble
+        "floating assistant", "floatingassistant",
+        // Android system task-switcher / recents screen (captured under the last-active app's package)
+        "no recent tasks",
+        // Generic unnamed container — root_class FrameLayout with no real title
+        "frame layout",
+        // Any AD dialog captured as a screen
+        "ad"
+    )
 
     /**
      * Resolves the target screen and optional target element from destination / task.

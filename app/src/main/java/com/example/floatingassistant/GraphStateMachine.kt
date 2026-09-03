@@ -81,7 +81,10 @@ object GraphStateMachine {
     private val SPATIAL_LABELS = setOf(
         "Back_Button", "Menu_Button", "Search_Bar", "Action_Bar",
         "Bottom_Nav_Item", "Bottom_Bar", "Scrollable_List",
-        "Floating Assistant", "FloatingAssistant"
+        // Our overlay bubble
+        "Floating Assistant", "FloatingAssistant",
+        // Android recents / task switcher overlay (fires under the last-active app's package)
+        "No recent tasks"
     )
 
     // ── Dynamic data filters ──────────────────────────────────────────────────

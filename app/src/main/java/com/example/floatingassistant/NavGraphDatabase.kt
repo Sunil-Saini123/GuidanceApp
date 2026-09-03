@@ -557,11 +557,16 @@ class NavGraphDatabase private constructor(context: Context)
 
     /**
      * Removes all screens (and their associated transitions) whose title matches
-     * an overlay screen title like "Floating Assistant" or "FloatingAssistant".
-     * Call this once on app startup to purge stale overlay captures from the DB.
+     * a known system-UI or overlay screen title that should never appear in the nav graph.
+     * Call this once on app startup to purge stale captures from previous sessions.
      */
     fun pruneOverlayScreens() {
-        val overlayTitles = listOf("Floating Assistant", "FloatingAssistant")
+        val overlayTitles = listOf(
+            "Floating Assistant", "FloatingAssistant",
+            "No recent tasks",   // Android task-switcher captured under the last app's package
+            "Frame Layout",      // Generic unnamed container — FrameLayout with no real toolbar title
+            "AD"                 // Ad dialog captured as a screen
+        )
         val db = writableDatabase
         var totalDeleted = 0
         for (title in overlayTitles) {
@@ -580,7 +585,7 @@ class NavGraphDatabase private constructor(context: Context)
             totalDeleted += rows
         }
         if (totalDeleted > 0) {
-            Log.i(TAG, "pruneOverlayScreens: removed $totalDeleted overlay screen(s) from DB")
+            Log.i(TAG, "pruneOverlayScreens: removed $totalDeleted junk screen(s) from DB")
         }
     }
 }
