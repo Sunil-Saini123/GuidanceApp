@@ -48,11 +48,6 @@ android {
         compose = true
         buildConfig = true   // required to access BuildConfig.GEMINI_API_KEY
     }
-    androidResources {
-        // ONNX isn't a "known" asset extension to AAPT — force it to stay
-        // uncompressed in the APK so ONNX Runtime can mmap it directly.
-        noCompress += "onnx"
-    }
 }
 
 dependencies {
@@ -65,7 +60,6 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.onnxruntime.android)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
