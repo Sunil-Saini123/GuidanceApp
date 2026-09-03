@@ -334,9 +334,11 @@ class FloatingOverlayService : Service() {
         }
 
         val input = EditText(this).apply {
-            hint = "Enter a command such as:\n\"Call Mom\"\n\"Send a WhatsApp message to John\"\n\"Play music on Spotify\"\n\"Navigate to the airport in Maps\"\n\"Set an alarm for 7 AM in Clock\""
+            hint = "Enter a command (e.g., \"Call Mom\")"
             setHintTextColor(Color.parseColor("#8A8A8A"))
             setTextColor(Color.WHITE)
+            minLines = 1
+            maxLines = 4
             background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(10).toFloat())
             setPadding(dp(12), dp(10), dp(12), dp(10))
             // Switch to typing flags when the user taps the field
@@ -436,62 +438,81 @@ class FloatingOverlayService : Service() {
         applyIdleFlags()
     }
 
-    // ── Query handling: AI parse → DB lookup → state machine ───────────────────
+    // ── Query handling: Gemini → [Tier 1 local] → [Tier 2 cloud] → [Tier 3 Groq] ──
 
     /**
-     * Handles a validated user command:
-     *  1. Calls [GeminiCommandParser] on IO to identify the target app + intent.
-     *  2. Displays the AI result in [statusText].
-     *  3. Passes the result to [PathDatabase] and [NavigationStateMachine].
+     * Full pipeline entry point for a validated user command.
+     *
+     * Phase 1  — Gemini parses the raw query into a structured intent
+     *            {targetApp, destinationScreen, exactTask}.
+     * Phase 2+ — Tier 1 / Tier 2 / Tier 3 path resolution wired here.
+     *
+     * Every major step logs to Logcat under the [PathFinder] tag so the
+     * complete execution flow is traceable without a debugger.
      */
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
+        Log.i("[PathFinder]", "── New query ── \"$query\"")
         statusText.text = "Analysing…"
+
         serviceScope.launch {
-            if (BuildConfig.GEMINI_API_KEY.isBlank() || BuildConfig.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE") {
-                statusText.text = "Gemini API key is not set. Add GEMINI_API_KEY to local.properties."
-                Log.e(TAG, "Gemini API key is not set.")
+            if (BuildConfig.GEMINI_API_KEY.isBlank() ||
+                BuildConfig.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE") {
+                statusText.text =
+                    "Gemini API key is not set.\nAdd GEMINI_API_KEY to local.properties."
+                Log.e("[PathFinder]", "Gemini API key missing — aborting")
                 return@launch
             }
-            // ── Step A: call Gemini AI ─────────────────────────────────────────
+
+            // ── PHASE 1 STEP A: Gemini intent classification ──────────────────
+            Log.d("[PathFinder]", "Phase 1 — calling GeminiCommandParser")
             val parsed = withContext(Dispatchers.IO) {
                 GeminiCommandParser.parse(query) { progressMsg ->
-                    withContext(Dispatchers.Main) {
-                        statusText.text = progressMsg
-                    }
+                    withContext(Dispatchers.Main) { statusText.text = progressMsg }
                 }
             }
 
             if (parsed == null) {
+                Log.w("[PathFinder]", "Phase 1 — GeminiCommandParser returned null (server busy or bad format)")
                 statusText.text = "Server is busy — please try again in a moment."
-                if (BuildConfig.DEBUG) Log.w(TAG, "GeminiCommandParser returned null")
                 return@launch
             }
 
-            Log.i(TAG, "AI result → targetApp=\"${parsed.targetApp}\", intent=\"${parsed.intent}\"")
+            // GeminiCommandParser already emits the [PathFinder] log:
+            //   "Parsed Intent -> App: X, Screen: Y, Task: Z"
+            // Show structured result in the panel status area.
+            statusText.text =
+                "App: ${parsed.targetApp}\n" +
+                "Screen: ${parsed.destinationScreen}\n" +
+                "Task: ${parsed.exactTask}"
 
-            // ── Step B: show AI result to user ────────────────────────────────
-            statusText.text = "Target App: ${parsed.targetApp}\nIntent: ${parsed.intent}"
+            Log.d("[PathFinder]", "Phase 1 complete — " +
+                "targetApp=\"${parsed.targetApp}\" | " +
+                "destinationScreen=\"${parsed.destinationScreen}\" | " +
+                "exactTask=\"${parsed.exactTask}\"")
 
-            // ── Step C: look up a navigation path ─────────────────────────────
-            // Build a combined lookup string so the keyword matcher gets both
-            // the target app name and the intent description.
-            val lookupQuery = "${parsed.targetApp} ${parsed.intent}"
-            val path = withContext(Dispatchers.IO) {
-                PathDatabase.lookup(this@FloatingOverlayService, lookupQuery)
-            }
+            // ── PHASE 2 (Tier 1 — Local Graph BFS) — wired in Phase 2 ─────────
+            // val localPath = SearchPathEngine.find(
+            //     fromScreenId = GraphStateMachine.currentScreenId(parsed.targetApp),
+            //     toScreenTitle = parsed.destinationScreen
+            // )
+            // if (localPath != null) { … dispatch … return@launch }
 
-            if (path.isEmpty()) {
-                // Path not yet stored for this device — keep the status showing
-                // the AI result so the user can see what was understood.
-                Log.w(TAG, "No path found for targetApp=\"${parsed.targetApp}\" intent=\"${parsed.intent}\"")
-                statusText.text = "Target App: ${parsed.targetApp}\nIntent: ${parsed.intent}\n\n(No guide path found for your device yet)"
-                return@launch
-            }
+            // ── PHASE 3 (Tier 2 — Firestore) — wired in Phase 3 ─────────────
+            // val cloudPath = CloudPathDatabase.lookup(parsed.destinationScreen)
+            // if (cloudPath.isNotEmpty()) { … dispatch … return@launch }
 
-            // ── Step D: start guided navigation ────────────────────────────────
-            NavigationStateMachine.start(path)
-            Log.i(TAG, "Guide started: targetApp=${parsed.targetApp}, intent=${parsed.intent}, path=$path")
-            hidePanelAndRestoreIdle()
+            // ── PHASE 4 (Tier 3 — Groq) — wired in Phase 4 ──────────────────
+            // val groqPath = PathGenerator(…).generatePath(parsed)
+            // CloudPathDatabase.addEntry(…)
+
+            // Phases 2-4 not yet wired — inform user what was understood.
+            Log.i("[PathFinder]", "Path resolution not yet wired (Phases 2-4 pending)")
+            statusText.text =
+                "✓ Understood:\n" +
+                "App: ${parsed.targetApp}\n" +
+                "Screen: ${parsed.destinationScreen}\n" +
+                "Task: ${parsed.exactTask}\n\n" +
+                "(Path guide coming in next phases)"
         }
     }
 

@@ -56,11 +56,20 @@ object GeminiCommandParser {
     private class QuotaExceededException(message: String) : Exception(message)
 
     /**
-     * Result of a successful parse.
-     * @param targetApp  The app identified by the AI (e.g. "WhatsApp", "Settings").
-     * @param intent     The action to perform (e.g. "Send Message", "Enable dark mode").
+     * Structured intent payload produced by a successful Gemini parse.
+     *
+     * @param targetApp         The application to open, e.g. "WhatsApp", "Settings".
+     * @param destinationScreen The screen/section inside the app to reach,
+     *                          e.g. "Profile", "Wi-Fi Settings", "Dark Mode".
+     * @param exactTask         The specific action to perform once at the destination,
+     *                          e.g. "Change profile picture", "Toggle dark mode switch".
      */
-    data class ParsedCommand(val targetApp: String, val intent: String)
+    data class ParsedCommand(
+        val targetApp:         String,
+        val destinationScreen: String,
+        val exactTask:         String
+    )
+
 
     /**
      * Models tried in order. Only models confirmed to exist for this API key version
@@ -85,53 +94,75 @@ object GeminiCommandParser {
     private fun endpointUrl(model: String) = "$GEMINI_BASE/$model:generateContent"
 
     // ── System prompt — pinned instructions for every request ─────────────────
-    private const val SYSTEM_PROMPT = """You are a mobile assistant that interprets user commands.
+    private const val SYSTEM_PROMPT = """You are a mobile navigation assistant that interprets user commands.
 
-Given a user command, identify:
-1. The mobile application the user wants to use (Target App)
-2. The specific action they want to perform (Intent)
+Given a user command, identify three things:
+1. Target App       — the mobile application to open.
+2. Destination Screen — the specific screen, section, or menu to navigate to inside the app.
+3. Exact Task       — the precise action to perform once at the destination.
 
 RULES:
-- Respond in EXACTLY two lines, no more, no less.
+- Respond in EXACTLY three lines, no more, no less.
 - Line 1 must start with "Target App: "
-- Line 2 must start with "Intent: "
-- Be concise and specific.
-- If the command mentions an app by name, use that exact app name.
+- Line 2 must start with "Destination Screen: "
+- Line 3 must start with "Exact Task: "
+- Be concise and specific on every line.
+- If the command names an app, use that exact app name.
 - If no app is mentioned, infer the most likely app.
-- Do NOT add explanations, greetings, or any other text.
+- Do NOT add explanations, greetings, bullets, or any other text.
 
 EXAMPLES:
+User: change my profile picture on WhatsApp
+Target App: WhatsApp
+Destination Screen: Profile
+Exact Task: Change profile picture
+
+User: I want to turn on dark mode in mobile settings
+Target App: Settings
+Destination Screen: Display
+Exact Task: Enable dark mode
+
 User: call mom
 Target App: Phone
-Intent: Dial contact "Mom"
+Destination Screen: Dialer
+Exact Task: Dial contact "Mom"
 
 User: send a WhatsApp message to john
 Target App: WhatsApp
-Intent: Send Message
+Destination Screen: Chat with John
+Exact Task: Send message
 
 User: play some music on spotify
 Target App: Spotify
-Intent: Play music
+Destination Screen: Home
+Exact Task: Play music
 
 User: navigate to the airport in Maps
 Target App: Maps
-Intent: Directions to airport
+Destination Screen: Search
+Exact Task: Get directions to airport
 
 User: set an alarm for 7am in Clock
 Target App: Clock
-Intent: Set alarm 7:00 AM
+Destination Screen: Alarms
+Exact Task: Add alarm at 7:00 AM
+
+User: turn on Bluetooth
+Target App: Settings
+Destination Screen: Bluetooth
+Exact Task: Enable Bluetooth toggle
 
 User: check my email in Gmail
 Target App: Gmail
-Intent: Check inbox
+Destination Screen: Inbox
+Exact Task: Read emails
 
-User: open camera and take a selfie
+User: take a selfie
 Target App: Camera
-Intent: Take selfie
+Destination Screen: Camera
+Exact Task: Switch to front camera and capture photo"""
 
-User: I want to turn on dark mode in mobile setting
-Target App: Settings
-Intent: Enable dark mode"""
+
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -290,9 +321,13 @@ Intent: Enable dark mode"""
         val modelAck = JSONObject()
         modelAck.put("role", "model")
         val ackParts = JSONArray()
-        ackParts.put(JSONObject().put("text", "Understood. I will respond in exactly two lines: \"Target App: ...\" and \"Intent: ...\"."))
+        ackParts.put(JSONObject().put("text",
+            "Understood. I will respond in exactly three lines: " +
+            "\"Target App: ...\", \"Destination Screen: ...\", and \"Exact Task: ...\"."
+        ))
         modelAck.put("parts", ackParts)
         contents.put(modelAck)
+
 
         // Turn 3 — actual user command
         val userTurn = JSONObject()
@@ -319,14 +354,14 @@ Intent: Enable dark mode"""
      */
     private fun extractTextFromResponse(responseBody: String): String? {
         return try {
-            val root = JSONObject(responseBody)
+            val root       = JSONObject(responseBody)
             val candidates = root.getJSONArray("candidates")
             if (candidates.length() == 0) {
                 Log.w(TAG, "No candidates in response")
                 return null
             }
             val content = candidates.getJSONObject(0).getJSONObject("content")
-            val parts = content.getJSONArray("parts")
+            val parts   = content.getJSONArray("parts")
             if (parts.length() == 0) {
                 Log.w(TAG, "No parts in first candidate")
                 return null
@@ -341,15 +376,16 @@ Intent: Enable dark mode"""
     /**
      * Parses the model's text response into a [ParsedCommand].
      *
-     * Primary format (strict two lines):
+     * Expected format (strict three lines):
      * ```
-     * Target App: Settings
-     * Intent: Enable dark mode
+     * Target App: WhatsApp
+     * Destination Screen: Profile
+     * Exact Task: Change profile picture
      * ```
      *
-     * Resilient fallback: if the value after ":" is blank, the parser looks at
-     * the NEXT non-blank line as the value. This handles models that occasionally
-     * split the label and value across two lines.
+     * Resilient fallback: if the value after ":" is blank on a given line, the
+     * parser looks at the NEXT non-blank line as the value.  This handles models
+     * that occasionally split the label and value across two lines.
      *
      * @return [ParsedCommand] or `null` if the format cannot be recognised at all.
      */
@@ -357,39 +393,57 @@ Intent: Enable dark mode"""
         // Normalise line endings and split into non-blank lines
         val lines = rawText
             .replace("\r\n", "\n")
-            .replace("\r", "\n")
+            .replace("\r",   "\n")
             .split("\n")
-            .map { it.trim() }
+            .map    { it.trim() }
             .filter { it.isNotBlank() }
 
         if (BuildConfig.DEBUG) Log.d(TAG, "Model response lines: $lines")
 
+        // Labels we recognise — checked case-insensitively
+        val ALL_LABELS = listOf("Target App:", "Destination Screen:", "Exact Task:")
+
         /**
-         * Extract the value for a label like "Target App:" or "Intent:".
-         * If the value on the same line is empty, returns the next line's content.
+         * Extract the value for a given label prefix.
+         * If the value on the same line is empty, returns the next line's content
+         * provided it doesn't itself look like another label.
          */
         fun extractValue(prefix: String): String? {
             val idx = lines.indexOfFirst { it.startsWith(prefix, ignoreCase = true) }
             if (idx < 0) return null
             val sameLine = lines[idx].substringAfter(":").trim()
             if (sameLine.isNotEmpty()) return sameLine
-            // Value was on the next line (model split label and value)
+            // Value split to next line (model formatting quirk)
             val nextLine = lines.getOrNull(idx + 1)
-                ?.takeIf { !it.startsWith("Target App:", ignoreCase = true) &&
-                           !it.startsWith("Intent:", ignoreCase = true) }
+                ?.takeIf { candidate ->
+                    ALL_LABELS.none { label ->
+                        candidate.startsWith(label, ignoreCase = true)
+                    }
+                }
                 ?.trim()
             return if (!nextLine.isNullOrEmpty()) nextLine else null
         }
 
-        val targetApp = extractValue("Target App:")
-        val intent    = extractValue("Intent:")
+        val targetApp         = extractValue("Target App:")
+        val destinationScreen = extractValue("Destination Screen:")
+        val exactTask         = extractValue("Exact Task:")
 
-        if (targetApp.isNullOrEmpty() || intent.isNullOrEmpty()) {
-            Log.w(TAG, "Could not extract targetApp or intent. Lines: $lines")
+        // All three fields are required
+        if (targetApp.isNullOrEmpty() || destinationScreen.isNullOrEmpty() || exactTask.isNullOrEmpty()) {
+            Log.w(TAG, "[PathFinder] Gemini response incomplete — " +
+                "targetApp=$targetApp, destinationScreen=$destinationScreen, exactTask=$exactTask. " +
+                "Raw lines: $lines")
             return null
         }
 
-        Log.i(TAG, "Parsed → targetApp=\"$targetApp\", intent=\"$intent\"")
-        return ParsedCommand(targetApp = targetApp, intent = intent)
+        // ── [PathFinder] structured log ───────────────────────────────────────
+        Log.i("[PathFinder]",
+            "Parsed Intent -> App: $targetApp, Screen: $destinationScreen, Task: $exactTask")
+
+        return ParsedCommand(
+            targetApp         = targetApp,
+            destinationScreen = destinationScreen,
+            exactTask         = exactTask
+        )
     }
 }
