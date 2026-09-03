@@ -1,0 +1,1494 @@
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "FrameLayout",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779743478,
+    "total_nodes": 91
+  },
+  "tree": {
+    "id": 5318169606068437610,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 7941274948194413391,
+        "text": "Clock",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 51,
+          "top": 223,
+          "right": 1206,
+          "bottom": 538,
+          "width": 1155,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -3424345404920269678,
+            "text": "Clock",
+            "resource_id": "",
+            "class": "AppWidgetHostView",
+            "clickable": false,
+            "bounds": {
+              "left": 73,
+              "top": 249,
+              "right": 1184,
+              "bottom": 512,
+              "width": 1111,
+              "height": 263
+            },
+            "children": [
+              {
+                "id": -3864909751884498477,
+                "text": "Saturday, Aug 15",
+                "resource_id": "date",
+                "class": "TextView",
+                "clickable": true,
+                "bounds": {
+                  "left": 436,
+                  "top": 249,
+                  "right": 822,
+                  "bottom": 320,
+                  "width": 386,
+                  "height": 71
+                },
+                "children": []
+              },
+              {
+                "id": 1811431301045807262,
+                "text": "13:12",
+                "resource_id": "clock",
+                "class": "TextView",
+                "clickable": true,
+                "bounds": {
+                  "left": 308,
+                  "top": 320,
+                  "right": 951,
+                  "bottom": 512,
+                  "width": 643,
+                  "height": 192
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 6844887033738831522,
+        "text": "Device battery",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 52,
+          "top": 1225,
+          "right": 514,
+          "bottom": 1874,
+          "width": 462,
+          "height": 649
+        },
+        "children": [
+          {
+            "id": -903095578380173436,
+            "text": "Device battery",
+            "resource_id": "",
+            "class": "AppWidgetHostView",
+            "clickable": false,
+            "bounds": {
+              "left": 81,
+              "top": 1253,
+              "right": 485,
+              "bottom": 1758,
+              "width": 404,
+              "height": 505
+            },
+            "children": [
+              {
+                "id": -2123870478046824160,
+                "text": "",
+                "resource_id": "white_device_widget",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 81,
+                  "top": 1253,
+                  "right": 485,
+                  "bottom": 1758,
+                  "width": 404,
+                  "height": 505
+                },
+                "children": [
+                  {
+                    "id": -9105724995324685824,
+                    "text": "PhoneiQOO Neo9 ProBattery85%",
+                    "resource_id": "devicePowerView1",
+                    "class": "ViewGroup",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 91,
+                      "top": 1268,
+                      "right": 293,
+                      "bottom": 1521,
+                      "width": 202,
+                      "height": 253
+                    },
+                    "children": [
+                      {
+                        "id": -2584293739819050953,
+                        "text": "85%",
+                        "resource_id": "device_power_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 173,
+                          "top": 1445,
+                          "right": 212,
+                          "bottom": 1485,
+                          "width": 39,
+                          "height": 40
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 1151828966111447999,
+                    "text": "",
+                    "resource_id": "device_power_text",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 193,
+                      "top": 1678,
+                      "right": 193,
+                      "bottom": 1718,
+                      "width": 0,
+                      "height": 40
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 1151828966111447999,
+                    "text": "",
+                    "resource_id": "device_power_text",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 374,
+                      "top": 1445,
+                      "right": 374,
+                      "bottom": 1485,
+                      "width": 0,
+                      "height": 40
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 1151828966111447999,
+                    "text": "",
+                    "resource_id": "device_power_text",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 374,
+                      "top": 1678,
+                      "right": 374,
+                      "bottom": 1718,
+                      "width": 0,
+                      "height": 40
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -2584293739819050953,
+                    "text": "85%",
+                    "resource_id": "device_power_text",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 173,
+                      "top": 1445,
+                      "right": 212,
+                      "bottom": 1485,
+                      "width": 39,
+                      "height": 40
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 2377205221827453536,
+        "text": "Multiple stats",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 514,
+          "top": 1559,
+          "right": 1207,
+          "bottom": 1874,
+          "width": 693,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -2477912331916135922,
+            "text": "Multiple stats",
+            "resource_id": "",
+            "class": "AppWidgetHostView",
+            "clickable": false,
+            "bounds": {
+              "left": 514,
+              "top": 1559,
+              "right": 1207,
+              "bottom": 1863,
+              "width": 693,
+              "height": 304
+            },
+            "children": [
+              {
+                "id": -6179481820710056458,
+                "text": "",
+                "resource_id": "widget_container",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 543,
+                  "top": 1632,
+                  "right": 1178,
+                  "bottom": 1779,
+                  "width": 635,
+                  "height": 147
+                },
+                "children": [
+                  {
+                    "id": -5639954844400303273,
+                    "text": "45 steps",
+                    "resource_id": "metric_container",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 566,
+                      "top": 1667,
+                      "right": 758,
+                      "bottom": 1744,
+                      "width": 192,
+                      "height": 77
+                    },
+                    "children": [
+                      {
+                        "id": 2644873091442898292,
+                        "text": "45",
+                        "resource_id": "metric_value_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 642,
+                          "top": 1667,
+                          "right": 681,
+                          "bottom": 1708,
+                          "width": 39,
+                          "height": 41
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 8296672860903104553,
+                        "text": "steps",
+                        "resource_id": "metric_unit_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 626,
+                          "top": 1708,
+                          "right": 698,
+                          "bottom": 1744,
+                          "width": 72,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -585693830674202537,
+                    "text": "655 Calories",
+                    "resource_id": "metric_container",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 764,
+                      "top": 1667,
+                      "right": 956,
+                      "bottom": 1744,
+                      "width": 192,
+                      "height": 77
+                    },
+                    "children": [
+                      {
+                        "id": -3817697562487110641,
+                        "text": "655",
+                        "resource_id": "metric_value_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 832,
+                          "top": 1667,
+                          "right": 888,
+                          "bottom": 1708,
+                          "width": 56,
+                          "height": 41
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 992408930017598568,
+                        "text": "Cal",
+                        "resource_id": "metric_unit_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 1708,
+                          "right": 880,
+                          "bottom": 1744,
+                          "width": 41,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -5492200311797783884,
+                    "text": "0.02 kilometers",
+                    "resource_id": "metric_container",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 962,
+                      "top": 1667,
+                      "right": 1155,
+                      "bottom": 1744,
+                      "width": 193,
+                      "height": 77
+                    },
+                    "children": [
+                      {
+                        "id": -7815041919068613543,
+                        "text": "0.02",
+                        "resource_id": "metric_value_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1026,
+                          "top": 1667,
+                          "right": 1091,
+                          "bottom": 1708,
+                          "width": 65,
+                          "height": 41
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -4880237801001022036,
+                        "text": "km",
+                        "resource_id": "metric_unit_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1042,
+                          "top": 1708,
+                          "right": 1074,
+                          "bottom": 1744,
+                          "width": 32,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -1703859399694593102,
+        "text": "Google,Folder,27 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 52,
+          "top": 1893,
+          "right": 283,
+          "bottom": 2208,
+          "width": 231,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 4222302936696405226,
+            "text": "Google",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 52,
+              "top": 2084,
+              "right": 283,
+              "bottom": 2180,
+              "width": 231,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 81,
+              "top": 1920,
+              "right": 254,
+              "bottom": 2092,
+              "width": 173,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -9110118055966379387,
+        "text": "iManager",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 283,
+          "top": 1893,
+          "right": 514,
+          "bottom": 2208,
+          "width": 231,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -7271863401555359822,
+        "text": "Play Store",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 514,
+          "top": 1893,
+          "right": 745,
+          "bottom": 2208,
+          "width": 231,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -932013929342833646,
+        "text": "Meet",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 745,
+          "top": 1893,
+          "right": 976,
+          "bottom": 2208,
+          "width": 231,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -6973938560981742291,
+        "text": "Utility,Folder,22 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 976,
+          "top": 1893,
+          "right": 1207,
+          "bottom": 2208,
+          "width": 231,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -5747780390965894855,
+            "text": "Utility",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 976,
+              "top": 2084,
+              "right": 1207,
+              "bottom": 2180,
+              "width": 231,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1005,
+              "top": 1920,
+              "right": 1178,
+              "bottom": 2092,
+              "width": 173,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7883283206421160496,
+        "text": "Settings",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1311,
+          "top": 223,
+          "right": 1260,
+          "bottom": 538,
+          "width": -51,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 309260367390336476,
+        "text": "iQOO Store",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1542,
+          "top": 223,
+          "right": 1260,
+          "bottom": 538,
+          "width": -282,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 6321899372694927923,
+        "text": "Clock",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1773,
+          "top": 223,
+          "right": 1260,
+          "bottom": 538,
+          "width": -513,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -3860124966312613551,
+        "text": "Origin Player",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 2004,
+          "top": 223,
+          "right": 1260,
+          "bottom": 538,
+          "width": -744,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 3108170091737056761,
+            "text": "Origin Player",
+            "resource_id": "",
+            "class": "AppWidgetHostView",
+            "clickable": false,
+            "bounds": {
+              "left": 2033,
+              "top": 251,
+              "right": 1260,
+              "bottom": 422,
+              "width": -773,
+              "height": 171
+            },
+            "children": [
+              {
+                "id": 1428614099575643771,
+                "text": "",
+                "resource_id": "",
+                "class": "RelativeLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 2033,
+                  "top": 251,
+                  "right": 1260,
+                  "bottom": 422,
+                  "width": -773,
+                  "height": 171
+                },
+                "children": [
+                  {
+                    "id": 7505124550157934612,
+                    "text": "Music",
+                    "resource_id": "button_music_app_icon",
+                    "class": "ImageView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 2057,
+                      "top": 251,
+                      "right": 1260,
+                      "bottom": 422,
+                      "width": -797,
+                      "height": 171
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -5029961103919104024,
+                    "text": "Play",
+                    "resource_id": "play_layout",
+                    "class": "ViewGroup",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 2264,
+                      "top": 264,
+                      "right": 1260,
+                      "bottom": 408,
+                      "width": -1004,
+                      "height": 144
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -4159440641237351931,
+        "text": "Themes",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1311,
+          "top": 557,
+          "right": 1260,
+          "bottom": 872,
+          "width": -51,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -8953453901531545356,
+        "text": "Contacts",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1542,
+          "top": 557,
+          "right": 1260,
+          "bottom": 872,
+          "width": -282,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 8235335260078385878,
+        "text": "Why Microsoft Why??,Folder,7 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1773,
+          "top": 557,
+          "right": 1260,
+          "bottom": 872,
+          "width": -513,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 8672659261229445459,
+            "text": "Why Microsoft Why??",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1773,
+              "top": 748,
+              "right": 1260,
+              "bottom": 844,
+              "width": -513,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1802,
+              "top": 584,
+              "right": 1260,
+              "bottom": 756,
+              "width": -542,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 3777849891578320940,
+        "text": "No,Folder,14 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 2004,
+          "top": 557,
+          "right": 1260,
+          "bottom": 872,
+          "width": -744,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 3030150465944944542,
+            "text": "No",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 2004,
+              "top": 748,
+              "right": 1260,
+              "bottom": 844,
+              "width": -744,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 2033,
+              "top": 584,
+              "right": 1260,
+              "bottom": 756,
+              "width": -773,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7878833525921941864,
+        "text": "Invest,Folder,3 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 2235,
+          "top": 557,
+          "right": 1260,
+          "bottom": 872,
+          "width": -975,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -1699472360995057364,
+            "text": "Invest",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 2235,
+              "top": 748,
+              "right": 1260,
+              "bottom": 844,
+              "width": -975,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 2264,
+              "top": 584,
+              "right": 1260,
+              "bottom": 756,
+              "width": -1004,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 5311764984561095995,
+        "text": "This,Folder,20 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1311,
+          "top": 891,
+          "right": 1260,
+          "bottom": 1206,
+          "width": -51,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -4178050519172192113,
+            "text": "This",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1311,
+              "top": 1082,
+              "right": 1260,
+              "bottom": 1178,
+              "width": -51,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1340,
+              "top": 918,
+              "right": 1260,
+              "bottom": 1090,
+              "width": -80,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2632511224662491103,
+        "text": ",,Folder,39 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1542,
+          "top": 891,
+          "right": 1260,
+          "bottom": 1206,
+          "width": -282,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 4562772988908371581,
+            "text": ",",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1542,
+              "top": 1082,
+              "right": 1260,
+              "bottom": 1178,
+              "width": -282,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1571,
+              "top": 918,
+              "right": 1260,
+              "bottom": 1090,
+              "width": -311,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -5800817319178805640,
+        "text": "Game Center",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1773,
+          "top": 891,
+          "right": 1260,
+          "bottom": 1206,
+          "width": -513,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 4748527580063132496,
+        "text": "Video",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 2004,
+          "top": 891,
+          "right": 1260,
+          "bottom": 1206,
+          "width": -744,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -9025336448547786923,
+        "text": "MyJio",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 2235,
+          "top": 891,
+          "right": 1260,
+          "bottom": 1206,
+          "width": -975,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 8540826594693160002,
+        "text": "Travel,Folder,16 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1311,
+          "top": 1225,
+          "right": 1260,
+          "bottom": 1540,
+          "width": -51,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -2788548369252841045,
+            "text": "Travel",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1311,
+              "top": 1416,
+              "right": 1260,
+              "bottom": 1512,
+              "width": -51,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1340,
+              "top": 1252,
+              "right": 1260,
+              "bottom": 1424,
+              "width": -80,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -3631339415322766469,
+        "text": "Learn,Folder,15 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1542,
+          "top": 1225,
+          "right": 1260,
+          "bottom": 1540,
+          "width": -282,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 378898808955104915,
+            "text": "Learn",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1542,
+              "top": 1416,
+              "right": 1260,
+              "bottom": 1512,
+              "width": -282,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1571,
+              "top": 1252,
+              "right": 1260,
+              "bottom": 1424,
+              "width": -311,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4621848242657701983,
+        "text": "ZArchiver",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1773,
+          "top": 1225,
+          "right": 1260,
+          "bottom": 1540,
+          "width": -513,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 1094507921453781507,
+        "text": ".,Folder,20 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 2004,
+          "top": 1225,
+          "right": 1260,
+          "bottom": 1540,
+          "width": -744,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 3848776069587011963,
+            "text": ".",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 2004,
+              "top": 1416,
+              "right": 1260,
+              "bottom": 1512,
+              "width": -744,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 2033,
+              "top": 1252,
+              "right": 1260,
+              "bottom": 1424,
+              "width": -773,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7999736917083001469,
+        "text": "WhatsApp",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 2235,
+          "top": 1225,
+          "right": 1260,
+          "bottom": 1540,
+          "width": -975,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 3606147576283573557,
+        "text": "Chrome",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1311,
+          "top": 1559,
+          "right": 1260,
+          "bottom": 1874,
+          "width": -51,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 258040925687186785,
+        "text": "YT Music",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1542,
+          "top": 1559,
+          "right": 1260,
+          "bottom": 1874,
+          "width": -282,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": -8909651419811404943,
+        "text": "W,Folder,6 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1773,
+          "top": 1559,
+          "right": 1260,
+          "bottom": 1874,
+          "width": -513,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": -2094571400230316830,
+            "text": "W",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1773,
+              "top": 1750,
+              "right": 1260,
+              "bottom": 1846,
+              "width": -513,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 1802,
+              "top": 1586,
+              "right": 1260,
+              "bottom": 1758,
+              "width": -542,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 6125163991094005550,
+        "text": "YouTube",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 2004,
+          "top": 1559,
+          "right": 1260,
+          "bottom": 1874,
+          "width": -744,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 7550870248344820909,
+        "text": "Made,Folder,2 apps",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 2235,
+          "top": 1559,
+          "right": 1260,
+          "bottom": 1874,
+          "width": -975,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 5573644535424979320,
+            "text": "Made",
+            "resource_id": "origin_folder_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 2235,
+              "top": 1750,
+              "right": 1260,
+              "bottom": 1846,
+              "width": -975,
+              "height": 96
+            },
+            "children": []
+          },
+          {
+            "id": -8126212437502968473,
+            "text": "",
+            "resource_id": "containerForIconInFolder",
+            "class": "ViewGroup",
+            "clickable": true,
+            "bounds": {
+              "left": 2264,
+              "top": 1586,
+              "right": 1260,
+              "bottom": 1758,
+              "width": -1004,
+              "height": 172
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 2033251127686529007,
+        "text": "FloatingAssistant",
+        "resource_id": "",
+        "class": "TextView",
+        "clickable": true,
+        "bounds": {
+          "left": 1311,
+          "top": 1893,
+          "right": 1260,
+          "bottom": 2208,
+          "width": -51,
+          "height": 315
+        },
+        "children": []
+      },
+      {
+        "id": 5655916402376529936,
+        "text": "Page 1 of 2,Page indicator,Swipe up or down to turn page. Double-tap and hold to drag to quickly turn page",
+        "resource_id": "workspace_indicator",
+        "class": "SeekBar",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 2213,
+          "right": 1260,
+          "bottom": 2390,
+          "width": 1260,
+          "height": 177
+        },
+        "children": []
+      },
+      {
+        "id": 1862512829519914618,
+        "text": "",
+        "resource_id": "layout",
+        "class": "ViewGroup",
+        "clickable": true,
+        "bounds": {
+          "left": 52,
+          "top": 2449,
+          "right": 1260,
+          "bottom": 2764,
+          "width": 1208,
+          "height": 315
+        },
+        "children": [
+          {
+            "id": 4740310650052603865,
+            "text": "Phone",
+            "resource_id": "",
+            "class": "TextView",
+            "clickable": true,
+            "bounds": {
+              "left": 52,
+              "top": 2449,
+              "right": 283,
+              "bottom": 2764,
+              "width": 231,
+              "height": 315
+            },
+            "children": []
+          },
+          {
+            "id": -3066985516415536857,
+            "text": "Messages",
+            "resource_id": "",
+            "class": "TextView",
+            "clickable": true,
+            "bounds": {
+              "left": 283,
+              "top": 2449,
+              "right": 514,
+              "bottom": 2764,
+              "width": 231,
+              "height": 315
+            },
+            "children": []
+          },
+          {
+            "id": -7935551224900999958,
+            "text": "Firefox",
+            "resource_id": "",
+            "class": "TextView",
+            "clickable": true,
+            "bounds": {
+              "left": 514,
+              "top": 2449,
+              "right": 745,
+              "bottom": 2764,
+              "width": 231,
+              "height": 315
+            },
+            "children": []
+          },
+          {
+            "id": 5563411936310943111,
+            "text": "Albums",
+            "resource_id": "",
+            "class": "TextView",
+            "clickable": true,
+            "bounds": {
+              "left": 745,
+              "top": 2449,
+              "right": 976,
+              "bottom": 2764,
+              "width": 231,
+              "height": 315
+            },
+            "children": []
+          },
+          {
+            "id": -8885878183354512446,
+            "text": "Camera",
+            "resource_id": "",
+            "class": "TextView",
+            "clickable": true,
+            "bounds": {
+              "left": 976,
+              "top": 2449,
+              "right": 1207,
+              "bottom": 2764,
+              "width": 231,
+              "height": 315
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,17 +1,28 @@
 # FloatingAssistant — Progress Tracker
 
-## Architecture Overview
+## ⚠ ARCHITECTURE RESET (2026-08-21)
+The previous multi-tier filter pipeline (Phases 1–11, Phase D) has been **superseded** by a new
+Universal OEM-Agnostic Extraction & Graph Mapping Pipeline. Old source files are preserved on disk
+but are no longer called by the accessibility service.
+
+---
+
+## New Architecture — Universal OEM-Agnostic Pipeline
+
 ```
-App Open
- └─ Check Accessibility Permission
-     ├─ NO  → Prompt user to enable in Settings
-     └─ YES → Show Main UI
-                └─ ON/OFF Switch
-                    ├─ OFF → Idle
-                    └─ ON  → Loop: Get Current UI Tree
-                                └─ Main Filter        (drop system UI)
-                                    └─ Inbetween Filter  (parse + FNV-1a hash)
-                                        └─ Secondary Filter  (context root, scroll dedup, JSON write)
+AccessibilityService (ON/OFF via ServiceStateManager)
+ └─ onAccessibilityEvent
+     ├─ MainFilter (drop own app + system UI — unchanged)
+     └─ RawDumpWriter
+           │
+           ▼  [Phase 1 — ACTIVE]
+     temp_tree.json   ← full unfiltered tree, overwritten each event
+           │
+           ▼  [Phase 2 — PENDING]
+     clean_page.json  ← pruned, de-duped, OEM-name-normalised elements
+           │
+           ▼  [Phase 3 — PENDING]
+     Room SQLite      ← screens table + transitions table (A* graph)
 ```
 
 ## Package
@@ -21,23 +32,348 @@ App Open
 
 ## Phase Status
 
-| Phase | Title                                    | Status         | Notes                      |
-|-------|------------------------------------------|----------------|----------------------------|
-| 1     | Project Scaffolding & Main UI            | ✅ DONE        | Awaiting user test         |
-| 2     | Accessibility Service & Main Filter      | ✅ DONE        | Awaiting user test         |
-| 3     | Inbetween Filter (Parsing & Hashing)     | ✅ DONE        | Awaiting user test         |
-| 4     | Secondary Filter & Selective Tree Storage| ✅ DONE        | Awaiting user test         |
-| 5     | Clean Per-Page Extractor (Tier 2)        | ✅ DONE        | Awaiting user test         |
-| 6     | Persistent Navigation Graph (Tier 3)     | ✅ DONE        | Awaiting user test         |
-| 7     | Floating Bubble Overlay & State Machine  | ✅ DONE        | Awaiting user test         |
-| 8     | Custom OS Detection & Metadata           | ✅ DONE        | Awaiting user test         |
-| 9     | Floating Bubble Touch & State Overhaul   | ✅ DONE        | Awaiting user test         |
-| 11    | Static vs. Dynamic Content Filtering     | ✅ DONE        | Improved UI Filter (v4)    |
+| Phase | Title                                             | Status           | Notes                                       |
+|-------|---------------------------------------------------|------------------|---------------------------------------------|
+| 1     | Raw Dump — Unfiltered Baseline (`temp_tree.json`) | ✅ DONE          | Scroll dedup + root tracking                |
+| 2     | Universal UI Extraction (`clean_page.json`)       | ✅ DONE          | 5 rules, OEM naming, container flatten      |
+| 3     | Dynamic State Machine & Graph (`nav_graph.db`)    | ✅ DONE          | SQLite graph, FORWARD/BACK detection        |
+| 4     | Clean Names + Hierarchical Graph + Graph Filters  | ✅ DONE          | GENERIC_SYSTEM_IDS fix, bounds aggregation  |
+| 5     | Graph Quality & Screen Title Resolution           | 🔬 IN PROGRESS   | Strip composites, cleanRootClass, OEM names |
+| 6     | Search Path Engine                                | ⏳ PENDING       | A* / BFS on nav_graph.db after Phase 5 done |
+
 
 ---
 
-## Phase 1 — Project Scaffolding & Main UI
-**Status:** ✅ Complete — awaiting user test confirmation
+## Phase 1 — Raw Dump: Unfiltered Baseline
+**Status:** 🔬 IN PROGRESS — awaiting user test results
+
+### Goal
+Capture the exact state of every screen as a 100% unfiltered JSON snapshot.
+No filtering, no normalisation, no deduplication. This is the ground-truth
+baseline for designing Phases 2 and 3.
+
+### Files Created / Modified
+
+| File | Action | Description |
+|------|--------|-------------|
+| `RawDumpWriter.kt` | **REPLACED** | Traverses `AccessibilityNodeInfo` directly; dumps every field to `temp_tree.json` |
+| `UiTreeAccessibilityService.kt` | **REPLACED** | Lean Phase 1 service: MainFilter drop check → RawDumpWriter only |
+| `PROGRESS.md` | **MODIFIED** | Architecture reset + this section |
+
+### What is captured per node
+| Field | Source |
+|-------|--------|
+| `text` | `node.text` |
+| `content_desc` | `node.contentDescription` |
+| `resource_id` | `node.viewIdResourceName` (full, with package prefix) |
+| `class_name` | `node.className` (full) |
+| `is_clickable` | `node.isClickable` |
+| `is_scrollable` | `node.isScrollable` |
+| `is_enabled` | `node.isEnabled` |
+| `is_visible_to_user` | `node.isVisibleToUser` |
+| `is_focusable` | `node.isFocusable` |
+| `is_long_clickable` | `node.isLongClickable` |
+| `is_checkable / is_checked / is_selected` | respective node fields |
+| `bounds` | `getBoundsInScreen()` → left, top, right, bottom, width, height |
+| `depth` | tree depth (root = 0) |
+| `child_count` | `node.childCount` |
+| `children` | recursive array (depth-capped at 30) |
+
+### Event handling
+| Event | Debounce | Label in JSON |
+|-------|----------|---------------|
+| `TYPE_WINDOW_STATE_CHANGED` | None (immediate) | `"NAVIGATION"` |
+| `TYPE_VIEW_SCROLLED` | 300 ms | `"SCROLL"` |
+| `TYPE_WINDOW_CONTENT_CHANGED` | 300 ms | `"CONTENT_CHANGED"` |
+
+### Output
+- **File:** `temp_tree.json` (overwritten on every event)
+- **Location:** `/sdcard/Android/data/com.example.floatingassistant/files/`
+- **Pull command:**
+  ```bash
+  adb pull /sdcard/Android/data/com.example.floatingassistant/files/temp_tree.json
+  ```
+
+### JSON structure
+```json
+{
+  "meta": {
+    "package_name": "com.whatsapp",
+    "event_type":   "NAVIGATION",
+    "timestamp":    1692039482123,
+    "total_nodes":  147
+  },
+  "tree": {
+    "text": "",
+    "content_desc": "",
+    "resource_id": "com.whatsapp:id/home_screen_framelayout",
+    "class_name": "android.widget.FrameLayout",
+    "is_clickable": false,
+    "is_scrollable": false,
+    "is_enabled": true,
+    "is_visible_to_user": true,
+    "bounds": { "left": 0, "top": 0, "right": 1080, "bottom": 2400, "width": 1080, "height": 2400 },
+    "depth": 0,
+    "child_count": 2,
+    "children": [ "..." ]
+  }
+}
+```
+
+### Expected Logcat
+```
+I/UiTreeService: Service connected [Phase 1 - Raw Dump]
+I/UiTreeService: Output: /sdcard/Android/data/com.example.floatingassistant/files/temp_tree.json
+I/UiTreeService: Capture ON
+
+I/RawDumpWriter: [NAVIGATION] com.whatsapp -> temp_tree.json  (147 nodes, 42KB)
+I/RawDumpWriter: [SCROLL] com.whatsapp -> temp_tree.json  (183 nodes, 51KB)
+I/RawDumpWriter: [NAVIGATION] com.android.settings -> temp_tree.json  (89 nodes, 24KB)
+
+# Scroll down — new items:
+I/RawDumpWriter: [SCROLL] com.whatsapp/ConversationListActivity +23 new (170 nodes total)
+
+# Scroll back up — nothing new:
+V/RawDumpWriter: [SCROLL] com.whatsapp — 0 new nodes, scroll-up ignored
+```
+
+### Phase 1 v2 changes (scroll dedup + root tracking)
+- **NAVIGATION**: clears all state for package, serialises full tree fresh
+- **SCROLL/CONTENT**: appends only NEW nodes (by stable dedup key); 0 new = no write
+- **Dedup key**: `resource_id` → `text|class` → `content_desc|class` → `bounds|class` (interactive only) → null (skip)
+- **Debounce**: packageName captured pre-debounce; `rootInActiveWindow` fetched fresh post-debounce with package cross-check
+
+---
+
+## Phase 2 — Universal UI Extraction (`clean_page.json`)
+**Status:** 🔬 IN PROGRESS — awaiting user test results
+
+### Goal
+Read the accumulated flat node list from Phase 1 (in-memory, no file round-trip) and
+extract clean, actionable, static navigation elements — no duplicates, no dynamic data,
+OEM-agnostic naming.
+
+### Files Created / Modified
+
+| File | Action | Description |
+|------|--------|-------------|
+| `CleanPageProcessor.kt` | **CREATED** | Phase 2 extraction: all 5 rules, writes `clean_page.json` |
+| `UiTreeAccessibilityService.kt` | **UPDATED** | Wired Phase 2 trigger after nav + scroll-with-new-nodes |
+| `RawDumpWriter.kt` | **UPDATED** | v2: scroll accumulation, per-package state, `getSnapshot()` API |
+
+### Rules Applied (in order)
+
+| Rule | Action |
+|------|--------|
+| 1 — Prune Invalid | Drop if `width/height <= 0` or `is_visible_to_user == false` |
+| 2 — Drop Dynamic | Drop names > 55 chars, purely numeric, phone/date/time/relative-time/status patterns |
+| 3 — Container Flatten | Clickable layout + no text → aggregate descendant texts (up to 5), mark children absorbed |
+| 4 — Universal Naming | `content_desc` → `text` → stripped `resource_id` (OEM prefix removed) → spatial label |
+| 5 — Name Dedup | Same name (case-insensitive) → keep first occurrence only |
+
+### OEM Prefix Strips
+`bbk_`, `sec_`, `originui_`, `miui_`, `vivo_`, `oppo_`, `samsung_`, `huawei_`, `oneplus_`, `xiaomi_`, `realme_`
+
+Example: `com.bbk.launcher:id/bbk_search_btn` → **"search btn"**
+
+### Spatial Labels (when no text/id available)
+| Zone | Result |
+|------|--------|
+| Top 12%, left edge, square + clickable | `Back_Button` |
+| Top 12%, right edge, square + clickable | `Menu_Button` |
+| Top 12%, wide + EditText | `Search_Bar` |
+| Top 12%, wide + clickable | `Action_Bar` |
+| Bottom 12%, square + clickable | `Bottom_Nav_Item` |
+| Bottom 12%, wide + clickable | `Bottom_Bar` |
+| Any, scrollable | `Scrollable_List` |
+
+### Output
+- **File:** `clean_page.json` (overwritten each time; Phase 1 accumulation means content grows on scroll)
+- **Location:** `/sdcard/Android/data/com.example.floatingassistant/files/`
+- **Pull command:**
+  ```bash
+  adb pull /sdcard/Android/data/com.example.floatingassistant/files/clean_page.json
+  ```
+
+### JSON structure
+```json
+{
+  "meta": {
+    "package_name":  "com.whatsapp",
+    "root_name":     "ConversationListActivity",
+    "timestamp":     1692039482123,
+    "element_count": 12
+  },
+  "elements": [
+    { "name": "Chats",    "is_clickable": true,  "class_name": "android.widget.TextView",  "source": "direct"    },
+    { "name": "Status",   "is_clickable": true,  "class_name": "android.widget.TextView",  "source": "direct"    },
+    { "name": "New Chat", "is_clickable": true,  "class_name": "android.widget.ImageButton","source": "container" },
+    { "name": "Search_Bar","is_clickable": true, "class_name": "android.widget.EditText",  "source": "direct"    }
+  ]
+}
+```
+
+### Expected Logcat (Phase 1 + 2)
+```
+I/UiTreeService:     Service connected [Phase 1+2 - Raw Dump + Clean Extraction]
+I/RawDumpWriter:     [NAVIGATION] com.whatsapp/ConversationListActivity — 147 nodes
+I/RawDumpWriter:     Written temp_tree.json: com.whatsapp/ConversationListActivity (147 nodes, 38KB)
+I/CleanPageProcessor: Clean page written: com.whatsapp/ConversationListActivity (9 elements, 2KB)
+
+I/RawDumpWriter:     [SCROLL] com.whatsapp/ConversationListActivity +18 new (165 nodes total)
+I/CleanPageProcessor: Clean page written: com.whatsapp/ConversationListActivity (14 elements, 3KB)
+
+V/RawDumpWriter:     [SCROLL] com.whatsapp — 0 new nodes, scroll-up ignored
+# (no Phase 2 write on scroll-up)
+```
+
+---
+
+## Phase 3 — Dynamic State Machine & Graph Mapping
+**Status:** 🔬 IN PROGRESS — awaiting user test results
+
+### Goal
+Map the clean elements from Phase 2 into a persistent directed graph
+(Nodes = Screens, Edges = Clicks/Backs) stored in SQLite. The graph structure
+supports A* pathfinding for future autonomous navigation.
+
+### Files Created / Modified
+
+| File | Action | Description |
+|------|--------|-------------|
+| `NavGraphDatabase.kt` | **CREATED** | SQLiteOpenHelper — `screens` + `transitions` tables, no Room/kapt |
+| `GraphStateMachine.kt` | **CREATED** | In-memory navigation stacks, screen-ID computation, FORWARD/BACK detection |
+| `CleanPageProcessor.kt` | **UPDATED** | Added `extractSync()` + `writeToFile()` — Phase 3 re-uses Phase 2 extraction result |
+| `UiTreeAccessibilityService.kt` | **UPDATED** | Added `TYPE_VIEW_CLICKED`, init `GraphStateMachine`, chained pipeline |
+
+### Screen Identity (Deterministic Hash)
+
+```
+screenId = "$packageName::$screenTitle"
+```
+
+`screenTitle` = the topmost non-clickable element in the top 20% of the screen whose
+name is not a spatial label (`Back_Button`, `Menu_Button`, etc.).
+Fallback: the Activity class name from the navigation event.
+
+> This is content-based, not class-based — fully OEM-agnostic.
+
+### Navigation Stack Machine
+
+Each package has its own `ArrayDeque<String>` (screen IDs).
+
+| Condition | Action |
+|-----------|--------|
+| New `screenId` == top of stack | Content refresh — upsert elements only |
+| New `screenId` NOT in stack | **FORWARD** → push, draw `CLICK` edge from previous top |
+| New `screenId` found below current in stack | **BACK** → draw `BACK` edge, pop everything above |
+| SCROLL / CONTENT_CHANGED event | No stack change — upsert elements only |
+
+### Click Label Capture
+
+- `TYPE_VIEW_CLICKED` is now listened to in the service
+- Tapped element's `contentDescription` (or `text`) is stored per package as `lastClickedLabel`
+- On the next FORWARD navigation, this label becomes the `action_label` of the CLICK edge
+- Cleared after each navigation event to prevent stale labels
+- Fallback if no click recorded: the destination screen's title
+
+### Database Schema
+
+**screens**
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT PK | `$packageName::$screenTitle` |
+| `package_name` | TEXT | |
+| `screen_title` | TEXT | Header text used to derive the ID |
+| `root_class` | TEXT | Activity class name |
+| `elements_json` | TEXT | JSON array of Phase 2 clean elements |
+| `visit_count` | INTEGER | Incremented on each revisit |
+| `first_seen` / `last_seen` | INTEGER | Epoch ms |
+
+**transitions**
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | INTEGER PK AUTOINCREMENT | |
+| `from_screen_id` | TEXT FK | |
+| `to_screen_id` | TEXT FK | |
+| `action_label` | TEXT | Element tapped, or `"BACK"` |
+| `action_type` | TEXT | `"CLICK"` or `"BACK"` |
+| `traversal_count` | INTEGER | Incremented on re-traversal |
+| `weight` | REAL | A* edge cost (default 1.0) |
+| `first_seen` / `last_seen` | INTEGER | Epoch ms |
+
+### Output Files
+
+| File | Format | Description |
+|------|--------|-------------|
+| `nav_graph.db` | SQLite | Persistent graph database |
+| `nav_graph.json` | JSON | Human-readable graph snapshot, updated after every event |
+
+**Pull commands:**
+```bash
+adb pull /sdcard/Android/data/com.example.floatingassistant/files/nav_graph.json
+adb pull /sdcard/Android/data/com.example.floatingassistant/files/nav_graph.db
+```
+
+### nav_graph.json structure
+```json
+{
+  "package_name": "com.whatsapp",
+  "timestamp": 1692039482123,
+  "current_stack": [
+    "com.whatsapp::Chats",
+    "com.whatsapp::John Smith"
+  ],
+  "stack_depth": 2,
+  "screens": [
+    { "id": "com.whatsapp::Chats",      "screen_title": "Chats",      "visit_count": 3, "element_count": 9  },
+    { "id": "com.whatsapp::John Smith", "screen_title": "John Smith", "visit_count": 1, "element_count": 12 }
+  ],
+  "transitions": [
+    { "from": "com.whatsapp::Chats", "to": "com.whatsapp::John Smith", "action_label": "John Smith", "action_type": "CLICK", "traversal_count": 1, "weight": 1.0 },
+    { "from": "com.whatsapp::John Smith", "to": "com.whatsapp::Chats", "action_label": "BACK",       "action_type": "BACK",  "traversal_count": 1, "weight": 1.0 }
+  ]
+}
+```
+
+### Expected Logcat (all 3 phases)
+```
+I/UiTreeService:      Service connected [Phase 1 + 2 + 3]
+I/GraphStateMachine:  Initialised — DB: nav_graph.db  JSON: nav_graph.json
+
+# User opens WhatsApp → Chats screen
+I/RawDumpWriter:      [NAVIGATION] com.whatsapp/ConversationListActivity — 147 nodes
+I/CleanPageProcessor: Clean page written: com.whatsapp/ConversationListActivity (9 elements, 2KB)
+I/GraphStateMachine:  [FORWARD] (first screen) com.whatsapp::Chats
+I/GraphStateMachine:  nav_graph.json: com.whatsapp — 1 screens, 0 transitions
+
+# User scrolls down — new contacts
+I/RawDumpWriter:      [SCROLL] com.whatsapp/ConversationListActivity +18 new (165 nodes total)
+I/CleanPageProcessor: Clean page written: com.whatsapp/ConversationListActivity (14 elements, 3KB)
+
+# User taps "John Smith" contact
+V/GraphStateMachine:  Click recorded: com.whatsapp → John Smith
+
+# Navigation fires → new screen
+I/RawDumpWriter:      [NAVIGATION] com.whatsapp/ConversationActivity — 89 nodes
+I/GraphStateMachine:  [FORWARD] com.whatsapp::Chats -[John Smith]-> com.whatsapp::John Smith
+I/GraphStateMachine:  nav_graph.json: com.whatsapp — 2 screens, 1 transitions
+
+# User presses Back
+I/RawDumpWriter:      [NAVIGATION] com.whatsapp/ConversationListActivity — 147 nodes
+I/GraphStateMachine:  [BACK] com.whatsapp::John Smith → com.whatsapp::Chats  (popped 0 screens)
+I/GraphStateMachine:  nav_graph.json: com.whatsapp — 2 screens, 2 transitions
+```
+
+---
+
+## Archived — Old Pipeline (Phases 1–11 / Phase D)
+> These sections are preserved for reference. The code files still exist on disk
+> but are no longer called by the accessibility service.
+
+---
+
+### Old Phase 1 — Project Scaffolding & Main UI *(archived)*
 
 ### Files Created / Modified
 | File | Action | Description |
@@ -415,3 +751,106 @@ adb pull /sdcard/Android/data/com.example.floatingassistant/files/ui_tree_temp.j
 adb pull /sdcard/Android/data/com.example.floatingassistant/files/ui_clean_page.json
 adb pull /sdcard/Android/data/com.example.floatingassistant/files/ui_nav_graph.json
 ```
+
+---
+
+## Phase D — Debug: Raw Tree Extraction (Temporary)
+**Status:** 🔬 IN PROGRESS — awaiting user analysis
+
+> ⚠ **This is a temporary debug phase.** Phase 11 (StaticDynamicFilter) is fully
+> preserved and will be re-enabled by flipping one boolean back to `false`.
+
+### Purpose
+The Phase 11 filter algorithms need to be tuned based on real-world data. Before
+refining the whitelist/blacklist rules, we need to see the **complete, raw
+accessibility trees** for each app screen — every node, every property, no
+omissions. This phase captures that data.
+
+### Toggle
+```kotlin
+// UiTreeAccessibilityService.kt — companion object
+const val DEBUG_SAVE_RAW_TREES = true   // ← flip to false to restore production
+```
+
+### What Changes (and What Doesn't)
+
+| Component | When DEBUG=true | When DEBUG=false |
+|-----------|-----------------|------------------|
+| `MainFilter` | ✅ Runs normally | ✅ Runs normally |
+| `UiTreeParser` | ✅ Runs normally (full tree) | ✅ Runs normally |
+| `ContextRootTracker` | ✅ Runs normally | ✅ Runs normally |
+| `SecondaryFilter` | ⏭ **SKIPPED** | ✅ Runs normally |
+| `StaticDynamicFilter` | ⏭ **SKIPPED** | ✅ Runs normally |
+| `CleanPageExtractor` | ⏭ **SKIPPED** | ✅ Runs normally |
+| `CleanPageWriter` | ⏭ **SKIPPED** | ✅ Runs normally |
+| `NavGraph` / `NavGraphWriter` | ⏭ **SKIPPED** | ✅ Runs normally |
+| `RawTreeWriter` | ✅ **ACTIVE** | ⏭ Not called |
+
+### Files Created / Modified
+
+| File | Action | Description |
+|------|--------|-------------|
+| `RawTreeWriter.kt` | **CREATED** | Serializes the full `UiNode` tree to a unique JSON file per page |
+| `UiTreeAccessibilityService.kt` | **MODIFIED** | Added `DEBUG_SAVE_RAW_TREES` flag + debug bypass block |
+| `PROGRESS.md` | **MODIFIED** | This entry |
+
+### Output Files
+- **Location:** `/sdcard/Android/data/com.example.floatingassistant/files/`
+- **Naming:** `raw_page_<package>_<epoch_seconds>.json`
+  - e.g. `raw_page_com_whatsapp_1692039482.json`
+- **One file per captured page** — no overwriting between screens
+- **Pretty-printed** with 2-space indentation for manual readability
+
+### Pull Command
+```bash
+# Pull ALL raw dumps at once:
+adb pull /sdcard/Android/data/com.example.floatingassistant/files/
+
+# Or list what's there first:
+adb shell ls /sdcard/Android/data/com.example.floatingassistant/files/ | grep raw_page
+```
+
+### JSON Structure
+```json
+{
+  "meta": {
+    "package": "com.whatsapp",
+    "root_name": "ConversationListActivity",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1692039482123,
+    "total_nodes": 147
+  },
+  "tree": {
+    "id": -3984756123456789,
+    "text": "WhatsApp",
+    "resource_id": "com.whatsapp:id/toolbar",
+    "class": "Toolbar",
+    "clickable": false,
+    "bounds": { "left": 0, "top": 0, "right": 1080, "bottom": 196, "width": 1080, "height": 196 },
+    "children": [ "..." ]
+  }
+}
+```
+
+### Expected Logcat (Phase D)
+```
+W/UiTreeService: ╔══════════════════════════════════════════════════════════╗
+W/UiTreeService: ║  DEBUG_SAVE_RAW_TREES = true                             ║
+W/UiTreeService: ║  All filters bypassed. Raw trees saved to: ...           ║
+W/UiTreeService: ╚══════════════════════════════════════════════════════════╝
+
+D/InbetweenFilter: Parsed 'com.whatsapp' → 147 nodes (root childCount=3)
+D/UiTreeService: [RAW] Dumping com.whatsapp/ConversationListActivity (NAVIGATION, 147 nodes)
+I/RawTreeWriter: RAW DUMP → .../raw_page_com_whatsapp_1692039482.json  (18KB, 147 nodes)
+
+D/InbetweenFilter: Parsed 'com.whatsapp' → 152 nodes (root childCount=3)
+D/UiTreeService: [RAW] Dumping com.whatsapp/ConversationListActivity (SCROLL/CONTENT, 152 nodes)
+I/RawTreeWriter: RAW DUMP → .../raw_page_com_whatsapp_1692039483.json  (19KB, 152 nodes)
+```
+
+### How to Revert (Resume Phase 11)
+1. Open `UiTreeAccessibilityService.kt`
+2. Change line: `const val DEBUG_SAVE_RAW_TREES = true` → `false`
+3. Rebuild and install — the full 3-tier production pipeline resumes automatically.
+   `RawTreeWriter.kt` remains in the codebase but is never called.
+

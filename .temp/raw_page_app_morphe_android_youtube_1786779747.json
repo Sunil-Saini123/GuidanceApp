@@ -1,0 +1,358 @@
+{
+  "meta": {
+    "package": "app.morphe.android.youtube",
+    "root_name": "Main",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779747127,
+    "total_nodes": 21
+  },
+  "tree": {
+    "id": -1474400103885781848,
+    "text": "",
+    "resource_id": "results",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 411,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2389
+    },
+    "children": [
+      {
+        "id": 3980449628162151126,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 411,
+          "right": 1260,
+          "bottom": 1408,
+          "width": 1260,
+          "height": 997
+        },
+        "children": [
+          {
+            "id": 6689056495270928241,
+            "text": "Big Mistakes Were Made Today | Shift At Midnight - Part 3 - 51 minutes, 38 seconds - Go to channel BeastBoyShub - BeastBoyShub - 28 thousand views - 55 minutes ago - play video",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 411,
+              "right": 1260,
+              "bottom": 1336,
+              "width": 1260,
+              "height": 925
+            },
+            "children": [
+              {
+                "id": -4900192271926895972,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 411,
+                  "right": 1260,
+                  "bottom": 1120,
+                  "width": 1260,
+                  "height": 709
+                },
+                "children": [
+                  {
+                    "id": -2191585404818118857,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 411,
+                      "right": 1260,
+                      "bottom": 1120,
+                      "width": 1260,
+                      "height": 709
+                    },
+                    "children": [
+                      {
+                        "id": 517021462290658258,
+                        "text": "51 minutes, 38 seconds",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1160,
+                          "top": 1048,
+                          "right": 1224,
+                          "bottom": 1084,
+                          "width": 64,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": -5524854883909622636,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 1120,
+                  "right": 1260,
+                  "bottom": 1336,
+                  "width": 1260,
+                  "height": 216
+                },
+                "children": [
+                  {
+                    "id": 3822186234405505012,
+                    "text": "Go to channel BeastBoyShub",
+                    "resource_id": "",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 36,
+                      "top": 1156,
+                      "right": 144,
+                      "bottom": 1264,
+                      "width": 108,
+                      "height": 108
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -3152327122689084211,
+                    "text": "Action menu for Big Mistakes Were Made Today | Shift At Midnight - Part 3",
+                    "resource_id": "",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1140,
+                      "top": 1156,
+                      "right": 1212,
+                      "bottom": 1228,
+                      "width": 72,
+                      "height": 72
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 511297227272012774,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 1432,
+          "right": 1260,
+          "bottom": 2429,
+          "width": 1260,
+          "height": 997
+        },
+        "children": [
+          {
+            "id": 3219904094380789889,
+            "text": "Daya Pe Ayi Nayi Musibat! I FULL MOVIE | PART 8 I Taarak Mehta Ka Ooltah Chashmah Ep 1053 to 1055 - 55 minutes, 22 seconds - Go to channel Taarak Mehta Ka Ooltah Chashmah - Taarak Mehta Ka Ooltah Chashmah - 13 million views - 1 year ago - play video",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 1432,
+              "right": 1260,
+              "bottom": 2357,
+              "width": 1260,
+              "height": 925
+            },
+            "children": [
+              {
+                "id": -6732357030649564857,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 1432,
+                  "right": 1260,
+                  "bottom": 2141,
+                  "width": 1260,
+                  "height": 709
+                },
+                "children": [
+                  {
+                    "id": -4023750163540787742,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 1432,
+                      "right": 1260,
+                      "bottom": 2141,
+                      "width": 1260,
+                      "height": 709
+                    },
+                    "children": [
+                      {
+                        "id": -1315143296432010627,
+                        "text": "55 minutes, 22 seconds",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1152,
+                          "top": 2069,
+                          "right": 1224,
+                          "bottom": 2105,
+                          "width": 72,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": -773145416413853386,
+                "text": "Go to channel Taarak Mehta Ka Ooltah Chashmah",
+                "resource_id": "",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 36,
+                  "top": 2177,
+                  "right": 144,
+                  "bottom": 2285,
+                  "width": 108,
+                  "height": 108
+                },
+                "children": []
+              },
+              {
+                "id": 1116755537722295148,
+                "text": "Action menu for Daya Pe Ayi Nayi Musibat! I FULL MOVIE | PART 8 I Taarak Mehta Ka Ooltah Chashmah Ep 1053 to 1055",
+                "resource_id": "",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1140,
+                  "top": 2177,
+                  "right": 1212,
+                  "bottom": 2249,
+                  "width": 72,
+                  "height": 72
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 8243413231123385339,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 2453,
+          "right": 1260,
+          "bottom": 2453,
+          "width": 1260,
+          "height": 0
+        },
+        "children": []
+      },
+      {
+        "id": 1839023681609651126,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 2477,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 323
+        },
+        "children": [
+          {
+            "id": 4547630548718428241,
+            "text": "Happiness | Tide Talcum | CHROME PICTURES Director: Hemant Bhandari - 32 seconds - Go to channel Chrome Pictures - Chrome Pictures - 109 thousand views - 13 years ago - play video",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 2477,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 323
+            },
+            "children": [
+              {
+                "id": 5534806364014608224,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 2477,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 323
+                },
+                "children": [
+                  {
+                    "id": 8243413231123385339,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2477,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 323
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,772 @@
+{
+  "meta": {
+    "package": "app.morphe.android.youtube",
+    "root_name": "ViewGroup",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779759217,
+    "total_nodes": 46
+  },
+  "tree": {
+    "id": -168127930359729625,
+    "text": "",
+    "resource_id": "",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 1344,
+      "right": 1260,
+      "bottom": 1830,
+      "width": 1260,
+      "height": 486
+    },
+    "children": [
+      {
+        "id": 1328391644156695493,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 24,
+          "top": 1344,
+          "right": 504,
+          "bottom": 1830,
+          "width": 480,
+          "height": 486
+        },
+        "children": [
+          {
+            "id": 4036998511265472608,
+            "text": "",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 24,
+              "top": 1344,
+              "right": 504,
+              "bottom": 1830,
+              "width": 480,
+              "height": 486
+            },
+            "children": [
+              {
+                "id": -2440420316134710956,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 48,
+                  "top": 1344,
+                  "right": 480,
+                  "bottom": 1602,
+                  "width": 432,
+                  "height": 258
+                },
+                "children": [
+                  {
+                    "id": 8243413231123385339,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 48,
+                      "top": 1344,
+                      "right": 480,
+                      "bottom": 1356,
+                      "width": 432,
+                      "height": 12
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7998720937201601356,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 48,
+                      "top": 1359,
+                      "right": 480,
+                      "bottom": 1602,
+                      "width": 432,
+                      "height": 243
+                    },
+                    "children": [
+                      {
+                        "id": 236767147369978835,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "ImageView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 351,
+                          "top": 1524,
+                          "right": 399,
+                          "bottom": 1572,
+                          "width": 48,
+                          "height": 48
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -5158665920137061140,
+                        "text": "23 videos",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 411,
+                          "top": 1530,
+                          "right": 444,
+                          "bottom": 1566,
+                          "width": 33,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": 8243413231123385339,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 84,
+                  "top": 1380,
+                  "right": 444,
+                  "bottom": 1380,
+                  "width": 360,
+                  "height": 0
+                },
+                "children": []
+              },
+              {
+                "id": -7077467515674779368,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 48,
+                  "top": 1626,
+                  "right": 495,
+                  "bottom": 1713,
+                  "width": 447,
+                  "height": 87
+                },
+                "children": [
+                  {
+                    "id": 1104031254153348583,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 48,
+                      "top": 1626,
+                      "right": 429,
+                      "bottom": 1713,
+                      "width": 381,
+                      "height": 87
+                    },
+                    "children": [
+                      {
+                        "id": 3812638121262125698,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 48,
+                          "top": 1626,
+                          "right": 429,
+                          "bottom": 1713,
+                          "width": 381,
+                          "height": 87
+                        },
+                        "children": [
+                          {
+                            "id": -8551871886827342741,
+                            "text": "",
+                            "resource_id": "",
+                            "class": "ViewGroup",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 48,
+                              "top": 1626,
+                              "right": 429,
+                              "bottom": 1668,
+                              "width": 381,
+                              "height": 42
+                            },
+                            "children": [
+                              {
+                                "id": -5843265019718565626,
+                                "text": "c++",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 48,
+                                  "top": 1626,
+                                  "right": 103,
+                                  "bottom": 1668,
+                                  "width": 55,
+                                  "height": 42
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": 2399342092800360530,
+                            "text": "",
+                            "resource_id": "",
+                            "class": "ViewGroup",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 48,
+                              "top": 1668,
+                              "right": 264,
+                              "bottom": 1713,
+                              "width": 216,
+                              "height": 45
+                            },
+                            "children": [
+                              {
+                                "id": 5107948959909137645,
+                                "text": "Private · Playlist",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 48,
+                                  "top": 1677,
+                                  "right": 264,
+                                  "bottom": 1713,
+                                  "width": 216,
+                                  "height": 36
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": 5770888338524401892,
+                    "text": "Action menu",
+                    "resource_id": "",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 441,
+                      "top": 1626,
+                      "right": 495,
+                      "bottom": 1680,
+                      "width": 54,
+                      "height": 54
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -6112286075544895550,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 504,
+          "top": 1344,
+          "right": 984,
+          "bottom": 1830,
+          "width": 480,
+          "height": 486
+        },
+        "children": [
+          {
+            "id": -3403679208436118435,
+            "text": "",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 504,
+              "top": 1344,
+              "right": 984,
+              "bottom": 1830,
+              "width": 480,
+              "height": 486
+            },
+            "children": [
+              {
+                "id": -4388517215322197340,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 528,
+                  "top": 1344,
+                  "right": 960,
+                  "bottom": 1602,
+                  "width": 432,
+                  "height": 258
+                },
+                "children": [
+                  {
+                    "id": 8243413231123385339,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 528,
+                      "top": 1344,
+                      "right": 960,
+                      "bottom": 1356,
+                      "width": 432,
+                      "height": 12
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 8499926237320463876,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 528,
+                      "top": 1359,
+                      "right": 960,
+                      "bottom": 1602,
+                      "width": 432,
+                      "height": 243
+                    },
+                    "children": [
+                      {
+                        "id": 236767147369978835,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "ImageView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 837,
+                          "top": 1524,
+                          "right": 885,
+                          "bottom": 1572,
+                          "width": 48,
+                          "height": 48
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -7106762819324547524,
+                        "text": "16 videos",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 897,
+                          "top": 1530,
+                          "right": 924,
+                          "bottom": 1566,
+                          "width": 27,
+                          "height": 36
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": 8243413231123385339,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 564,
+                  "top": 1380,
+                  "right": 924,
+                  "bottom": 1380,
+                  "width": 360,
+                  "height": 0
+                },
+                "children": []
+              },
+              {
+                "id": -5518176560866668603,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 528,
+                  "top": 1626,
+                  "right": 975,
+                  "bottom": 1713,
+                  "width": 447,
+                  "height": 87
+                },
+                "children": [
+                  {
+                    "id": 8890062348122131866,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 528,
+                      "top": 1626,
+                      "right": 909,
+                      "bottom": 1713,
+                      "width": 381,
+                      "height": 87
+                    },
+                    "children": [
+                      {
+                        "id": -6848074858478642635,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 528,
+                          "top": 1626,
+                          "right": 909,
+                          "bottom": 1713,
+                          "width": 381,
+                          "height": 87
+                        },
+                        "children": [
+                          {
+                            "id": 7804392431525094826,
+                            "text": "",
+                            "resource_id": "",
+                            "class": "ViewGroup",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 528,
+                              "top": 1626,
+                              "right": 909,
+                              "bottom": 1668,
+                              "width": 381,
+                              "height": 42
+                            },
+                            "children": [
+                              {
+                                "id": -7933744775075679675,
+                                "text": "CSI Full Episodes",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 528,
+                                  "top": 1626,
+                                  "right": 782,
+                                  "bottom": 1668,
+                                  "width": 254,
+                                  "height": 42
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": 1203269308001472868,
+                            "text": "",
+                            "resource_id": "",
+                            "class": "ViewGroup",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 528,
+                              "top": 1668,
+                              "right": 810,
+                              "bottom": 1713,
+                              "width": 282,
+                              "height": 45
+                            },
+                            "children": [
+                              {
+                                "id": 3911876175110249983,
+                                "text": "Yee Rachael · Playlist",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 528,
+                                  "top": 1677,
+                                  "right": 810,
+                                  "bottom": 1713,
+                                  "width": 282,
+                                  "height": 36
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": 5770888338524401892,
+                    "text": "Action menu",
+                    "resource_id": "",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 921,
+                      "top": 1626,
+                      "right": 975,
+                      "bottom": 1680,
+                      "width": 54,
+                      "height": 54
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -6576776583179672239,
+        "text": "",
+        "resource_id": "",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 984,
+          "top": 1344,
+          "right": 1260,
+          "bottom": 1830,
+          "width": 276,
+          "height": 486
+        },
+        "children": [
+          {
+            "id": -3868169716070895124,
+            "text": "",
+            "resource_id": "",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 984,
+              "top": 1344,
+              "right": 1260,
+              "bottom": 1830,
+              "width": 276,
+              "height": 486
+            },
+            "children": [
+              {
+                "id": -4645030221519275877,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 1008,
+                  "top": 1344,
+                  "right": 1260,
+                  "bottom": 1602,
+                  "width": 252,
+                  "height": 258
+                },
+                "children": [
+                  {
+                    "id": 8243413231123385339,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1008,
+                      "top": 1344,
+                      "right": 1260,
+                      "bottom": 1356,
+                      "width": 252,
+                      "height": 12
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 8243413231123385339,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1008,
+                      "top": 1359,
+                      "right": 1260,
+                      "bottom": 1602,
+                      "width": 252,
+                      "height": 243
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 8243413231123385339,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 1044,
+                  "top": 1380,
+                  "right": 1260,
+                  "bottom": 1380,
+                  "width": 216,
+                  "height": 0
+                },
+                "children": []
+              },
+              {
+                "id": 718658928666857757,
+                "text": "",
+                "resource_id": "",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 1008,
+                  "top": 1626,
+                  "right": 1260,
+                  "bottom": 1755,
+                  "width": 252,
+                  "height": 129
+                },
+                "children": [
+                  {
+                    "id": 3427265795775634872,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 1008,
+                      "top": 1626,
+                      "right": 1260,
+                      "bottom": 1755,
+                      "width": 252,
+                      "height": 129
+                    },
+                    "children": [
+                      {
+                        "id": 6135872662884411987,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1008,
+                          "top": 1626,
+                          "right": 1260,
+                          "bottom": 1755,
+                          "width": 252,
+                          "height": 129
+                        },
+                        "children": [
+                          {
+                            "id": 1192989429568205981,
+                            "text": "",
+                            "resource_id": "",
+                            "class": "ViewGroup",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 1008,
+                              "top": 1626,
+                              "right": 1260,
+                              "bottom": 1710,
+                              "width": 252,
+                              "height": 84
+                            },
+                            "children": [
+                              {
+                                "id": 3901596296676983096,
+                                "text": "Data Structures and Algorithms Course in Hindi",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 1008,
+                                  "top": 1626,
+                                  "right": 1260,
+                                  "bottom": 1710,
+                                  "width": 252,
+                                  "height": 84
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": -2220218994486537707,
+                            "text": "",
+                            "resource_id": "",
+                            "class": "ViewGroup",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 1008,
+                              "top": 1710,
+                              "right": 1260,
+                              "bottom": 1755,
+                              "width": 252,
+                              "height": 45
+                            },
+                            "children": [
+                              {
+                                "id": 488387872622239408,
+                                "text": "CodeWithHarry · Course",
+                                "resource_id": "",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 1008,
+                                  "top": 1719,
+                                  "right": 1260,
+                                  "bottom": 1755,
+                                  "width": 252,
+                                  "height": 36
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

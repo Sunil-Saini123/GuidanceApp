@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "package": "com.vivo.gallery",
+    "root_name": "GalleryTab",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779817891,
+    "total_nodes": 7
+  },
+  "tree": {
+    "id": 8190186785623581612,
+    "text": "",
+    "resource_id": "dreamway_featured_recyclerview",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 2317,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 483
+    },
+    "children": [
+      {
+        "id": -5918076465283953098,
+        "text": ",July 5, 2026",
+        "resource_id": "",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 78,
+          "top": 2317,
+          "right": 1182,
+          "bottom": 2800,
+          "width": 1104,
+          "height": 483
+        },
+        "children": [
+          {
+            "id": 6981981530385264754,
+            "text": "",
+            "resource_id": "bottom_up_text",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 132,
+              "top": 3231,
+              "right": 1128,
+              "bottom": 2800,
+              "width": 996,
+              "height": -431
+            },
+            "children": []
+          },
+          {
+            "id": 7257171330094224347,
+            "text": "July 5, 2026",
+            "resource_id": "bottom_text",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 117,
+              "top": 3307,
+              "right": 1143,
+              "bottom": 2800,
+              "width": 1026,
+              "height": -507
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -9062721438972250157,
+        "text": ",June 23, 2026",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 1221,
+          "top": 2317,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 39,
+          "height": 483
+        },
+        "children": [
+          {
+            "id": 6981981530385264754,
+            "text": "",
+            "resource_id": "bottom_up_text",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1275,
+              "top": 3231,
+              "right": 1260,
+              "bottom": 2800,
+              "width": -15,
+              "height": -431
+            },
+            "children": []
+          },
+          {
+            "id": 1696405250502966433,
+            "text": "June 23, 2026",
+            "resource_id": "bottom_text",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 1260,
+              "top": 3307,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 0,
+              "height": -507
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,290 @@
+{
+  "meta": {
+    "package": "com.android.contacts",
+    "root_name": "BBKTwelveKeyDialer",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779790086,
+    "total_nodes": 17
+  },
+  "tree": {
+    "id": -2152220792686441539,
+    "text": "",
+    "resource_id": "slip_recyclerview",
+    "class": "RecyclerView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2674,
+      "width": 1260,
+      "height": 2674
+    },
+    "children": [
+      {
+        "id": 7653941064410687163,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 420,
+          "right": 1260,
+          "bottom": 584,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": 6247070929797905088,
+            "text": "Aai",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 471,
+              "right": 289,
+              "bottom": 530,
+              "width": 58,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 8745865222880102944,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 584,
+          "right": 1260,
+          "bottom": 748,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": 7338995088267320869,
+            "text": "Baba",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 635,
+              "right": 325,
+              "bottom": 694,
+              "width": 94,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 8745865222880102944,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 748,
+          "right": 1260,
+          "bottom": 912,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": 7338995088267320869,
+            "text": "Baba",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 799,
+              "right": 325,
+              "bottom": 858,
+              "width": 94,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -5028866215060740335,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 912,
+          "right": 1260,
+          "bottom": 1076,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": -6435736349673522410,
+            "text": "Dadaji",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 963,
+              "right": 347,
+              "bottom": 1022,
+              "width": 116,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7484105519031905610,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 1076,
+          "right": 1260,
+          "bottom": 1240,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": 6077235384419123535,
+            "text": "Kru",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 1127,
+              "right": 292,
+              "bottom": 1186,
+              "width": 61,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -4600813589541074547,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 1240,
+          "right": 1260,
+          "bottom": 1404,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": -6007683724153856622,
+            "text": "Mom",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 1291,
+              "right": 304,
+              "bottom": 1350,
+              "width": 73,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2891723778479685135,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 1404,
+          "right": 1260,
+          "bottom": 1568,
+          "width": 1260,
+          "height": 164
+        },
+        "children": [
+          {
+            "id": -4298593913092467210,
+            "text": "Sam",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 1455,
+              "right": 302,
+              "bottom": 1514,
+              "width": 71,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2891723778479685135,
+        "text": "",
+        "resource_id": "",
+        "class": "",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 1568,
+          "right": 1260,
+          "bottom": 1730,
+          "width": 1260,
+          "height": 162
+        },
+        "children": [
+          {
+            "id": -4298593913092467210,
+            "text": "Sam",
+            "resource_id": "contact_name",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 231,
+              "top": 1619,
+              "right": 302,
+              "bottom": 1678,
+              "width": 71,
+              "height": 59
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

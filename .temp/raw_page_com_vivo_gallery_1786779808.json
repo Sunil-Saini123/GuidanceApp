@@ -1,0 +1,1058 @@
+{
+  "meta": {
+    "package": "com.vivo.gallery",
+    "root_name": "GalleryTab",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779808988,
+    "total_nodes": 64
+  },
+  "tree": {
+    "id": 533355402234759583,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": -1541143103733558005,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": 7476640357623506156,
+            "text": "",
+            "resource_id": "title_view_layout",
+            "class": "RelativeLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 0,
+              "width": 1260,
+              "height": 0
+            },
+            "children": []
+          },
+          {
+            "id": -7116708338661023664,
+            "text": "",
+            "resource_id": "coordinator",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 2800
+            },
+            "children": [
+              {
+                "id": -2470358030336154062,
+                "text": "",
+                "resource_id": "tv_cloud_tips",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 630,
+                  "top": 13,
+                  "right": 630,
+                  "bottom": 65,
+                  "width": 0,
+                  "height": 52
+                },
+                "children": []
+              },
+              {
+                "id": 4495024317507589990,
+                "text": "",
+                "resource_id": "rv_albumset",
+                "class": "RecyclerView",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 2800
+                },
+                "children": [
+                  {
+                    "id": -3639744525411603519,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 420,
+                      "right": 421,
+                      "bottom": 878,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": 4670028395507601341,
+                        "text": "All",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 778,
+                          "right": 114,
+                          "bottom": 827,
+                          "width": 36,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 4920298564239580095,
+                        "text": "5,596",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 824,
+                          "right": 150,
+                          "bottom": 866,
+                          "width": 72,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 4434488503024906577,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 459,
+                      "top": 420,
+                      "right": 801,
+                      "bottom": 878,
+                      "width": 342,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": 9004539636780604733,
+                        "text": "Camera",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 777,
+                          "right": 567,
+                          "bottom": 826,
+                          "width": 108,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 7751891629179846351,
+                        "text": "1,376",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 823,
+                          "right": 524,
+                          "bottom": 865,
+                          "width": 65,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -5396022244266381854,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 839,
+                      "top": 420,
+                      "right": 1182,
+                      "bottom": 878,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": -7798421831726183820,
+                        "text": "Videos",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 778,
+                          "right": 935,
+                          "bottom": 827,
+                          "width": 96,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 2304352341731557815,
+                        "text": "364",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 824,
+                          "right": 890,
+                          "bottom": 866,
+                          "width": 51,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 8995835139855432609,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 896,
+                      "right": 421,
+                      "bottom": 1354,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": 4329393626726881231,
+                        "text": "Screenshots",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 1254,
+                          "right": 260,
+                          "bottom": 1303,
+                          "width": 182,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -8777932085710163599,
+                        "text": "568",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 1300,
+                          "right": 127,
+                          "bottom": 1342,
+                          "width": 49,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -8074359050107210320,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 459,
+                      "top": 896,
+                      "right": 801,
+                      "bottom": 1354,
+                      "width": 342,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": 4126462402969435788,
+                        "text": "Screen recordings",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 1253,
+                          "right": 733,
+                          "bottom": 1302,
+                          "width": 274,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -1110514265482446179,
+                        "text": "21",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 1299,
+                          "right": 486,
+                          "bottom": 1341,
+                          "width": 27,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -331514521477345330,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 1390,
+                      "right": 1182,
+                      "bottom": 1516,
+                      "width": 1104,
+                      "height": 126
+                    },
+                    "children": [
+                      {
+                        "id": 2083186669417722932,
+                        "text": "More albums",
+                        "resource_id": "main_title",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 1420,
+                          "right": 305,
+                          "bottom": 1479,
+                          "width": 227,
+                          "height": 59
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 8795407348114521904,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 1516,
+                      "right": 421,
+                      "bottom": 1974,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": -5805150492520837189,
+                        "text": "Goa",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 1874,
+                          "right": 136,
+                          "bottom": 1923,
+                          "width": 58,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -8402141433834180756,
+                        "text": "51",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 1920,
+                          "right": 104,
+                          "bottom": 1962,
+                          "width": 26,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 7384124305701124033,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 459,
+                      "top": 1516,
+                      "right": 801,
+                      "bottom": 1974,
+                      "width": 342,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": 4472353504843345765,
+                        "text": "SomeWhats",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 1873,
+                          "right": 622,
+                          "bottom": 1922,
+                          "width": 163,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 3625344932234678887,
+                        "text": "30",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 1919,
+                          "right": 492,
+                          "bottom": 1961,
+                          "width": 33,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -5914389439780857560,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 839,
+                      "top": 1516,
+                      "right": 1182,
+                      "bottom": 1974,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": -8485937709222158744,
+                        "text": "Instagram",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 1874,
+                          "right": 987,
+                          "bottom": 1923,
+                          "width": 148,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -35976862918749462,
+                        "text": "22",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 1920,
+                          "right": 873,
+                          "bottom": 1962,
+                          "width": 34,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 1770114531759419630,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 1992,
+                      "right": 421,
+                      "bottom": 2450,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": -5446621793309667589,
+                        "text": "Movies",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 2350,
+                          "right": 173,
+                          "bottom": 2399,
+                          "width": 95,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -8095079852025989014,
+                        "text": "4",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 2396,
+                          "right": 96,
+                          "bottom": 2438,
+                          "width": 18,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 8918229648602304694,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 459,
+                      "top": 1992,
+                      "right": 801,
+                      "bottom": 2450,
+                      "width": 342,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": 5654593789772988130,
+                        "text": "WhatsApp",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 2349,
+                          "right": 602,
+                          "bottom": 2398,
+                          "width": 143,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 5403489589736049465,
+                        "text": "3,123",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 2395,
+                          "right": 525,
+                          "bottom": 2437,
+                          "width": 66,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -3212994047102468135,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 839,
+                      "top": 1992,
+                      "right": 1182,
+                      "bottom": 2450,
+                      "width": 343,
+                      "height": 458
+                    },
+                    "children": [
+                      {
+                        "id": -223621114219057282,
+                        "text": "Restored",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 2350,
+                          "right": 973,
+                          "bottom": 2399,
+                          "width": 134,
+                          "height": 49
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -8970512819310831752,
+                        "text": "2",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 2396,
+                          "right": 856,
+                          "bottom": 2438,
+                          "width": 17,
+                          "height": 42
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": 7018379101811593190,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 78,
+                      "top": 2468,
+                      "right": 421,
+                      "bottom": 2800,
+                      "width": 343,
+                      "height": 332
+                    },
+                    "children": [
+                      {
+                        "id": 6466835190140442277,
+                        "text": "Pictures",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 2826,
+                          "right": 201,
+                          "bottom": 2800,
+                          "width": 123,
+                          "height": -26
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -3229100294736188980,
+                        "text": "28",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 78,
+                          "top": 2872,
+                          "right": 111,
+                          "bottom": 2800,
+                          "width": 33,
+                          "height": -72
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -7557058219024763183,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 459,
+                      "top": 2468,
+                      "right": 801,
+                      "bottom": 2800,
+                      "width": 342,
+                      "height": 332
+                    },
+                    "children": [
+                      {
+                        "id": 6461725927989551664,
+                        "text": "Download",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 2825,
+                          "right": 597,
+                          "bottom": 2800,
+                          "width": 138,
+                          "height": -25
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 800593584814615266,
+                        "text": "84",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 459,
+                          "top": 2871,
+                          "right": 493,
+                          "bottom": 2800,
+                          "width": 34,
+                          "height": -71
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -5083151027869206897,
+                    "text": "",
+                    "resource_id": "",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 839,
+                      "top": 2468,
+                      "right": 1182,
+                      "bottom": 2800,
+                      "width": 343,
+                      "height": 332
+                    },
+                    "children": [
+                      {
+                        "id": -839448520306020042,
+                        "text": "Other albums",
+                        "resource_id": "dreamway_folder_name",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 2826,
+                          "right": 1040,
+                          "bottom": 2800,
+                          "width": 201,
+                          "height": -26
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 8249979788618275046,
+                        "text": "44",
+                        "resource_id": "dreamway_folder_count",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 839,
+                          "top": 2872,
+                          "right": 875,
+                          "bottom": 2800,
+                          "width": 36,
+                          "height": -72
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": -6809964128809472580,
+                "text": "",
+                "resource_id": "orginui_vcommonlayout_toptargetview",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 384,
+                  "width": 1260,
+                  "height": 384
+                },
+                "children": [
+                  {
+                    "id": -1787643210011669259,
+                    "text": "Albums",
+                    "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+                    "class": "FrameLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 201,
+                      "right": 1260,
+                      "bottom": 384,
+                      "width": 1260,
+                      "height": 183
+                    },
+                    "children": [
+                      {
+                        "id": 8384675900140048820,
+                        "text": "",
+                        "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                        "class": "ViewGroup",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 39,
+                          "top": 201,
+                          "right": 1242,
+                          "bottom": 375,
+                          "width": 1203,
+                          "height": 174
+                        },
+                        "children": [
+                          {
+                            "id": 2171255071770910901,
+                            "text": "",
+                            "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                            "class": "LinearLayout",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 768,
+                              "top": 214,
+                              "right": 1218,
+                              "bottom": 352,
+                              "width": 450,
+                              "height": 138
+                            },
+                            "children": [
+                              {
+                                "id": 6828524634961351377,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "Button",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 768,
+                                  "top": 214,
+                                  "right": 918,
+                                  "bottom": 352,
+                                  "width": 150,
+                                  "height": 138
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": 6828524634961351377,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "Button",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 918,
+                                  "top": 214,
+                                  "right": 1068,
+                                  "bottom": 352,
+                                  "width": 150,
+                                  "height": 138
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": 6828524634961351377,
+                                "text": "",
+                                "resource_id": "",
+                                "class": "Button",
+                                "clickable": true,
+                                "bounds": {
+                                  "left": 1068,
+                                  "top": 214,
+                                  "right": 1218,
+                                  "bottom": 352,
+                                  "width": 150,
+                                  "height": 138
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": -6226283418071948967,
+                "text": "",
+                "resource_id": "upgrade_tips_blur_container",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 384,
+                  "right": 1260,
+                  "bottom": 384,
+                  "width": 1260,
+                  "height": 0
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -6797240901195816758,
+        "text": "",
+        "resource_id": "bottomBar",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 2461,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 339
+        },
+        "children": [
+          {
+            "id": 5048669099812136288,
+            "text": "",
+            "resource_id": "",
+            "class": "LinearLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2461,
+              "right": 1260,
+              "bottom": 2674,
+              "width": 1260,
+              "height": 213
+            },
+            "children": [
+              {
+                "id": -1708707909686738511,
+                "text": "Photos",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2461,
+                  "right": 315,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -5687343722510380360,
+                "text": "Albums",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 315,
+                  "top": 2461,
+                  "right": 630,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": 7293276879699767525,
+                "text": "Recommended",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 630,
+                  "top": 2461,
+                  "right": 945,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              },
+              {
+                "id": -9215929244925978088,
+                "text": "Search",
+                "resource_id": "",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 945,
+                  "top": 2461,
+                  "right": 1260,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 213
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

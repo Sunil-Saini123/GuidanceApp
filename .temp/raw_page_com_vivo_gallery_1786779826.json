@@ -1,0 +1,465 @@
+{
+  "meta": {
+    "package": "com.vivo.gallery",
+    "root_name": "GalleryTab",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779826431,
+    "total_nodes": 28
+  },
+  "tree": {
+    "id": -4282544026881151369,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": -5358599267631971009,
+        "text": "",
+        "resource_id": "photo_page_root",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": 295018753278968582,
+            "text": "",
+            "resource_id": "cv_root_view",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 2800
+            },
+            "children": [
+              {
+                "id": -1186626937098770644,
+                "text": "Images2，，Aug 14, 2026 12:57. Wadala-Mumbai，第2个，共1378个",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 2800
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -7590964029283195383,
+            "text": "Cancel text extraction",
+            "resource_id": "live_text_view",
+            "class": "ImageView",
+            "clickable": false,
+            "bounds": {
+              "left": 1071,
+              "top": 2131,
+              "right": 1188,
+              "bottom": 2248,
+              "width": 117,
+              "height": 117
+            },
+            "children": []
+          },
+          {
+            "id": 7018900448831560276,
+            "text": "Yesterday 12:57 Wadala-Mumbai",
+            "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+            "class": "ViewGroup",
+            "clickable": false,
+            "bounds": {
+              "left": 39,
+              "top": 123,
+              "right": 1242,
+              "bottom": 306,
+              "width": 1203,
+              "height": 183
+            },
+            "children": [
+              {
+                "id": 2936210952110819260,
+                "text": "",
+                "resource_id": "originui_vtoolbar_navigation_view_rom14_0",
+                "class": "FrameLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 39,
+                  "top": 145,
+                  "right": 171,
+                  "bottom": 283,
+                  "width": 132,
+                  "height": 138
+                },
+                "children": [
+                  {
+                    "id": -7620949286317815104,
+                    "text": "Back",
+                    "resource_id": "originui_vtoolbar_navigation_view_btn_rom14_0",
+                    "class": "ImageButton",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 39,
+                      "top": 148,
+                      "right": 171,
+                      "bottom": 280,
+                      "width": 132,
+                      "height": 132
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -5975125355081555603,
+                "text": "Yesterday",
+                "resource_id": "originui_vtoolbar_normal_title_rom14_0",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 171,
+                  "top": 159,
+                  "right": 380,
+                  "bottom": 219,
+                  "width": 209,
+                  "height": 60
+                },
+                "children": []
+              },
+              {
+                "id": 3054846007626342667,
+                "text": "12:57 Wadala-Mumbai",
+                "resource_id": "originui_vtoolbar_normal_sub_title_rom14_0",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 171,
+                  "top": 225,
+                  "right": 469,
+                  "bottom": 269,
+                  "width": 298,
+                  "height": 44
+                },
+                "children": []
+              },
+              {
+                "id": -3425440792235645114,
+                "text": "",
+                "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                "class": "LinearLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 786,
+                  "top": 145,
+                  "right": 1218,
+                  "bottom": 283,
+                  "width": 432,
+                  "height": 138
+                },
+                "children": [
+                  {
+                    "id": 7062486175367320649,
+                    "text": "Super Documents",
+                    "resource_id": "com.vivo.gallery:string\/superdoc_func_name",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 786,
+                      "top": 145,
+                      "right": 930,
+                      "bottom": 283,
+                      "width": 144,
+                      "height": 138
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -892551639457393339,
+                    "text": "Favorites",
+                    "resource_id": "com.vivo.gallery:string\/favorite",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 930,
+                      "top": 145,
+                      "right": 1074,
+                      "bottom": 283,
+                      "width": 144,
+                      "height": 138
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -2698591125910140450,
+                    "text": "Details",
+                    "resource_id": "com.vivo.gallery:string\/details",
+                    "class": "Button",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1074,
+                      "top": 145,
+                      "right": 1218,
+                      "bottom": 283,
+                      "width": 144,
+                      "height": 138
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 7703710350892696307,
+            "text": "",
+            "resource_id": "photopage_track_bar",
+            "class": "View",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2344,
+              "right": 1260,
+              "bottom": 2476,
+              "width": 1260,
+              "height": 132
+            },
+            "children": [
+              {
+                "id": 7829756622851752335,
+                "text": "Navigation bar. Image 1. Aug 14, 2026 17:16. Item 1 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 474,
+                  "top": 2350,
+                  "right": 546,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": 7108063307032305517,
+                "text": "Navigation bar. Current preview. Image 2. Aug 14, 2026 12:57. Item 2 of 1378",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 585,
+                  "top": 2350,
+                  "right": 675,
+                  "bottom": 2470,
+                  "width": 90,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": -3082068537200476474,
+                "text": "Navigation bar. Image 3. Aug 14, 2026 12:47. Item 3 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 714,
+                  "top": 2350,
+                  "right": 786,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": -1080422484724340967,
+                "text": "Navigation bar. Image 4. Aug 13, 2026 17:44. Item 4 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 789,
+                  "top": 2350,
+                  "right": 861,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": 1691097596249836251,
+                "text": "Navigation bar. Image 5. Aug 13, 2026 17:42. Item 5 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 864,
+                  "top": 2350,
+                  "right": 936,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": 760731659125194973,
+                "text": "Navigation bar. Image 6. Aug 12, 2026 12:15. Item 6 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 939,
+                  "top": 2350,
+                  "right": 1011,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": 4479269348318852201,
+                "text": "Navigation bar. Image 7. Aug 11, 2026 11:44. Item 7 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 1014,
+                  "top": 2350,
+                  "right": 1086,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": -6237405817040428755,
+                "text": "Navigation bar. Image 8. Aug 11, 2026 11:44. Item 8 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 1089,
+                  "top": 2350,
+                  "right": 1161,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": 1103732187121117541,
+                "text": "Navigation bar. Image 9. Aug 11, 2026 11:26. Item 9 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 1164,
+                  "top": 2350,
+                  "right": 1236,
+                  "bottom": 2470,
+                  "width": 72,
+                  "height": 120
+                },
+                "children": []
+              },
+              {
+                "id": -6742767865893568982,
+                "text": "Navigation bar. Image 10. Aug 10, 2026 18:05. Item 10 of 1378. Double-tap to activate",
+                "resource_id": "",
+                "class": "View",
+                "clickable": false,
+                "bounds": {
+                  "left": 1239,
+                  "top": 2350,
+                  "right": 1260,
+                  "bottom": 2470,
+                  "width": 21,
+                  "height": 120
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -7984147747607233345,
+            "text": "",
+            "resource_id": "photopage_bottom_bar",
+            "class": "LinearLayout",
+            "clickable": true,
+            "bounds": {
+              "left": 0,
+              "top": 2476,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 324
+            },
+            "children": [
+              {
+                "id": -575929679580746598,
+                "text": "",
+                "resource_id": "item_root_container",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 2476,
+                  "right": 315,
+                  "bottom": 2674,
+                  "width": 315,
+                  "height": 198
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -3952463691718234282,
+        "text": "",
+        "resource_id": "bottomBar",
+        "class": "FrameLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 2461,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 339
+        },
+        "children": []
+      }
+    ]
+  }
+}

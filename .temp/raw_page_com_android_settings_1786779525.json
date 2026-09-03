@@ -1,0 +1,663 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "FrameLayout",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779525813,
+    "total_nodes": 40
+  },
+  "tree": {
+    "id": -2031315064587920008,
+    "text": "",
+    "resource_id": "apps_list",
+    "class": "ListView",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 452,
+      "right": 1260,
+      "bottom": 2674,
+      "width": 1260,
+      "height": 2222
+    },
+    "children": [
+      {
+        "id": 5498803504931266532,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 491,
+          "right": 1167,
+          "bottom": 664,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 7194749723884366399,
+            "text": "AbhiBus",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 548,
+              "right": 383,
+              "bottom": 607,
+              "width": 146,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 553,
+              "right": 1051,
+              "bottom": 602,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 8730624323665423658,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 664,
+          "right": 1167,
+          "bottom": 837,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 229426155603260755,
+            "text": "Albums",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 721,
+              "right": 362,
+              "bottom": 780,
+              "width": 125,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 726,
+              "right": 1051,
+              "bottom": 775,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2231148153389206354,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 837,
+          "right": 1167,
+          "bottom": 1010,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -4955728764261166027,
+            "text": "Android Auto",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 894,
+              "right": 484,
+              "bottom": 953,
+              "width": 247,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 899,
+              "right": 1051,
+              "bottom": 948,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -5016035623120330485,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1010,
+          "right": 1167,
+          "bottom": 1183,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 2690167541819254840,
+            "text": "Authenticator",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1067,
+              "right": 498,
+              "bottom": 1126,
+              "width": 261,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1072,
+              "right": 1051,
+              "bottom": 1121,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 4959773518997243314,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1183,
+          "right": 1167,
+          "bottom": 1356,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -2343538507253919055,
+            "text": "Barbeque Nation",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1240,
+              "right": 551,
+              "bottom": 1299,
+              "width": 314,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1245,
+              "right": 1051,
+              "bottom": 1294,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -8908120705267038279,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1356,
+          "right": 1167,
+          "bottom": 1529,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -3981002454727576630,
+            "text": "Battlegrounds India",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1413,
+              "right": 609,
+              "bottom": 1472,
+              "width": 372,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1418,
+              "right": 1051,
+              "bottom": 1467,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -911006861702687650,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1529,
+          "right": 1167,
+          "bottom": 1702,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -9078537384399241595,
+            "text": "Browser",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1586,
+              "right": 378,
+              "bottom": 1645,
+              "width": 141,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 1591,
+              "right": 1051,
+              "bottom": 1640,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 1515976228922884951,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1702,
+          "right": 1167,
+          "bottom": 1875,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -5358810772078303866,
+            "text": "Camera",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1759,
+              "right": 369,
+              "bottom": 1818,
+              "width": 132,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1764,
+              "right": 1051,
+              "bottom": 1813,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -328965799219033266,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 1875,
+          "right": 1167,
+          "bottom": 2048,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -6013381291492867409,
+            "text": "Clock",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 1932,
+              "right": 332,
+              "bottom": 1991,
+              "width": 95,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 1937,
+              "right": 1051,
+              "bottom": 1986,
+              "width": 74,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7546803868331070141,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2048,
+          "right": 1167,
+          "bottom": 2221,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 6070701730851485766,
+            "text": "Confirmtkt",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2105,
+              "right": 428,
+              "bottom": 2164,
+              "width": 191,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2110,
+              "right": 1051,
+              "bottom": 2159,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -2452966879703233292,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2221,
+          "right": 1167,
+          "bottom": 2394,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": -797490383949784273,
+            "text": "Coursera",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2278,
+              "right": 398,
+              "bottom": 2337,
+              "width": 161,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2283,
+              "right": 1051,
+              "bottom": 2332,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": -5181197741092749242,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2394,
+          "right": 1167,
+          "bottom": 2567,
+          "width": 1101,
+          "height": 173
+        },
+        "children": [
+          {
+            "id": 6850233554657785245,
+            "text": "Discord",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2451,
+              "right": 370,
+              "bottom": 2510,
+              "width": 133,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 8661847915917133340,
+            "text": "Don't allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 888,
+              "top": 2456,
+              "right": 1051,
+              "bottom": 2505,
+              "width": 163,
+              "height": 49
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": 7356030039034159627,
+        "text": "",
+        "resource_id": "",
+        "class": "RelativeLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 66,
+          "top": 2567,
+          "right": 1167,
+          "bottom": 2674,
+          "width": 1101,
+          "height": 107
+        },
+        "children": [
+          {
+            "id": -3980309418609581998,
+            "text": "EasyShare",
+            "resource_id": "title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 237,
+              "top": 2624,
+              "right": 426,
+              "bottom": 2674,
+              "width": 189,
+              "height": 50
+            },
+            "children": []
+          },
+          {
+            "id": 6457770466850946038,
+            "text": "Allow",
+            "resource_id": "summary_ex",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 977,
+              "top": 2629,
+              "right": 1051,
+              "bottom": 2674,
+              "width": 74,
+              "height": 45
+            },
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,552 @@
+{
+  "meta": {
+    "package": "com.vivo.gallery",
+    "root_name": "GalleryTab",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779819703,
+    "total_nodes": 33
+  },
+  "tree": {
+    "id": 3781854095009605806,
+    "text": "",
+    "resource_id": "coordinator",
+    "class": "ViewGroup",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 1645761047670074352,
+        "text": "",
+        "resource_id": "dreamway_recmmend_list",
+        "class": "RecyclerView",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": -1647703360706435868,
+            "text": "",
+            "resource_id": "",
+            "class": "RelativeLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 420,
+              "right": 1260,
+              "bottom": 774,
+              "width": 1260,
+              "height": 354
+            },
+            "children": [
+              {
+                "id": -927954698362906297,
+                "text": "Collage",
+                "resource_id": "recommend_function_layout",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 81,
+                  "top": 420,
+                  "right": 419,
+                  "bottom": 750,
+                  "width": 338,
+                  "height": 330
+                },
+                "children": [
+                  {
+                    "id": 8885362106987662099,
+                    "text": "Collage",
+                    "resource_id": "dreamway_recommend_function_title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 198,
+                      "top": 633,
+                      "right": 301,
+                      "bottom": 678,
+                      "width": 103,
+                      "height": 45
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -4926719153343875015,
+                "text": "Video clips",
+                "resource_id": "recommend_function_layout",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 461,
+                  "top": 420,
+                  "right": 799,
+                  "bottom": 750,
+                  "width": 338,
+                  "height": 330
+                },
+                "children": [
+                  {
+                    "id": 6319723709704909204,
+                    "text": "Video clips",
+                    "resource_id": "dreamway_recommend_function_title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 555,
+                      "top": 633,
+                      "right": 705,
+                      "bottom": 678,
+                      "width": 150,
+                      "height": 45
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -6173243297929434691,
+                "text": "Draft videos",
+                "resource_id": "recommend_function_layout",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 841,
+                  "top": 420,
+                  "right": 1179,
+                  "bottom": 750,
+                  "width": 338,
+                  "height": 330
+                },
+                "children": [
+                  {
+                    "id": 3314959728717926891,
+                    "text": "Draft videos",
+                    "resource_id": "dreamway_recommend_function_title",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 921,
+                      "top": 633,
+                      "right": 1099,
+                      "bottom": 678,
+                      "width": 178,
+                      "height": 45
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": 2173075907721952525,
+            "text": "Memories",
+            "resource_id": "dreamway_memories_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 80,
+              "top": 876,
+              "right": 984,
+              "bottom": 935,
+              "width": 904,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 3817929380827859567,
+            "text": "More",
+            "resource_id": "dreamway_memories_view_all",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 1050,
+              "top": 870,
+              "right": 1180,
+              "bottom": 941,
+              "width": 130,
+              "height": 71
+            },
+            "children": [
+              {
+                "id": -3442580450360268119,
+                "text": "More",
+                "resource_id": "dreamway_memories_view_all_title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 1050,
+                  "top": 881,
+                  "right": 1120,
+                  "bottom": 930,
+                  "width": 70,
+                  "height": 49
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": -7265691242040860044,
+            "text": "Goodbye, extraordinary year2025",
+            "resource_id": "dreamway_memories_header_cover_image",
+            "class": "TextView",
+            "clickable": true,
+            "bounds": {
+              "left": 80,
+              "top": 975,
+              "right": 1180,
+              "bottom": 2075,
+              "width": 1100,
+              "height": 1100
+            },
+            "children": []
+          },
+          {
+            "id": -5666198548234156895,
+            "text": "",
+            "resource_id": "memory_videoeditor_text",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 80,
+              "top": 2016,
+              "right": 80,
+              "bottom": 2075,
+              "width": 0,
+              "height": 59
+            },
+            "children": []
+          },
+          {
+            "id": 7299163211312040595,
+            "text": "Goodbye, extraordinary year",
+            "resource_id": "header_main_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 131,
+              "top": 975,
+              "right": 1129,
+              "bottom": 1961,
+              "width": 998,
+              "height": 986
+            },
+            "children": []
+          },
+          {
+            "id": 5981913367816201027,
+            "text": "More",
+            "resource_id": "header_more",
+            "class": "Button",
+            "clickable": true,
+            "bounds": {
+              "left": 1027,
+              "top": 1005,
+              "right": 1165,
+              "bottom": 1143,
+              "width": 138,
+              "height": 138
+            },
+            "children": []
+          },
+          {
+            "id": 2502914822161119631,
+            "text": "2025",
+            "resource_id": "header_sub_title",
+            "class": "TextView",
+            "clickable": false,
+            "bounds": {
+              "left": 131,
+              "top": 1961,
+              "right": 243,
+              "bottom": 2030,
+              "width": 112,
+              "height": 69
+            },
+            "children": []
+          },
+          {
+            "id": -3072355405828433410,
+            "text": "",
+            "resource_id": "",
+            "class": "RelativeLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 2180,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 620
+            },
+            "children": [
+              {
+                "id": 2265345243071306134,
+                "text": "Featured",
+                "resource_id": "featured_title",
+                "class": "TextView",
+                "clickable": false,
+                "bounds": {
+                  "left": 78,
+                  "top": 2213,
+                  "right": 986,
+                  "bottom": 2272,
+                  "width": 908,
+                  "height": 59
+                },
+                "children": []
+              },
+              {
+                "id": -8624252378495983075,
+                "text": "More",
+                "resource_id": "dreamway_recommend_view_all",
+                "class": "Button",
+                "clickable": true,
+                "bounds": {
+                  "left": 1052,
+                  "top": 2213,
+                  "right": 1182,
+                  "bottom": 2284,
+                  "width": 130,
+                  "height": 71
+                },
+                "children": []
+              },
+              {
+                "id": 8190186785623581612,
+                "text": "",
+                "resource_id": "dreamway_featured_recyclerview",
+                "class": "RecyclerView",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 2317,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 483
+                },
+                "children": [
+                  {
+                    "id": -5918076465283953098,
+                    "text": ",July 5, 2026",
+                    "resource_id": "",
+                    "class": "FrameLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 78,
+                      "top": 2317,
+                      "right": 1182,
+                      "bottom": 2800,
+                      "width": 1104,
+                      "height": 483
+                    },
+                    "children": [
+                      {
+                        "id": 6981981530385264754,
+                        "text": "",
+                        "resource_id": "bottom_up_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 132,
+                          "top": 3231,
+                          "right": 1128,
+                          "bottom": 2800,
+                          "width": 996,
+                          "height": -431
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 7257171330094224347,
+                        "text": "July 5, 2026",
+                        "resource_id": "bottom_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 117,
+                          "top": 3307,
+                          "right": 1143,
+                          "bottom": 2800,
+                          "width": 1026,
+                          "height": -507
+                        },
+                        "children": []
+                      }
+                    ]
+                  },
+                  {
+                    "id": -9062721438972250157,
+                    "text": ",June 23, 2026",
+                    "resource_id": "",
+                    "class": "RelativeLayout",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1221,
+                      "top": 2317,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 39,
+                      "height": 483
+                    },
+                    "children": [
+                      {
+                        "id": 6981981530385264754,
+                        "text": "",
+                        "resource_id": "bottom_up_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1275,
+                          "top": 3231,
+                          "right": 1260,
+                          "bottom": 2800,
+                          "width": -15,
+                          "height": -431
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 1696405250502966433,
+                        "text": "June 23, 2026",
+                        "resource_id": "bottom_text",
+                        "class": "TextView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 1260,
+                          "top": 3307,
+                          "right": 1260,
+                          "bottom": 2800,
+                          "width": 0,
+                          "height": -507
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 256699274187597855,
+        "text": "",
+        "resource_id": "orginui_vcommonlayout_toptargetview",
+        "class": "LinearLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 384,
+          "width": 1260,
+          "height": 384
+        },
+        "children": [
+          {
+            "id": 5279020192985401176,
+            "text": "Recommended",
+            "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+            "class": "FrameLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 201,
+              "right": 1260,
+              "bottom": 384,
+              "width": 1260,
+              "height": 183
+            },
+            "children": [
+              {
+                "id": 5088084363972642648,
+                "text": "",
+                "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 39,
+                  "top": 201,
+                  "right": 1242,
+                  "bottom": 375,
+                  "width": 1203,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": -1125336464396495271,
+                    "text": "",
+                    "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 918,
+                      "top": 214,
+                      "right": 1218,
+                      "bottom": 352,
+                      "width": 300,
+                      "height": 138
+                    },
+                    "children": [
+                      {
+                        "id": 8606205405902799929,
+                        "text": "Search",
+                        "resource_id": "",
+                        "class": "Button",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 918,
+                          "top": 214,
+                          "right": 1068,
+                          "bottom": 352,
+                          "width": 150,
+                          "height": 138
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -460067870317672458,
+                        "text": "More",
+                        "resource_id": "",
+                        "class": "Button",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 1068,
+                          "top": 214,
+                          "right": 1218,
+                          "bottom": 352,
+                          "width": 150,
+                          "height": 138
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

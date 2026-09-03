@@ -1,0 +1,1325 @@
+{
+  "meta": {
+    "package": "com.android.contacts",
+    "root_name": "BBKTwelveKeyDialer",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779782146,
+    "total_nodes": 81
+  },
+  "tree": {
+    "id": -114385935600578914,
+    "text": "",
+    "resource_id": "calllog_coordinatorLayout",
+    "class": "ViewGroup",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 6483872526960672957,
+        "text": "",
+        "resource_id": "dialer_match_list_container",
+        "class": "LinearLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": -3119304433562373067,
+            "text": "",
+            "resource_id": "dialer_match_list",
+            "class": "RecyclerView",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 2800
+            },
+            "children": [
+              {
+                "id": 4682556496734882086,
+                "text": "",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 387,
+                  "right": 1260,
+                  "bottom": 388,
+                  "width": 1260,
+                  "height": 1
+                },
+                "children": []
+              },
+              {
+                "id": 8995915567604839193,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 388,
+                  "right": 1260,
+                  "bottom": 631,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": 4425124671030048730,
+                    "text": "Received incoming,Sam",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 428,
+                      "right": 206,
+                      "bottom": 487,
+                      "width": 71,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 206,
+                      "top": 428,
+                      "right": 206,
+                      "bottom": 487,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -1102148126352479153,
+                    "text": "‭+9 1 9 8 2 0 5 0 2 5 5 4‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 519,
+                      "right": 565,
+                      "bottom": 568,
+                      "width": 246,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7685397647227796413,
+                    "text": "Aug 14",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 971,
+                      "top": 485,
+                      "right": 1077,
+                      "bottom": 534,
+                      "width": 106,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 418,
+                      "right": 1260,
+                      "bottom": 601,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -2331030524573341624,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 631,
+                  "right": 1260,
+                  "bottom": 874,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": -8163093572121609196,
+                    "text": "Missed calls,Mubina(VIT)",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 671,
+                      "right": 350,
+                      "bottom": 730,
+                      "width": 215,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 350,
+                      "top": 671,
+                      "right": 350,
+                      "bottom": 730,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 3660816569551651716,
+                    "text": "‭+9 1 9 9 8 7 2 5 2 8 0 7‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 762,
+                      "right": 560,
+                      "bottom": 811,
+                      "width": 241,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7685397647227796413,
+                    "text": "Aug 14",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 971,
+                      "top": 728,
+                      "right": 1077,
+                      "bottom": 777,
+                      "width": 106,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 661,
+                      "right": 1260,
+                      "bottom": 844,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -4536687709220158273,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 874,
+                  "right": 1260,
+                  "bottom": 1117,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": -3008893128571871203,
+                    "text": "Outgoing,Aashna ?",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 937,
+                      "right": 310,
+                      "bottom": 996,
+                      "width": 175,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 310,
+                      "top": 937,
+                      "right": 310,
+                      "bottom": 996,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -6914024164277466126,
+                    "text": "‭+9 1 8 4 5 1 9 1 6 0 9 4‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 309,
+                      "top": 1005,
+                      "right": 540,
+                      "bottom": 1054,
+                      "width": 231,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7685397647227796413,
+                    "text": "Aug 14",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 971,
+                      "top": 971,
+                      "right": 1077,
+                      "bottom": 1020,
+                      "width": 106,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 904,
+                      "right": 1260,
+                      "bottom": 1087,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 6033885108480529605,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1117,
+                  "right": 1260,
+                  "bottom": 1360,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": -1690967776804345031,
+                    "text": "Outgoing,4 6 3 6#*#*",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 1180,
+                      "right": 320,
+                      "bottom": 1239,
+                      "width": 185,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 320,
+                      "top": 1180,
+                      "right": 320,
+                      "bottom": 1239,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 5672937208074088796,
+                    "text": "Unknown location",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 309,
+                      "top": 1248,
+                      "right": 567,
+                      "bottom": 1297,
+                      "width": 258,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7685397647227796413,
+                    "text": "Aug 14",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 971,
+                      "top": 1214,
+                      "right": 1077,
+                      "bottom": 1263,
+                      "width": 106,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 1147,
+                      "right": 1260,
+                      "bottom": 1330,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -1353133526647484232,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1360,
+                  "right": 1260,
+                  "bottom": 1603,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": -90107675616062314,
+                    "text": "Outgoing,Sunil VIT",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 1423,
+                      "right": 299,
+                      "bottom": 1482,
+                      "width": 164,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 299,
+                      "top": 1423,
+                      "right": 299,
+                      "bottom": 1482,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -6480389529981679630,
+                    "text": "‭+9 1 8 1 0 8 5 4 1 5 9 6‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 309,
+                      "top": 1491,
+                      "right": 538,
+                      "bottom": 1540,
+                      "width": 229,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7685397647227796413,
+                    "text": "Aug 14",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 971,
+                      "top": 1457,
+                      "right": 1077,
+                      "bottom": 1506,
+                      "width": 106,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 1390,
+                      "right": 1260,
+                      "bottom": 1573,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 2238216210581236211,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1603,
+                  "right": 1260,
+                  "bottom": 1846,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": 2026939862146443243,
+                    "text": "Received incoming,Rohit Co",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 1643,
+                      "right": 293,
+                      "bottom": 1702,
+                      "width": 158,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 293,
+                      "top": 1643,
+                      "right": 293,
+                      "bottom": 1702,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 4172249463782203864,
+                    "text": "‭+9 1 8 1 4 9 9 5 8 2 1 2‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 1734,
+                      "right": 549,
+                      "bottom": 1783,
+                      "width": 230,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7685397647227796413,
+                    "text": "Aug 14",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 971,
+                      "top": 1700,
+                      "right": 1077,
+                      "bottom": 1749,
+                      "width": 106,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 1633,
+                      "right": 1260,
+                      "bottom": 1816,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -3941435803469472105,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 1846,
+                  "right": 1260,
+                  "bottom": 2089,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": 4408719536061722953,
+                    "text": "Received incoming,Baba",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 1886,
+                      "right": 229,
+                      "bottom": 1945,
+                      "width": 94,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 229,
+                      "top": 1886,
+                      "right": 229,
+                      "bottom": 1945,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -532961194356658597,
+                    "text": "‭+9 1 9 2 2 3 5 6 9 9 6 3‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 1977,
+                      "right": 559,
+                      "bottom": 2026,
+                      "width": 240,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7711652622715644576,
+                    "text": "Aug 13",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 974,
+                      "top": 1943,
+                      "right": 1077,
+                      "bottom": 1992,
+                      "width": 103,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 1876,
+                      "right": 1260,
+                      "bottom": 2059,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -1743731869676395321,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2089,
+                  "right": 1260,
+                  "bottom": 2332,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": 2954813020764117216,
+                    "text": "Received incoming,Vicky VIT",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 2129,
+                      "right": 304,
+                      "bottom": 2188,
+                      "width": 169,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 304,
+                      "top": 2129,
+                      "right": 304,
+                      "bottom": 2188,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 6986774407873864372,
+                    "text": "‭+9 1 8 5 9 1 2 2 1 9 1 9‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 2220,
+                      "right": 540,
+                      "bottom": 2269,
+                      "width": 221,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -7711652622715644576,
+                    "text": "Aug 13",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 974,
+                      "top": 2186,
+                      "right": 1077,
+                      "bottom": 2235,
+                      "width": 103,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 2119,
+                      "right": 1260,
+                      "bottom": 2302,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -6201384322825364077,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2332,
+                  "right": 1260,
+                  "bottom": 2575,
+                  "width": 1260,
+                  "height": 243
+                },
+                "children": [
+                  {
+                    "id": 7166078895215069536,
+                    "text": "Received incoming,‭+9 1 2 0 6 6 3 9 4 6 0 1‬",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 2372,
+                      "right": 423,
+                      "bottom": 2431,
+                      "width": 288,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 423,
+                      "top": 2372,
+                      "right": 423,
+                      "bottom": 2431,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 3779051239635875993,
+                    "text": "Express delivery  Maharashtra Pune",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 2463,
+                      "right": 886,
+                      "bottom": 2512,
+                      "width": 567,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -3950139267296678695,
+                    "text": "Aug 12",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 972,
+                      "top": 2429,
+                      "right": 1077,
+                      "bottom": 2478,
+                      "width": 105,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 2362,
+                      "right": 1260,
+                      "bottom": 2545,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": -161226995514699633,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2575,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 225
+                },
+                "children": [
+                  {
+                    "id": 7537914635402495202,
+                    "text": "Missed calls,⛔ Spam Alert From Jio",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 2614,
+                      "right": 589,
+                      "bottom": 2675,
+                      "width": 454,
+                      "height": 61
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 589,
+                      "top": 2616,
+                      "right": 589,
+                      "bottom": 2675,
+                      "width": 0,
+                      "height": 59
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 4022416638967093139,
+                    "text": "Express delivery  ‭+9 1 7 9 6 8 1 7 9 2 4 1‬",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 319,
+                      "top": 2707,
+                      "right": 823,
+                      "bottom": 2756,
+                      "width": 504,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -3950139267296678695,
+                    "text": "Aug 12",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 972,
+                      "top": 2672,
+                      "right": 1077,
+                      "bottom": 2721,
+                      "width": 105,
+                      "height": 49
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 2605,
+                      "right": 1260,
+                      "bottom": 2788,
+                      "width": 183,
+                      "height": 183
+                    },
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "id": 5849041416477951212,
+                "text": "",
+                "resource_id": "",
+                "class": "",
+                "clickable": true,
+                "bounds": {
+                  "left": 0,
+                  "top": 2818,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": -18
+                },
+                "children": [
+                  {
+                    "id": 2837582576707426168,
+                    "text": "Outgoing,Rohit Co",
+                    "resource_id": "line1",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 135,
+                      "top": 2845,
+                      "right": 293,
+                      "bottom": 2800,
+                      "width": 158,
+                      "height": -45
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": 7247704609903293628,
+                    "text": "",
+                    "resource_id": "miss_count_with_black",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 293,
+                      "top": 2845,
+                      "right": 293,
+                      "bottom": 2800,
+                      "width": 0,
+                      "height": -45
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -8546802964845334328,
+                    "text": "8 1 4 9 9 5 8 2 1 2",
+                    "resource_id": "label",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 309,
+                      "top": 2845,
+                      "right": 489,
+                      "bottom": 2800,
+                      "width": 180,
+                      "height": -45
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -6109261717434643001,
+                    "text": "Aug 10",
+                    "resource_id": "date",
+                    "class": "TextView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 972,
+                      "top": 2845,
+                      "right": 1077,
+                      "bottom": 2800,
+                      "width": 105,
+                      "height": -45
+                    },
+                    "children": []
+                  },
+                  {
+                    "id": -560612835822311596,
+                    "text": "Call log details",
+                    "resource_id": "to_detail",
+                    "class": "ImageView",
+                    "clickable": true,
+                    "bounds": {
+                      "left": 1077,
+                      "top": 2845,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 183,
+                      "height": -45
+                    },
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -1859318897478338757,
+        "text": "",
+        "resource_id": "orginui_vcommonlayout_toptargetview",
+        "class": "LinearLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 384,
+          "width": 1260,
+          "height": 384
+        },
+        "children": [
+          {
+            "id": 3163002021319464564,
+            "text": "",
+            "resource_id": "orginui_vcommonlayout_toptargetview_vtoobar",
+            "class": "FrameLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 201,
+              "right": 1260,
+              "bottom": 384,
+              "width": 1260,
+              "height": 183
+            },
+            "children": [
+              {
+                "id": -4881715491608306273,
+                "text": "Dial",
+                "resource_id": "originui_vtoolbar_vtoolbarinternal_container_rom14_0",
+                "class": "ViewGroup",
+                "clickable": false,
+                "bounds": {
+                  "left": 39,
+                  "top": 201,
+                  "right": 1242,
+                  "bottom": 375,
+                  "width": 1203,
+                  "height": 174
+                },
+                "children": [
+                  {
+                    "id": 8957925405228284306,
+                    "text": "",
+                    "resource_id": "originui_vtoolbar_vtoolbarinternal_menulayout_container_rom14_0",
+                    "class": "LinearLayout",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 768,
+                      "top": 214,
+                      "right": 1218,
+                      "bottom": 352,
+                      "width": 450,
+                      "height": 138
+                    },
+                    "children": [
+                      {
+                        "id": -6938858147310009615,
+                        "text": "Select",
+                        "resource_id": "",
+                        "class": "Button",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 768,
+                          "top": 214,
+                          "right": 918,
+                          "bottom": 352,
+                          "width": 150,
+                          "height": 138
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": 8606205405902799929,
+                        "text": "Search",
+                        "resource_id": "",
+                        "class": "Button",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 918,
+                          "top": 214,
+                          "right": 1068,
+                          "bottom": 352,
+                          "width": 150,
+                          "height": 138
+                        },
+                        "children": []
+                      },
+                      {
+                        "id": -460067870317672458,
+                        "text": "More",
+                        "resource_id": "",
+                        "class": "Button",
+                        "clickable": true,
+                        "bounds": {
+                          "left": 1068,
+                          "top": 214,
+                          "right": 1218,
+                          "bottom": 352,
+                          "width": 150,
+                          "height": 138
+                        },
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": 1694973203067922918,
+        "text": "",
+        "resource_id": "bbk_call_log_tablayout_wrap",
+        "class": "LinearLayout",
+        "clickable": true,
+        "bounds": {
+          "left": 0,
+          "top": 255,
+          "right": 1260,
+          "bottom": 384,
+          "width": 1260,
+          "height": 129
+        },
+        "children": [
+          {
+            "id": -4809069731610378196,
+            "text": "",
+            "resource_id": "bbk_call_log_tablayout",
+            "class": "HorizontalScrollView",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 255,
+              "right": 1260,
+              "bottom": 384,
+              "width": 1260,
+              "height": 129
+            },
+            "children": [
+              {
+                "id": -7341919740979107771,
+                "text": "All",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 432,
+                  "top": 255,
+                  "right": 627,
+                  "bottom": 351,
+                  "width": 195,
+                  "height": 96
+                },
+                "children": []
+              },
+              {
+                "id": -5719008974961078539,
+                "text": "Missed",
+                "resource_id": "",
+                "class": "LinearLayout",
+                "clickable": true,
+                "bounds": {
+                  "left": 633,
+                  "top": 255,
+                  "right": 828,
+                  "bottom": 351,
+                  "width": 195,
+                  "height": 96
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

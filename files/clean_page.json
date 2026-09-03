@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "package_name": "com.android.settings",
+    "root_name": "SettingsHomepageActivity",
+    "timestamp": 1787470566998,
+    "element_count": 4
+  },
+  "elements": [
+    {
+      "name": "Dashboard",
+      "is_clickable": false,
+      "is_scrollable": true,
+      "class_name": "androidx.recyclerview.widget.RecyclerView",
+      "resource_id": "com.android.settings:id\/dashboard_container",
+      "bounds": {
+        "left": 13,
+        "top": 58,
+        "right": 1097,
+        "bottom": 2362,
+        "width": 1084,
+        "height": 2304
+      },
+      "source": "direct"
+    },
+    {
+      "name": "sawa**7@gmail.com · Account password & security",
+      "is_clickable": true,
+      "is_scrollable": false,
+      "class_name": "android.widget.LinearLayout",
+      "resource_id": "com.android.settings:id\/account_category",
+      "bounds": {
+        "left": 70,
+        "top": 544,
+        "right": 1040,
+        "bottom": 751,
+        "width": 970,
+        "height": 207
+      },
+      "source": "container"
+    },
+    {
+      "name": "Wi-Fi",
+      "is_clickable": true,
+      "is_scrollable": false,
+      "class_name": "android.widget.FrameLayout",
+      "resource_id": "",
+      "bounds": {
+        "left": 70,
+        "top": 795,
+        "right": 1040,
+        "bottom": 945,
+        "width": 970,
+        "height": 150
+      },
+      "source": "container"
+    },
+    {
+      "name": "Settings · Search settings",
+      "is_clickable": true,
+      "is_scrollable": false,
+      "class_name": "android.widget.LinearLayout",
+      "resource_id": "com.android.settings:id\/orginui_vcommonlayout_toptargetview",
+      "bounds": {
+        "left": 13,
+        "top": 58,
+        "right": 1097,
+        "bottom": 513,
+        "width": 1084,
+        "height": 455
+      },
+      "source": "container"
+    }
+  ]
+}

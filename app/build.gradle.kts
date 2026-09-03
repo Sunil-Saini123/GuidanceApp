@@ -1,8 +1,19 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
 }
+
+// Read local.properties so the API key never lives in source control.
+// Add this line to local.properties (never commit that file):
+//   GEMINI_API_KEY=your_real_key_here
+val localProperties = Properties().also { props ->
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { props.load(it) }
+}
+val geminiApiKey: String = localProperties.getProperty("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY_HERE")
 
 android {
     namespace = "com.example.floatingassistant"
@@ -18,6 +29,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Inject the Gemini API key as a BuildConfig constant
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -33,6 +47,10 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true   // required to access BuildConfig.GEMINI_API_KEY
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -51,6 +69,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
     testImplementation(libs.junit)
+    testImplementation("org.json:json:20231013")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

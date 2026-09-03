@@ -1,0 +1,424 @@
+{
+  "meta": {
+    "package": "app.morphe.android.youtube",
+    "root_name": "Main",
+    "event_type": "NAVIGATION",
+    "timestamp_ms": 1786779745273,
+    "total_nodes": 25
+  },
+  "tree": {
+    "id": 3634989353120683782,
+    "text": "",
+    "resource_id": "",
+    "class": "FrameLayout",
+    "clickable": false,
+    "bounds": {
+      "left": 0,
+      "top": 0,
+      "right": 1260,
+      "bottom": 2800,
+      "width": 1260,
+      "height": 2800
+    },
+    "children": [
+      {
+        "id": 5142029458106000233,
+        "text": "",
+        "resource_id": "more_drawer_container",
+        "class": "DrawerLayout",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": [
+          {
+            "id": 5429362443102427880,
+            "text": "",
+            "resource_id": "slim_status_bar_player_container",
+            "class": "FrameLayout",
+            "clickable": false,
+            "bounds": {
+              "left": 0,
+              "top": 0,
+              "right": 1260,
+              "bottom": 2800,
+              "width": 1260,
+              "height": 2800
+            },
+            "children": [
+              {
+                "id": -8210086926143643178,
+                "text": "",
+                "resource_id": "accessibility_layer_container",
+                "class": "FrameLayout",
+                "clickable": false,
+                "bounds": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1260,
+                  "bottom": 2800,
+                  "width": 1260,
+                  "height": 2800
+                },
+                "children": [
+                  {
+                    "id": 4434588982034290258,
+                    "text": "",
+                    "resource_id": "watch_while_layout_coordinator_layout",
+                    "class": "ViewGroup",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 0,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 2800
+                    },
+                    "children": [
+                      {
+                        "id": -1251195558591708153,
+                        "text": "",
+                        "resource_id": "browse_fragment_layout_coordinator_layout",
+                        "class": "ScrollView",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 0,
+                          "right": 1260,
+                          "bottom": 2800,
+                          "width": 1260,
+                          "height": 2800
+                        },
+                        "children": [
+                          {
+                            "id": -995752868363914112,
+                            "text": "",
+                            "resource_id": "toolbar_container",
+                            "class": "FrameLayout",
+                            "clickable": false,
+                            "bounds": {
+                              "left": 0,
+                              "top": 0,
+                              "right": 1260,
+                              "bottom": 267,
+                              "width": 1260,
+                              "height": 267
+                            },
+                            "children": [
+                              {
+                                "id": -3497195134744809186,
+                                "text": "",
+                                "resource_id": "collapsing_header_container",
+                                "class": "FrameLayout",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 123,
+                                  "right": 1260,
+                                  "bottom": 123,
+                                  "width": 1260,
+                                  "height": 0
+                                },
+                                "children": []
+                              },
+                              {
+                                "id": 5142560764424648791,
+                                "text": "",
+                                "resource_id": "toolbar",
+                                "class": "ViewGroup",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 0,
+                                  "top": 123,
+                                  "right": 1260,
+                                  "bottom": 267,
+                                  "width": 1260,
+                                  "height": 144
+                                },
+                                "children": [
+                                  {
+                                    "id": 6819030096194379309,
+                                    "text": "YouTube",
+                                    "resource_id": "youtube_logo",
+                                    "class": "ImageView",
+                                    "clickable": false,
+                                    "bounds": {
+                                      "left": 0,
+                                      "top": 123,
+                                      "right": 366,
+                                      "bottom": 267,
+                                      "width": 366,
+                                      "height": 144
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "id": 5601299414072180458,
+                                    "text": "Create video or post",
+                                    "resource_id": "menu_item_view",
+                                    "class": "ImageView",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 972,
+                                      "top": 123,
+                                      "right": 1116,
+                                      "bottom": 267,
+                                      "width": 144,
+                                      "height": 144
+                                    },
+                                    "children": []
+                                  },
+                                  {
+                                    "id": 2258915991698402092,
+                                    "text": "Search",
+                                    "resource_id": "menu_item_view",
+                                    "class": "ImageView",
+                                    "clickable": true,
+                                    "bounds": {
+                                      "left": 1116,
+                                      "top": 123,
+                                      "right": 1260,
+                                      "bottom": 267,
+                                      "width": 144,
+                                      "height": 144
+                                    },
+                                    "children": []
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": 6906942268708310144,
+                    "text": "",
+                    "resource_id": "pivot_bar",
+                    "class": "HorizontalScrollView",
+                    "clickable": false,
+                    "bounds": {
+                      "left": 0,
+                      "top": 2530,
+                      "right": 1260,
+                      "bottom": 2800,
+                      "width": 1260,
+                      "height": 270
+                    },
+                    "children": [
+                      {
+                        "id": 3397750023209315185,
+                        "text": "",
+                        "resource_id": "",
+                        "class": "LinearLayout",
+                        "clickable": false,
+                        "bounds": {
+                          "left": 0,
+                          "top": 2530,
+                          "right": 1260,
+                          "bottom": 2674,
+                          "width": 1260,
+                          "height": 144
+                        },
+                        "children": [
+                          {
+                            "id": 2695695037373646545,
+                            "text": "Home",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 0,
+                              "top": 2530,
+                              "right": 252,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": -6285349312548899015,
+                                "text": "Home",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 94,
+                                  "top": 2626,
+                                  "right": 158,
+                                  "bottom": 2656,
+                                  "width": 64,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": -4999698509854026431,
+                            "text": "Shorts",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 252,
+                              "top": 2530,
+                              "right": 504,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 6868979827007687721,
+                                "text": "Shorts",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 339,
+                                  "top": 2626,
+                                  "right": 417,
+                                  "bottom": 2656,
+                                  "width": 78,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": -410003251539647047,
+                            "text": "Subscriptions",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 504,
+                              "top": 2530,
+                              "right": 756,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 332610884441635838,
+                                "text": "Subscriptions",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 555,
+                                  "top": 2626,
+                                  "right": 706,
+                                  "bottom": 2656,
+                                  "width": 151,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": 2372774024931679889,
+                            "text": "Notifications",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 756,
+                              "top": 2530,
+                              "right": 1008,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": -5465011061260040924,
+                                "text": "Notifications",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 810,
+                                  "top": 2626,
+                                  "right": 954,
+                                  "bottom": 2656,
+                                  "width": 144,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          },
+                          {
+                            "id": 3897677786415419487,
+                            "text": "You",
+                            "resource_id": "",
+                            "class": "Button",
+                            "clickable": true,
+                            "bounds": {
+                              "left": 1008,
+                              "top": 2530,
+                              "right": 1260,
+                              "bottom": 2674,
+                              "width": 252,
+                              "height": 144
+                            },
+                            "children": [
+                              {
+                                "id": 2493571649251954297,
+                                "text": "You",
+                                "resource_id": "text",
+                                "class": "TextView",
+                                "clickable": false,
+                                "bounds": {
+                                  "left": 1113,
+                                  "top": 2626,
+                                  "right": 1155,
+                                  "bottom": 2656,
+                                  "width": 42,
+                                  "height": 30
+                                },
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": -7959771556531130161,
+        "text": "",
+        "resource_id": "reel_time_bar",
+        "class": "ViewGroup",
+        "clickable": false,
+        "bounds": {
+          "left": 0,
+          "top": 0,
+          "right": 1260,
+          "bottom": 2800,
+          "width": 1260,
+          "height": 2800
+        },
+        "children": []
+      }
+    ]
+  }
+}

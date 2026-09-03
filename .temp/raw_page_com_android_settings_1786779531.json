@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "package": "com.android.settings",
+    "root_name": "VivoSub",
+    "event_type": "SCROLL\/CONTENT",
+    "timestamp_ms": 1786779531995,
+    "total_nodes": 2
+  },
+  "tree": {
+    "id": 2936210952110819260,
+    "text": "",
+    "resource_id": "originui_vtoolbar_navigation_view_rom14_0",
+    "class": "FrameLayout",
+    "clickable": true,
+    "bounds": {
+      "left": 1299,
+      "top": 145,
+      "right": 1431,
+      "bottom": 283,
+      "width": 132,
+      "height": 138
+    },
+    "children": [
+      {
+        "id": -7620949286317815104,
+        "text": "Back",
+        "resource_id": "originui_vtoolbar_navigation_view_btn_rom14_0",
+        "class": "ImageButton",
+        "clickable": true,
+        "bounds": {
+          "left": 1299,
+          "top": 148,
+          "right": 1431,
+          "bottom": 280,
+          "width": 132,
+          "height": 132
+        },
+        "children": []
+      }
+    ]
+  }
+}
