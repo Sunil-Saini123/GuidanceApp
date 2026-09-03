@@ -442,6 +442,11 @@ class FloatingOverlayService : Service() {
     private fun handleSubmittedQuery(query: String, statusText: TextView) {
         statusText.text = "Analysing…"
         serviceScope.launch {
+            if (BuildConfig.GEMINI_API_KEY.isBlank() || BuildConfig.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE") {
+                statusText.text = "Gemini API key is not set. Add GEMINI_API_KEY to local.properties."
+                Log.e(TAG, "Gemini API key is not set.")
+                return@launch
+            }
             // ── Step A: call Gemini AI ─────────────────────────────────────────
             val parsed = withContext(Dispatchers.IO) {
                 GeminiCommandParser.parse(query) { progressMsg ->

@@ -36,7 +36,7 @@ object CommandValidator {
         "play", "pause", "resume", "skip", "next", "previous", "mute", "unmute",
         "volume", "navigate", "go", "search", "find", "check", "show", "view",
         "take", "capture", "record", "share", "post", "upload", "download",
-        "delete", "remove", "add", "create", "make", "schedule", "set",
+        "delete", "remove", "add", "create", "make", "schedule",
         "read", "listen", "watch", "browse", "book", "order", "buy", "pay",
         "lock", "unlock", "connect", "disconnect", "sync", "update", "install",
         "alarm", "reminder", "note", "timer", "clock", "camera", "selfie", "photo",

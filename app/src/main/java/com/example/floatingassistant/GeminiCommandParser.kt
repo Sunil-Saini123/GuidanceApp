@@ -139,11 +139,11 @@ Intent: Enable dark mode"""
      * Parses [userCommand] using the Gemini AI.
      *
      * For each model in [MODEL_FALLBACK_LIST]:
-     *   • 503 / 429 / timeout → retry up to [MAX_RETRIES] times with exponential
+     *   • 503 / timeout → retry up to [MAX_RETRIES] times with exponential
      *     back-off (3 s → 6 s → 12 s → 24 s), calling [onProgress] before each wait
      *     so the UI can show live status.
-     *   • 404               → skip to next model immediately.
-     *   • other non-200     → skip to next model immediately.
+     *   • 429          → treated as quota/rate-limit; skip to next model immediately.
+     *   • 404 / other non-200 → skip to next model immediately.
      *
      * @param onProgress Optional suspend callback invoked with a human-readable status
      *                   string just before each retry delay. Runs on whatever dispatcher
