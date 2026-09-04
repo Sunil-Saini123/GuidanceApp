@@ -71,7 +71,14 @@ public class PromptBuilder {
 
     /**
      * Builds a focused user prompt for Tier 3 Groq fallback using Gemini-parsed intent
-     * (targetApp + exactTask) and live screen state from clean_page.json.
+     * (targetApp + exactTask), live screen state from clean_page.json, and whether the
+     * user is already on the target app.
+     *
+     * isOnTargetApp controls the starting point of the path:
+     *   true  → user is already inside the target app → start from within the app
+     *           e.g.  WhatsApp → 3 dots → Settings → ...
+     *   false → user is on a different app / home screen → start from Home
+     *           e.g.  Home → WhatsApp → 3 dots → Settings → ...
      *
      * cleanPageContent is truncated to GroqProxyClient.MAX_SCREEN_CONTENT_CHARS to avoid
      * HTTP 413 (Request Entity Too Large) from the Vercel proxy.
@@ -80,7 +87,8 @@ public class PromptBuilder {
             String targetApp,
             String exactTask,
             String cleanPageContent,
-            JSONObject deviceInfo) {
+            JSONObject deviceInfo,
+            boolean isOnTargetApp) {
 
         StringBuilder sb = new StringBuilder();
 
@@ -114,8 +122,19 @@ public class PromptBuilder {
             sb.append("Current Screen Elements: Not available - use standard app navigation.\n\n");
         }
 
-        sb.append("Generate the exact ordered navigation path to accomplish the task in the target app. ");
-        sb.append("Start from the app home screen. Use real UI element names for this device ROM.");
+        // Path starting point instruction based on current context
+        if (isOnTargetApp) {
+            sb.append("IMPORTANT: The user is ALREADY INSIDE the target app (").append(targetApp).append("). ");
+            sb.append("Start the navigation path FROM WITHIN the app — do NOT include 'Home' or the app launch step. ");
+            sb.append("Example format: \"").append(targetApp).append(" → Menu → Settings → ...\"\n\n");
+        } else {
+            sb.append("IMPORTANT: The user is on a DIFFERENT app or the home screen. ");
+            sb.append("Start the navigation path from the device HOME SCREEN, then open the app. ");
+            sb.append("Example format: \"Home → ").append(targetApp).append(" → Menu → Settings → ...\"\n\n");
+        }
+
+        sb.append("Generate the exact ordered navigation path to accomplish the task. ");
+        sb.append("Use real UI element names for this device ROM.");
         return sb.toString();
     }
 }

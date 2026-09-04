@@ -555,24 +555,38 @@ class FloatingOverlayService : Service() {
                     val cleanPageContent = if (cleanPageFile.exists()) cleanPageFile.readText() else ""
                     Log.d("[PathFinder]", "clean_page.json read: ${cleanPageContent.length} chars")
 
-                    // 2. Gather device info
+                    // 2. Detect whether the user is already on the target app.
+                    //    clean_page.json has: { "meta": { "package_name": "com.whatsapp" }, ... }
+                    //    We compare the app's simple name (e.g. "whatsapp") against targetApp.
+                    val currentPackage = try {
+                        org.json.JSONObject(cleanPageContent)
+                            .optJSONObject("meta")
+                            ?.optString("package_name", "") ?: ""
+                    } catch (_: Exception) { "" }
+                    // Match: "com.whatsapp" contains "whatsapp", "com.android.settings" contains "settings"
+                    val isOnTargetApp = currentPackage.isNotEmpty() &&
+                            currentPackage.contains(parsed.targetApp.trim().lowercase(), ignoreCase = true)
+                    Log.d("[PathFinder]", "currentPackage=$currentPackage, targetApp=${parsed.targetApp}, isOnTargetApp=$isOnTargetApp")
+
+                    // 3. Gather device info
                     val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
 
-                    // 3. Build prompt and call Groq
+                    // 4. Build prompt and call Groq
                     val userPrompt = PromptBuilder.buildGeminiDrivenPrompt(
                         parsed.targetApp,
                         parsed.exactTask,
                         cleanPageContent,
-                        deviceInfo
+                        deviceInfo,
+                        isOnTargetApp
                     )
-                    Log.d("[PathFinder]", "Sending to Groq proxy…")
+                    Log.d("[PathFinder]", "Sending to Groq proxy… isOnTargetApp=$isOnTargetApp")
                     val rawResponse = GroqProxyClient().sendDirectRequest(
                         PromptBuilder.SYSTEM_PROMPT,
                         userPrompt
                     )
                     Log.d("[PathFinder]", "Groq raw response: $rawResponse")
 
-                    // 4. Parse the JSON path response
+                    // 5. Parse the JSON path response
                     val navPath = GroqResponseParser.parse(rawResponse)
                     if (navPath.isValid) {
                         navPath.toPathString()
