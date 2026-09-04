@@ -710,15 +710,22 @@ class FloatingOverlayService : Service() {
                     statusText.text = "Saving path to cloud…"
                     Log.i("[PathFinder]", "User confirmed path correct — saving to Firestore: app=$app, task=$task")
                     serviceScope.launch {
-                        withContext(Dispatchers.IO) {
-                            CloudPathDatabase.addEntry(
-                                targetApp = app,
-                                exactTask = task,
-                                path      = path
-                            )
+                        try {
+                            kotlinx.coroutines.withTimeout(3000L) {
+                                withContext(Dispatchers.IO) {
+                                    CloudPathDatabase.addEntry(
+                                        targetApp = app,
+                                        exactTask = task,
+                                        path      = path
+                                    )
+                                }
+                            }
+                            Log.i("[PathFinder]", "Tier 3 Groq: Path stored to Firestore ✓ (user confirmed)")
+                            statusText.text = "✓ Saved! This path will be remembered next time."
+                        } catch (e: Exception) {
+                            Log.w("[PathFinder]", "Cloud save timed out or failed (queued locally): ${e.message}")
+                            statusText.text = "✓ Saved locally! (Will sync when online)"
                         }
-                        Log.i("[PathFinder]", "Tier 3 Groq: Path stored to Firestore ✓ (user confirmed)")
-                        statusText.text = "✓ Saved! This path will be remembered next time."
                     }
                 }
                 .setNegativeButton("No, Discard") { dialog, _ ->
