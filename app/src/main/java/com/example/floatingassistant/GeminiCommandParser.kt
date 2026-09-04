@@ -80,10 +80,12 @@ object GeminiCommandParser {
      *     by the deprecation messages of all other models). Retry aggressively when busy.
      */
     private val MODEL_FALLBACK_LIST = listOf(
+        "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
-        "gemini-3.7-flash",
-        "gemini-3.8-flash"
+        "gemini-3.8-flash",
+        "gemini-flash-latest",
+        "gemini-3.1-pro-preview"
     )
 
     private val DEFAULT_GEMINI_KEY = BuildConfig.GEMINI_API_KEY
@@ -97,70 +99,60 @@ object GeminiCommandParser {
     private const val SYSTEM_PROMPT = """You are a mobile navigation assistant that interprets user commands.
 
 Given a user command, identify three things:
-1. Target App       — the mobile application to open.
-2. Destination Screen — the specific screen, section, or menu to navigate to inside the app.
-3. Exact Task       — the precise action to perform once at the destination.
+1. app       — the mobile application to open.
+2. end_page  — the specific screen, section, or menu to navigate to inside the app.
+3. task      — the precise action to perform once at the destination.
 
-RULES:
+CRITICAL NAMING RULES (for consistency across queries):
+- You MUST use a consistent, generalized naming scheme for all outputs. Use lowercase and snake_case for all values.
+- `app`: Use the canonical lowercase name. Normalize generic names to canonical apps (e.g., "email" or "mail" -> "gmail", "browser" or "web" -> "chrome").
+- `end_page`: Use a standardized page name (e.g., "alarm_tab", "profile_page", "display_settings").
+- `task`: You MUST group similar requests into exactly ONE generalized canonical task name. 
+  For example, "set a new alarm", "add an alarm", "create alarm" MUST all resolve to "create_alarm". 
+- `task` plurals: ALWAYS use singular nouns for tasks, NEVER plurals (e.g., use "search_video" instead of "search_videos", "read_email" instead of "read_emails").
+
+OUTPUT FORMAT RULES:
 - Respond in EXACTLY three lines, no more, no less.
-- Line 1 must start with "Target App: "
-- Line 2 must start with "Destination Screen: "
-- Line 3 must start with "Exact Task: "
-- Be concise and specific on every line.
-- If the command names an app, use that exact app name.
-- If no app is mentioned, infer the most likely app.
+- Line 1 must start with "app: "
+- Line 2 must start with "end_page: "
+- Line 3 must start with "task: "
 - Do NOT add explanations, greetings, bullets, or any other text.
 
 EXAMPLES:
 User: change my profile picture on WhatsApp
-Target App: WhatsApp
-Destination Screen: Profile
-Exact Task: Change profile picture
+app: whatsapp
+end_page: profile_page
+task: update_profile_picture
 
-User: I want to turn on dark mode in mobile settings
-Target App: Settings
-Destination Screen: Display
-Exact Task: Enable dark mode
+User: search for funny cats on youtube
+app: youtube
+end_page: search_page
+task: search_video
 
-User: call mom
-Target App: Phone
-Destination Screen: Dialer
-Exact Task: Dial contact "Mom"
+User: search videos of dogs
+app: youtube
+end_page: search_page
+task: search_video
 
-User: send a WhatsApp message to john
-Target App: WhatsApp
-Destination Screen: Chat with John
-Exact Task: Send message
+User: check my mail
+app: gmail
+end_page: inbox_page
+task: read_email
 
-User: play some music on spotify
-Target App: Spotify
-Destination Screen: Home
-Exact Task: Play music
-
-User: navigate to the airport in Maps
-Target App: Maps
-Destination Screen: Search
-Exact Task: Get directions to airport
+User: send an email to boss
+app: gmail
+end_page: compose_page
+task: compose_email
 
 User: set an alarm for 7am in Clock
-Target App: Clock
-Destination Screen: Alarms
-Exact Task: Add alarm at 7:00 AM
-
-User: turn on Bluetooth
-Target App: Settings
-Destination Screen: Bluetooth
-Exact Task: Enable Bluetooth toggle
-
-User: check my email in Gmail
-Target App: Gmail
-Destination Screen: Inbox
-Exact Task: Read emails
+app: clock
+end_page: alarm_tab
+task: create_alarm
 
 User: take a selfie
-Target App: Camera
-Destination Screen: Camera
-Exact Task: Switch to front camera and capture photo"""
+app: camera
+end_page: camera_page
+task: take_selfie"""
 
 
 
@@ -470,7 +462,7 @@ Exact Task: Switch to front camera and capture photo"""
         val ackParts = JSONArray()
         ackParts.put(JSONObject().put("text",
             "Understood. I will respond in exactly three lines: " +
-            "\"Target App: ...\", \"Destination Screen: ...\", and \"Exact Task: ...\"."
+            "\"app: ...\", \"end_page: ...\", and \"task: ...\" using standardized snake_case naming."
         ))
         modelAck.put("parts", ackParts)
         contents.put(modelAck)
@@ -525,9 +517,9 @@ Exact Task: Switch to front camera and capture photo"""
      *
      * Expected format (strict three lines):
      * ```
-     * Target App: WhatsApp
-     * Destination Screen: Profile
-     * Exact Task: Change profile picture
+     * app: whatsapp
+     * end_page: profile_page
+     * task: update_profile_picture
      * ```
      *
      * Resilient fallback: if the value after ":" is blank on a given line, the
@@ -548,7 +540,7 @@ Exact Task: Switch to front camera and capture photo"""
         if (BuildConfig.DEBUG) Log.d(TAG, "Model response lines: $lines")
 
         // Labels we recognise — checked case-insensitively
-        val ALL_LABELS = listOf("Target App:", "Destination Screen:", "Exact Task:")
+        val ALL_LABELS = listOf("app:", "end_page:", "task:")
 
         /**
          * Extract the value for a given label prefix.
@@ -571,9 +563,9 @@ Exact Task: Switch to front camera and capture photo"""
             return if (!nextLine.isNullOrEmpty()) nextLine else null
         }
 
-        val targetApp         = extractValue("Target App:")
-        val destinationScreen = extractValue("Destination Screen:")
-        val exactTask         = extractValue("Exact Task:")
+        val targetApp         = extractValue("app:")
+        val destinationScreen = extractValue("end_page:")
+        val exactTask         = extractValue("task:")
 
         // All three fields are required
         if (targetApp.isNullOrEmpty() || destinationScreen.isNullOrEmpty() || exactTask.isNullOrEmpty()) {
