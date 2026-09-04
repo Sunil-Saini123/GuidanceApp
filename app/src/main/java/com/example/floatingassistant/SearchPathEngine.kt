@@ -290,9 +290,131 @@ object SearchPathEngine {
         "ad"
     )
 
-    /**
-     * Resolves the target screen and optional target element from destination / task.
-     */
+    private data class MatchResult(
+        val matched: Boolean,
+        val score: Int
+    )
+
+    private fun normalizeText(text: String): String {
+        return text
+            .lowercase()
+            .replace("&", " and ")
+            .replace("-", " ")
+            .replace("_", " ")
+            .replace("/", " ")
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    private fun tokenize(text: String): List<String> {
+        return normalizeText(text)
+            .split(" ")
+            .filter { it.length >= 2 }
+    }
+
+    private fun levenshteinDistance(a: String, b: String): Int {
+        if (a == b) return 0
+        if (a.isEmpty()) return b.length
+        if (b.isEmpty()) return a.length
+
+        val previous = IntArray(b.length + 1) { it }
+        val current = IntArray(b.length + 1)
+
+        for (i in 1..a.length) {
+            current[0] = i
+            for (j in 1..b.length) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                current[j] = minOf(
+                    current[j - 1] + 1,
+                    previous[j] + 1,
+                    previous[j - 1] + cost
+                )
+            }
+            for (j in previous.indices) {
+                previous[j] = current[j]
+            }
+        }
+        return previous[b.length]
+    }
+
+    private fun calculateMatchScore(candidate: String, query: String): MatchResult {
+        val candidateNorm = normalizeText(candidate)
+        val queryNorm = normalizeText(query)
+
+        if (candidateNorm.isBlank() || queryNorm.isBlank()) {
+            return MatchResult(false, 0)
+        }
+
+        // 1. Exact match
+        if (candidateNorm == queryNorm) {
+            return MatchResult(true, 100)
+        }
+
+        val candidateTokens = tokenize(candidateNorm)
+        val queryTokens = tokenize(queryNorm)
+
+        if (candidateTokens.isEmpty() || queryTokens.isEmpty()) {
+            return MatchResult(false, 0)
+        }
+
+        var score = 0
+
+        // 2. Exact token matching
+        val commonTokens = queryTokens.intersect(candidateTokens.toSet())
+        if (commonTokens.isNotEmpty()) {
+            val tokenCoverage = commonTokens.size.toDouble() / queryTokens.size
+            score += (tokenCoverage * 55).toInt()
+        }
+
+        // 3. Whole-word containment
+        val candidateWordPattern = Regex("(^|\\s)${Regex.escape(queryNorm)}(\\s|$)")
+        val queryWordPattern = Regex("(^|\\s)${Regex.escape(candidateNorm)}(\\s|$)")
+        if (candidateWordPattern.containsMatchIn(candidateNorm) || queryWordPattern.containsMatchIn(queryNorm)) {
+            score = maxOf(score, 82)
+        }
+
+        // 4. Phrase containment
+        if (candidateNorm.contains(queryNorm) || queryNorm.contains(candidateNorm)) {
+            val shorterTokens = minOf(candidateTokens.size, queryTokens.size)
+            val longerTokens = maxOf(candidateTokens.size, queryTokens.size)
+            if (shorterTokens > 0) {
+                val tokenRatio = shorterTokens.toDouble() / longerTokens
+                if (tokenRatio >= 0.5 || commonTokens.isNotEmpty()) {
+                    score = maxOf(score, 78)
+                }
+            }
+        }
+
+        // 5. Prefix matching
+        if (candidateNorm.startsWith(queryNorm) || queryNorm.startsWith(candidateNorm)) {
+            if (queryNorm.length >= 4 && candidateNorm.length >= 4) {
+                score = maxOf(score, 75)
+            }
+        }
+
+        // 6. Fuzzy token matching
+        var fuzzyTokenFound = false
+        for (queryToken in queryTokens) {
+            for (candidateToken in candidateTokens) {
+                if (queryToken.length < 4 || candidateToken.length < 4) continue
+                val distance = levenshteinDistance(queryToken, candidateToken)
+                val maxLength = maxOf(queryToken.length, candidateToken.length)
+                val similarity = 1.0 - (distance.toDouble() / maxLength)
+                if (similarity >= 0.80) {
+                    fuzzyTokenFound = true
+                    break
+                }
+            }
+            if (fuzzyTokenFound) break
+        }
+        if (fuzzyTokenFound) {
+            score = maxOf(score, 65)
+        }
+
+        return MatchResult(matched = score >= 70, score = score)
+    }
+
     private fun resolveTarget(
         screens: List<NavGraphDatabase.ScreenRecord>,
         destinationScreen: String
@@ -302,80 +424,66 @@ object SearchPathEngine {
         val validScreens = screens.filter { it.screenTitle.lowercase().trim() !in OVERLAY_SCREEN_TITLES }
 
         for (screen in validScreens) {
-            val title = screen.screenTitle.trim()
-
-            // A. Exact title match (highest confidence)
-            if (title.equals(destClean, ignoreCase = true)) {
-                candidates.add(TargetCandidate(screen, elementName = null, score = 100))
-                continue
+            // 1. Screen title matching
+            val screenMatch = calculateMatchScore(screen.screenTitle, destClean)
+            if (screenMatch.matched) {
+                candidates.add(TargetCandidate(screen, null, screenMatch.score))
             }
 
-            // B. Substring title match
-            if (title.contains(destClean, ignoreCase = true) || destClean.contains(title, ignoreCase = true)) {
-                candidates.add(TargetCandidate(screen, elementName = null, score = 90))
-            }
-
-            // C. Search inside elements_json for matching element
-            val matchedElement = findMatchingElement(screen.elementsJson, destClean)
+            // 2. Element matching
+            val matchedElement = findBestMatchingElement(screen.elementsJson, destClean)
             if (matchedElement != null) {
-                val score = if (matchedElement.equals(destClean, ignoreCase = true)) 80 else 60
-                candidates.add(TargetCandidate(screen, elementName = matchedElement, score = score))
+                candidates.add(TargetCandidate(screen, matchedElement.name, matchedElement.score))
             }
 
-            // D. WhatsApp Settings Heuristic
+            // 3. WhatsApp Settings Heuristic
             if (destClean.equals("Settings", ignoreCase = true) &&
                 screen.rootClass.contains("Settings", ignoreCase = true) &&
                 screen.elementsJson.contains("\"Chats\"", ignoreCase = true) &&
                 screen.elementsJson.contains("\"Privacy\"", ignoreCase = true)
             ) {
-                candidates.add(TargetCandidate(screen, elementName = null, score = 95))
+                candidates.add(TargetCandidate(screen, null, 95))
             }
         }
 
-        return candidates.sortedByDescending { it.score }
+        val sorted = candidates.filter { it.score >= 70 }.sortedByDescending { it.score }
+        
+        if (sorted.isNotEmpty()) {
+            Log.d(TAG, "resolveTarget('$destClean'): ${sorted.size} trustworthy candidate(s) — " +
+                sorted.joinToString { "'${it.elementName ?: it.screen.screenTitle}'(score=${it.score})" })
+        } else {
+            Log.d(TAG, "resolveTarget('$destClean'): 0 trustworthy candidates")
+        }
+        return sorted
     }
 
-    /**
-     * Checks if any clean element in [elementsJson] matches the target destination or task.
-     */
-    private fun findMatchingElement(
-        elementsJson: String,
-        destClean: String
-    ): String? {
+    private data class ElementMatch(val name: String, val score: Int)
+
+    private fun findBestMatchingElement(elementsJson: String, destination: String): ElementMatch? {
         if (elementsJson.isBlank()) return null
         return try {
             val arr = JSONArray(elementsJson)
-            var bestMatch: String? = null
-            var bestScore = 0
+            var bestMatch: ElementMatch? = null
 
             for (i in 0 until arr.length()) {
                 val obj = arr.optJSONObject(i) ?: continue
                 val name = obj.optString("name", "").trim()
                 if (name.isEmpty()) continue
 
-                // 1. Exact match with destination
-                if (name.equals(destClean, ignoreCase = true)) {
-                    return name
-                }
+                val result = calculateMatchScore(name, destination)
+                if (!result.matched) continue
 
-                // 2. Substring match
-                if (destClean.length >= 3 && name.length >= 3 && (name.contains(destClean, ignoreCase = true) || destClean.contains(name, ignoreCase = true))) {
-                    if (bestScore < 30) {
-                        bestScore = 30
-                        bestMatch = name
-                    }
+                if (bestMatch == null || result.score > bestMatch.score) {
+                    bestMatch = ElementMatch(name, result.score)
                 }
             }
             bestMatch
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse elements_json", e)
             null
         }
     }
 
-    /**
-     * Resolves the starting screen. Prefers the active screen if given, otherwise finds
-     * the root / entry screen for the package.
-     */
     private fun resolveStartScreen(
         screens: List<NavGraphDatabase.ScreenRecord>,
         transitions: List<NavGraphDatabase.TransitionRecord>,

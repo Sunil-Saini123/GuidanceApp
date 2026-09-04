@@ -489,6 +489,7 @@ class FloatingOverlayService : Service() {
             if (searchResult.found) {
                 statusText.text =
                     "✓ Local Graph Match:\n" +
+                    "App: ${parsed.targetApp}\n" +
                     "Intent: ${parsed.targetApp} → ${parsed.destinationScreen}\n" +
                     "Path: ${searchResult.pathString}\n" +
                     "Task: ${parsed.exactTask}"
@@ -496,6 +497,7 @@ class FloatingOverlayService : Service() {
             } else {
                 statusText.text =
                     "✗ Local Graph Miss:\n" +
+                    "App: ${parsed.targetApp}\n" +
                     "Intent: ${parsed.targetApp} → ${parsed.destinationScreen}\n" +
                     "Reason: ${searchResult.message}\n" +
                     "Task: ${parsed.exactTask}"
