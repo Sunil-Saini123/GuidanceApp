@@ -80,13 +80,15 @@ object GeminiCommandParser {
      *     by the deprecation messages of all other models). Retry aggressively when busy.
      */
     private val MODEL_FALLBACK_LIST = listOf(
-        "gemini-3.6-flash",
         "gemini-3.7-flash",
-        "gemini-3.8-flash",
+        "gemini-3.6-flash",
         "gemini-3.5-flash",
+        "gemini-3.8-flash",
         "gemini-flash-latest",
         "gemini-3.1-pro-preview"
     )
+
+    private val DEFAULT_GEMINI_KEY = BuildConfig.GEMINI_API_KEY
 
     private const val GEMINI_BASE =
         "https://generativelanguage.googleapis.com/v1beta/models"
@@ -97,134 +99,270 @@ object GeminiCommandParser {
     private const val SYSTEM_PROMPT = """You are a mobile navigation assistant that interprets user commands.
 
 Given a user command, identify three things:
-1. Target App       — the mobile application to open.
-2. Destination Screen — the specific screen, section, or menu to navigate to inside the app.
-3. Exact Task       — the precise action to perform once at the destination.
+1. app       — the mobile application to open.
+2. end_page  — the specific screen, section, or menu to navigate to inside the app.
+3. task      — the precise action to perform once at the destination.
 
-RULES:
+CRITICAL NAMING RULES (for consistency across queries):
+- You MUST use a consistent, generalized naming scheme for all outputs. Use lowercase and snake_case for all values.
+- `app`: Use the canonical lowercase name. Normalize generic names to canonical apps (e.g., "email" or "mail" -> "gmail", "browser" or "web" -> "chrome").
+- `end_page`: Use a standardized page name (e.g., "alarm_tab", "profile_page", "display_settings").
+- `task`: You MUST group similar requests into exactly ONE generalized canonical task name. 
+  For example, "set a new alarm", "add an alarm", "create alarm" MUST all resolve to "create_alarm". 
+- `task` plurals: ALWAYS use singular nouns for tasks, NEVER plurals (e.g., use "search_video" instead of "search_videos", "read_email" instead of "read_emails").
+
+OUTPUT FORMAT RULES:
 - Respond in EXACTLY three lines, no more, no less.
-- Line 1 must start with "Target App: "
-- Line 2 must start with "Destination Screen: "
-- Line 3 must start with "Exact Task: "
-- Be concise and specific on every line.
-- If the command names an app, use that exact app name.
-- If no app is mentioned, infer the most likely app.
+- Line 1 must start with "app: "
+- Line 2 must start with "end_page: "
+- Line 3 must start with "task: "
 - Do NOT add explanations, greetings, bullets, or any other text.
 
 EXAMPLES:
 User: change my profile picture on WhatsApp
-Target App: WhatsApp
-Destination Screen: Profile
-Exact Task: Change profile picture
+app: whatsapp
+end_page: profile_page
+task: update_profile_picture
 
-User: I want to turn on dark mode in mobile settings
-Target App: Settings
-Destination Screen: Display
-Exact Task: Enable dark mode
+User: search for funny cats on youtube
+app: youtube
+end_page: search_page
+task: search_video
 
-User: call mom
-Target App: Phone
-Destination Screen: Dialer
-Exact Task: Dial contact "Mom"
+User: search videos of dogs
+app: youtube
+end_page: search_page
+task: search_video
 
-User: send a WhatsApp message to john
-Target App: WhatsApp
-Destination Screen: Chat with John
-Exact Task: Send message
+User: check my mail
+app: gmail
+end_page: inbox_page
+task: read_email
 
-User: play some music on spotify
-Target App: Spotify
-Destination Screen: Home
-Exact Task: Play music
-
-User: navigate to the airport in Maps
-Target App: Maps
-Destination Screen: Search
-Exact Task: Get directions to airport
+User: send an email to boss
+app: gmail
+end_page: compose_page
+task: compose_email
 
 User: set an alarm for 7am in Clock
-Target App: Clock
-Destination Screen: Alarms
-Exact Task: Add alarm at 7:00 AM
-
-User: turn on Bluetooth
-Target App: Settings
-Destination Screen: Bluetooth
-Exact Task: Enable Bluetooth toggle
-
-User: check my email in Gmail
-Target App: Gmail
-Destination Screen: Inbox
-Exact Task: Read emails
+app: clock
+end_page: alarm_tab
+task: create_alarm
 
 User: take a selfie
-Target App: Camera
-Destination Screen: Camera
-Exact Task: Switch to front camera and capture photo"""
+app: camera
+end_page: camera_page
+task: take_selfie"""
 
 
 
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Parses [userCommand] using the Gemini AI.
+     * Parses [userCommand] into a structured [ParsedCommand].
      *
-     * For each model in [MODEL_FALLBACK_LIST]:
-     *   • 503 / timeout → retry up to [MAX_RETRIES] times with exponential
-     *     back-off (3 s → 6 s → 12 s → 24 s), calling [onProgress] before each wait
-     *     so the UI can show live status.
-     *   • 429          → treated as quota/rate-limit; skip to next model immediately.
-     *   • 404 / other non-200 → skip to next model immediately.
+     * Architecture:
+     * 1. First tries direct Google Gemini REST API using the configured Gemini key.
+     * 2. If Gemini API is unreachable, falls back to the local offline IntentClassificationEngine.
      *
-     * @param onProgress Optional suspend callback invoked with a human-readable status
-     *                   string just before each retry delay. Runs on whatever dispatcher
-     *                   the caller switches to inside the lambda.
-     * @return [ParsedCommand] on success, `null` if all retries for all models fail.
+     * Guaranteed to return a valid [ParsedCommand].
      */
     suspend fun parse(
         userCommand: String,
         onProgress: suspend (String) -> Unit = {}
-    ): ParsedCommand? = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isBlank() || apiKey == "YOUR_GEMINI_API_KEY_HERE") {
-            Log.e(TAG, "Gemini API key is not set. Add GEMINI_API_KEY to local.properties.")
-            return@withContext null
-        }
+    ): ParsedCommand = withContext(Dispatchers.IO) {
+        val apiKey = BuildConfig.GEMINI_API_KEY.takeIf { it.isNotBlank() && it != "YOUR_GEMINI_API_KEY_HERE" }
+            ?: DEFAULT_GEMINI_KEY
 
-        for (model in MODEL_FALLBACK_LIST) {
-            Log.d(TAG, "Trying model: $model")
-            var attempt = 0
-            while (attempt < MAX_RETRIES) {
-                try {
-                    val responseText = callGeminiApi(apiKey, model, userCommand)
-                    if (responseText != null) {
-                        return@withContext parseResponse(responseText)
-                    }
-                    // null = non-retryable error → skip to next model
-                    break
-                } catch (e: QuotaExceededException) {
-                    Log.w(TAG, "Model $model hit quota limit (429). Skipping to next model.")
-                    break
-                } catch (e: RetryableException) {
-                    attempt++
-                    if (attempt >= MAX_RETRIES) {
-                        Log.w(TAG, "Model $model exhausted $MAX_RETRIES retries. Trying next model.")
+        // ── 1. Direct Gemini REST API (Primary intent classification) ─────────
+        if (apiKey.isNotBlank()) {
+            Log.d(TAG, "Attempting direct Gemini REST API for intent classification")
+            onProgress("Analyzing intent with Gemini…")
+            for (model in MODEL_FALLBACK_LIST) {
+                var attempt = 0
+                while (attempt < MAX_RETRIES) {
+                    try {
+                        val responseText = callGeminiApi(apiKey, model, userCommand)
+                        if (responseText != null) {
+                            val parsed = parseResponse(responseText)
+                            if (parsed != null) {
+                                Log.i(TAG, "Gemini intent classification succeeded with $model: $parsed")
+                                return@withContext parsed
+                            }
+                        }
+                        break
+                    } catch (e: QuotaExceededException) {
+                        Log.w(TAG, "Model $model hit quota limit (429). Skipping.")
+                        break
+                    } catch (e: RetryableException) {
+                        attempt++
+                        if (attempt >= MAX_RETRIES) break
+                        val delayMs = RETRY_DELAY_MS * (1L shl (attempt - 1))
+                        onProgress("Gemini busy — retrying…")
+                        kotlinx.coroutines.delay(delayMs)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Model $model failed: ${e.message}")
                         break
                     }
-                    val delayMs = RETRY_DELAY_MS * (1L shl (attempt - 1))  // 3s, 6s, 12s, 24s
-                    val msg = "Server busy — retrying ($attempt/$MAX_RETRIES)…"
-                    Log.w(TAG, "[$model] $msg Waiting ${delayMs / 1000}s")
-                    onProgress(msg)
-                    kotlinx.coroutines.delay(delayMs)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Unexpected error with model $model: ${e.message}", e)
-                    break
                 }
             }
         }
 
-        Log.e(TAG, "All models exhausted for: \"$userCommand\"")
-        null
+        // ── 2. Offline Local Intent Classification Fallback ───────────────────
+        Log.i(TAG, "Falling back to offline IntentClassificationEngine")
+        onProgress("Resolving intent locally…")
+        val localParsed = resolveLocally(userCommand)
+        Log.i("[PathFinder]", "Parsed Intent (Offline Fallback) -> App: ${localParsed.targetApp}, Screen: ${localParsed.destinationScreen}, Task: ${localParsed.exactTask}")
+        localParsed
+    }
+
+    private const val PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate"
+
+    /**
+     * Calls our deployed proxy server (does not require any device-side API key).
+     */
+    private fun callProxyApi(userCommand: String): String? {
+        var connection: HttpURLConnection? = null
+        return try {
+            val url = URL(PROXY_URL)
+            connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setRequestProperty("Accept", "application/json")
+            connection.doOutput = true
+            connection.connectTimeout = 8_000
+            connection.readTimeout = 15_000
+
+            val requestBody = JSONObject().apply {
+                put("model", "llama-3.3-70b-versatile")
+                put("temperature", 0.0)
+                put("max_tokens", 250)
+
+                val messages = JSONArray()
+                messages.put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", SYSTEM_PROMPT)
+                })
+                messages.put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", userCommand)
+                })
+                put("messages", messages)
+            }
+
+            OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { writer ->
+                writer.write(requestBody.toString())
+                writer.flush()
+            }
+
+            val statusCode = connection.responseCode
+            val stream = if (statusCode in 200..299) connection.inputStream else connection.errorStream
+            val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+
+            if (statusCode in 200..299) {
+                val root = JSONObject(responseText)
+                if (root.has("choices")) {
+                    val choices = root.getJSONArray("choices")
+                    if (choices.length() > 0) {
+                        val message = choices.getJSONObject(0).optJSONObject("message")
+                        return message?.optString("content", "")
+                    }
+                }
+                responseText
+            } else {
+                Log.w(TAG, "Proxy returned HTTP $statusCode: $responseText")
+                null
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Proxy call failed: ${e.message}")
+            null
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    /**
+     * Resolves intent locally using offline IntentClassificationEngine and IntentProvider.
+     */
+    fun resolveLocally(userCommand: String): ParsedCommand {
+        val query = userCommand.trim()
+        val queryLower = query.lowercase(java.util.Locale.US)
+
+        // 1. Try local IntentClassificationEngine
+        try {
+            val engine = com.example.floatingassistant.intent.IntentClassificationEngine()
+            val match = engine.classify(query)
+            if (match.isConfident && match.userIntent != null) {
+                return mapUserIntentToCommand(match.userIntent, query)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Local IntentClassificationEngine failed: ${e.message}")
+        }
+
+        // 2. Try IntentProvider predefined intents
+        val predefined = com.example.floatingassistant.pathgenerator.IntentProvider.findMatchingIntent(query)
+        if (predefined.intentName != "UNKNOWN" && predefined.intentName != "GENERIC_NAVIGATE") {
+            return mapUserIntentToCommand(predefined, query)
+        }
+
+        // 3. Fallback heuristics for common apps
+        return when {
+            queryLower.contains("whatsapp") -> {
+                val feature = query.replace(Regex("(?i)\\b(open|go to|change|set|show|view|my|whatsapp|in whatsapp|on whatsapp)\\b"), "").trim()
+                val screen = when {
+                    queryLower.contains("profile") || queryLower.contains("dp") -> "Profile"
+                    feature.isNotBlank() -> feature
+                    else -> "Chats"
+                }
+                ParsedCommand(targetApp = "WhatsApp", destinationScreen = screen, exactTask = query)
+            }
+            queryLower.contains("youtube") -> {
+                ParsedCommand(targetApp = "YouTube", destinationScreen = "Home", exactTask = query)
+            }
+            queryLower.contains("call") || queryLower.contains("dial") || queryLower.contains("phone") -> {
+                ParsedCommand(targetApp = "Phone", destinationScreen = "Dialer", exactTask = query)
+            }
+            queryLower.contains("camera") || queryLower.contains("photo") || queryLower.contains("selfie") -> {
+                ParsedCommand(targetApp = "Camera", destinationScreen = "Camera", exactTask = query)
+            }
+            queryLower.contains("map") || queryLower.contains("direction") || queryLower.contains("navigate to") -> {
+                ParsedCommand(targetApp = "Maps", destinationScreen = "Search", exactTask = query)
+            }
+            queryLower.contains("wifi") || queryLower.contains("wi-fi") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Wi-Fi", exactTask = query)
+            }
+            queryLower.contains("bluetooth") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Bluetooth", exactTask = query)
+            }
+            queryLower.contains("display") || queryLower.contains("brightness") || queryLower.contains("dark mode") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Display", exactTask = query)
+            }
+            queryLower.contains("battery") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Battery saver", exactTask = query)
+            }
+            queryLower.contains("sound") || queryLower.contains("volume") -> {
+                ParsedCommand(targetApp = "Settings", destinationScreen = "Sound & vibration", exactTask = query)
+            }
+            else -> {
+                val feature = query.replace(Regex("^(open|go to|change|set|turn on|turn off|show|view)\\s+", RegexOption.IGNORE_CASE), "").trim()
+                val dest = if (feature.isNotBlank()) feature else "Settings"
+                ParsedCommand(targetApp = "Settings", destinationScreen = dest, exactTask = query)
+            }
+        }
+    }
+
+    private fun mapUserIntentToCommand(intent: com.example.floatingassistant.pathgenerator.UserIntent, rawQuery: String): ParsedCommand {
+        return when (intent.intentName.uppercase(java.util.Locale.US)) {
+            "ENABLE_BLUETOOTH" -> ParsedCommand("Settings", "Bluetooth", "Enable Bluetooth")
+            "OPEN_WIFI_SETTINGS", "CONNECT_WIFI" -> ParsedCommand("Settings", "Wi-Fi", "Open Wi-Fi settings")
+            "OPEN_DISPLAY_SETTINGS" -> ParsedCommand("Settings", "Display", "Open display settings")
+            "OPEN_SECURITY_PRIVACY" -> ParsedCommand("Settings", "Security & privacy", "Open security settings")
+            "CHANGE_WALLPAPER" -> ParsedCommand("Settings", "Wallpaper & style", "Change wallpaper")
+            "OPEN_BATTERY_SAVER" -> ParsedCommand("Settings", "Battery saver", "Turn on battery saver")
+            "OPEN_ACCESSIBILITY_SETTINGS" -> ParsedCommand("Settings", "Accessibility", "Open accessibility settings")
+            "OPEN_SOUND_SETTINGS" -> ParsedCommand("Settings", "Sound & vibration", "Adjust sound settings")
+            else -> ParsedCommand(intent.targetCategory.ifEmpty { "Settings" }, intent.intentName, rawQuery)
+        }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -241,9 +379,10 @@ Exact Task: Switch to front camera and capture photo"""
         return try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            connection.setRequestProperty("x-goog-api-key", apiKey)
             connection.doOutput = true
             connection.connectTimeout = 15_000
-            connection.readTimeout = 45_000   // gemini-3.6-flash can be slow; 45 s gives it room
+            connection.readTimeout = 45_000   // gemini-flash can be slow; 45 s gives it room
 
             // Build request body
             val requestBody = buildRequestBody(userCommand)
@@ -323,7 +462,7 @@ Exact Task: Switch to front camera and capture photo"""
         val ackParts = JSONArray()
         ackParts.put(JSONObject().put("text",
             "Understood. I will respond in exactly three lines: " +
-            "\"Target App: ...\", \"Destination Screen: ...\", and \"Exact Task: ...\"."
+            "\"app: ...\", \"end_page: ...\", and \"task: ...\" using standardized snake_case naming."
         ))
         modelAck.put("parts", ackParts)
         contents.put(modelAck)
@@ -378,9 +517,9 @@ Exact Task: Switch to front camera and capture photo"""
      *
      * Expected format (strict three lines):
      * ```
-     * Target App: WhatsApp
-     * Destination Screen: Profile
-     * Exact Task: Change profile picture
+     * app: whatsapp
+     * end_page: profile_page
+     * task: update_profile_picture
      * ```
      *
      * Resilient fallback: if the value after ":" is blank on a given line, the
@@ -401,7 +540,7 @@ Exact Task: Switch to front camera and capture photo"""
         if (BuildConfig.DEBUG) Log.d(TAG, "Model response lines: $lines")
 
         // Labels we recognise — checked case-insensitively
-        val ALL_LABELS = listOf("Target App:", "Destination Screen:", "Exact Task:")
+        val ALL_LABELS = listOf("app:", "end_page:", "task:")
 
         /**
          * Extract the value for a given label prefix.
@@ -424,9 +563,9 @@ Exact Task: Switch to front camera and capture photo"""
             return if (!nextLine.isNullOrEmpty()) nextLine else null
         }
 
-        val targetApp         = extractValue("Target App:")
-        val destinationScreen = extractValue("Destination Screen:")
-        val exactTask         = extractValue("Exact Task:")
+        val targetApp         = extractValue("app:")
+        val destinationScreen = extractValue("end_page:")
+        val exactTask         = extractValue("task:")
 
         // All three fields are required
         if (targetApp.isNullOrEmpty() || destinationScreen.isNullOrEmpty() || exactTask.isNullOrEmpty()) {

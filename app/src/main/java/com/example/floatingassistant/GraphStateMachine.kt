@@ -80,7 +80,11 @@ object GraphStateMachine {
     // Spatial label names — never valid screen titles
     private val SPATIAL_LABELS = setOf(
         "Back_Button", "Menu_Button", "Search_Bar", "Action_Bar",
-        "Bottom_Nav_Item", "Bottom_Bar", "Scrollable_List"
+        "Bottom_Nav_Item", "Bottom_Bar", "Scrollable_List",
+        // Our overlay bubble
+        "Floating Assistant", "FloatingAssistant",
+        // Android recents / task switcher overlay (fires under the last-active app's package)
+        "No recent tasks"
     )
 
     // ── Dynamic data filters ──────────────────────────────────────────────────
@@ -197,6 +201,8 @@ object GraphStateMachine {
     fun init(context: Context, navGraphFile: File) {
         db                = NavGraphDatabase.getInstance(context)
         this.navGraphFile = navGraphFile
+        // Prune any old Floating Assistant overlay screens from previous sessions
+        db.pruneOverlayScreens()
         Log.i(TAG, "Initialised — DB: nav_graph.db  JSON: ${navGraphFile.name}")
     }
 
@@ -321,6 +327,12 @@ object GraphStateMachine {
 
         val topZoneLimit = sh * 0.20f
 
+        // Navigation-only words that should NEVER become a screen title
+        val NAV_ONLY_LABELS = setOf(
+            "back", "close", "next", "done", "cancel", "ok", "yes", "no",
+            "skip", "forward", "continue", "dismiss", "navigate up", "search"
+        )
+
         /** Primary label of an element — stripped of any composite suffix. */
         fun primaryName(el: JSONObject): String =
             el.optString("name", "").trim().substringBefore(" · ").trim()
@@ -330,6 +342,7 @@ object GraphStateMachine {
             val top  = el.optJSONObject("bounds")?.optInt("top", sh) ?: sh
             return name.isNotEmpty()
                     && name !in SPATIAL_LABELS
+                    && name.lowercase() !in NAV_ONLY_LABELS
                     && top.toFloat() <= topZoneLimit
                     && isStaticTitle(name)
         }
@@ -436,6 +449,28 @@ object GraphStateMachine {
             ?: packageName.substringAfterLast('.')
                 .split(Regex("(?<=[a-z])(?=[A-Z])|_"))
                 .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+
+    /** Returns the current active screen ID for [packageName] from the in-memory navigation stack. */
+    fun currentScreenId(packageName: String): String? =
+        navigationStacks[packageName]?.lastOrNull()
+
+    /** Reverse lookup: given an app display name (e.g. "WhatsApp", "Settings", "Phone"), find the package name. */
+    fun getPackageNameForApp(appName: String): String? {
+        val trimmed = appName.trim()
+        if (trimmed.isEmpty()) return null
+        // 1. Direct match in KNOWN_APP_NAMES values
+        KNOWN_APP_NAMES.entries.firstOrNull { it.value.equals(trimmed, ignoreCase = true) }?.key?.let { return it }
+        // 2. If it's already a package name in KNOWN_APP_NAMES
+        if (KNOWN_APP_NAMES.containsKey(trimmed)) return trimmed
+        // 3. Partial / substring match in display names
+        KNOWN_APP_NAMES.entries.firstOrNull {
+            it.value.contains(trimmed, ignoreCase = true) || trimmed.contains(it.value, ignoreCase = true)
+        }?.key?.let { return it }
+        return null
+    }
+
+    /** Returns all packages that currently have an active navigation stack in memory. */
+    fun getActivePackages(): Set<String> = navigationStacks.keys.toSet()
 
     // ── nav_graph.json hierarchical export ───────────────────────────────────
 

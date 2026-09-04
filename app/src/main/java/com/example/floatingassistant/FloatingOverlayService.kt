@@ -34,8 +34,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.math.abs
 import kotlin.system.exitProcess
+
+import com.example.floatingassistant.pathgenerator.DeviceInfoGatherer
+import com.example.floatingassistant.pathgenerator.GroqProxyClient
+import com.example.floatingassistant.pathgenerator.GroqResponseParser
+import com.example.floatingassistant.pathgenerator.PromptBuilder
 
 /**
  * FloatingOverlayService — Phase 9
@@ -117,6 +123,11 @@ class FloatingOverlayService : Service() {
 
     // ── Stop button tap counter ───────────────────────────────────────────────
     private var stopTapCount = 0
+
+    // ── Pending Groq path — saved to Firestore only when user confirms task done (Stop tap 1) ──
+    private var pendingGroqApp:  String? = null
+    private var pendingGroqTask: String? = null
+    private var pendingGroqPath: String? = null
 
     // ── Whether we are currently in typing mode ───────────────────────────────
     private var typingModeActive = false
@@ -454,27 +465,19 @@ class FloatingOverlayService : Service() {
         Log.i("[PathFinder]", "── New query ── \"$query\"")
         statusText.text = "Analysing…"
 
-        serviceScope.launch {
-            if (BuildConfig.GEMINI_API_KEY.isBlank() ||
-                BuildConfig.GEMINI_API_KEY == "YOUR_GEMINI_API_KEY_HERE") {
-                statusText.text =
-                    "Gemini API key is not set.\nAdd GEMINI_API_KEY to local.properties."
-                Log.e("[PathFinder]", "Gemini API key missing — aborting")
-                return@launch
-            }
+        // Clear any pending path from a previous query — a new query means the old
+        // one is abandoned, so it should not be saved to Firestore on Stop.
+        pendingGroqApp  = null
+        pendingGroqTask = null
+        pendingGroqPath = null
 
-            // ── PHASE 1 STEP A: Gemini intent classification ──────────────────
-            Log.d("[PathFinder]", "Phase 1 — calling GeminiCommandParser")
+        serviceScope.launch {
+            // ── PHASE 1 STEP A: Intent classification (Proxy Server -> Gemini -> Local Fallback) ──
+            Log.d("[PathFinder]", "Phase 1 — calling Command Parser")
             val parsed = withContext(Dispatchers.IO) {
                 GeminiCommandParser.parse(query) { progressMsg ->
                     withContext(Dispatchers.Main) { statusText.text = progressMsg }
                 }
-            }
-
-            if (parsed == null) {
-                Log.w("[PathFinder]", "Phase 1 — GeminiCommandParser returned null (server busy or bad format)")
-                statusText.text = "Server is busy — please try again in a moment."
-                return@launch
             }
 
             // GeminiCommandParser already emits the [PathFinder] log:
@@ -490,29 +493,152 @@ class FloatingOverlayService : Service() {
                 "destinationScreen=\"${parsed.destinationScreen}\" | " +
                 "exactTask=\"${parsed.exactTask}\"")
 
-            // ── PHASE 2 (Tier 1 — Local Graph BFS) — wired in Phase 2 ─────────
-            // val localPath = SearchPathEngine.find(
-            //     fromScreenId = GraphStateMachine.currentScreenId(parsed.targetApp),
-            //     toScreenTitle = parsed.destinationScreen
-            // )
-            // if (localPath != null) { … dispatch … return@launch }
+            // ── PHASE 2 (Tier 1 — Local Graph Search) ─────────────────────────
+            val searchResult = withContext(Dispatchers.IO) {
+                SearchPathEngine.findPath(
+                    context = applicationContext,
+                    targetApp = parsed.targetApp,
+                    destinationScreen = parsed.destinationScreen,
+                    exactTask = parsed.exactTask
+                )
+            }
 
-            // ── PHASE 3 (Tier 2 — Firestore) — wired in Phase 3 ─────────────
-            // val cloudPath = CloudPathDatabase.lookup(parsed.destinationScreen)
-            // if (cloudPath.isNotEmpty()) { … dispatch … return@launch }
+            if (searchResult.found) {
+                statusText.text =
+                    "✓ Local Graph Match:\n" +
+                    "App: ${parsed.targetApp}\n" +
+                    "Intent: ${parsed.targetApp} → ${parsed.destinationScreen}\n" +
+                    "Path: ${searchResult.pathString}\n" +
+                    "Task: ${parsed.exactTask}"
+                Log.i(TAG, "Local search matched: ${searchResult.pathString}")
+                return@launch
+            }
 
-            // ── PHASE 4 (Tier 3 — Groq) — wired in Phase 4 ──────────────────
-            // val groqPath = PathGenerator(…).generatePath(parsed)
-            // CloudPathDatabase.addEntry(…)
+            // ── PHASE 3 (Tier 2 — Firestore) ─────────────────────────────────
+            Log.d("[PathFinder]", "Phase 3 — Tier 2 Firestore lookup (app=${parsed.targetApp}, task=${parsed.exactTask})")
+            statusText.text = "Searching cloud database…"
 
-            // Phases 2-4 not yet wired — inform user what was understood.
-            Log.i("[PathFinder]", "Path resolution not yet wired (Phases 2-4 pending)")
-            statusText.text =
-                "✓ Understood:\n" +
-                "App: ${parsed.targetApp}\n" +
-                "Screen: ${parsed.destinationScreen}\n" +
-                "Task: ${parsed.exactTask}\n\n" +
-                "(Path guide coming in next phases)"
+            val cloudPath = withContext(Dispatchers.IO) {
+                CloudPathDatabase.lookup(
+                    targetApp = parsed.targetApp,
+                    exactTask = parsed.exactTask
+                )
+            }
+
+            if (cloudPath.isNotEmpty()) {
+                Log.i("[PathFinder]", "Tier 2 Firestore: Match Found → \"$cloudPath\"")
+                statusText.text =
+                    "✓ Path found:\n" +
+                    "App: ${parsed.targetApp}\n" +
+                    "Task: ${parsed.exactTask}\n\n" +
+                    cloudPath
+                // TODO Phase 4: dispatch cloudPath to NavigationStateMachine
+                return@launch
+            }
+
+            Log.w("[PathFinder]", "Tier 2 Firestore: Miss — falling through to Tier 3 (Groq)")
+
+            // ── PHASE 4 (Tier 3 — Groq) ──────────────────────────────────────
+            Log.d("[PathFinder]", "Phase 4 — Tier 3 Groq fallback for app=${parsed.targetApp}, task=${parsed.exactTask}")
+            statusText.text = "Asking AI for path…"
+
+            // Capture the actual failure reason so it can be shown in the bubble
+            var groqErrorReason: String? = null
+
+            val groqPath = withContext(Dispatchers.IO) {
+                try {
+                    // 1. Read live screen state from clean_page.json
+                    val cleanPageFile = File(
+                        getExternalFilesDir(null) ?: cacheDir,
+                        CleanPageProcessor.CLEAN_FILE_NAME
+                    )
+                    val cleanPageContent = if (cleanPageFile.exists()) cleanPageFile.readText() else ""
+                    Log.d("[PathFinder]", "clean_page.json read: ${cleanPageContent.length} chars")
+
+                    // 2. Detect whether the user is already on the target app.
+                    //    clean_page.json has: { "meta": { "package_name": "com.whatsapp" }, ... }
+                    //    We compare the app's simple name (e.g. "whatsapp") against targetApp.
+                    val currentPackage = try {
+                        org.json.JSONObject(cleanPageContent)
+                            .optJSONObject("meta")
+                            ?.optString("package_name", "") ?: ""
+                    } catch (_: Exception) { "" }
+                    // Match: "com.whatsapp" contains "whatsapp", "com.android.settings" contains "settings"
+                    val isOnTargetApp = currentPackage.isNotEmpty() &&
+                            currentPackage.contains(parsed.targetApp.trim().lowercase(), ignoreCase = true)
+                    Log.d("[PathFinder]", "currentPackage=$currentPackage, targetApp=${parsed.targetApp}, isOnTargetApp=$isOnTargetApp")
+
+                    // 3. Gather device info
+                    val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
+
+                    // 4. Build prompt and call Groq
+                    val userPrompt = PromptBuilder.buildGeminiDrivenPrompt(
+                        parsed.targetApp,
+                        parsed.exactTask,
+                        cleanPageContent,
+                        deviceInfo,
+                        isOnTargetApp
+                    )
+                    Log.d("[PathFinder]", "Sending to Groq proxy… isOnTargetApp=$isOnTargetApp")
+                    val rawResponse = GroqProxyClient().sendDirectRequest(
+                        PromptBuilder.SYSTEM_PROMPT,
+                        userPrompt
+                    )
+                    Log.d("[PathFinder]", "Groq raw response: $rawResponse")
+
+                    // 5. Parse the JSON path response
+                    val navPath = GroqResponseParser.parse(rawResponse)
+                    if (navPath.isValid) {
+                        navPath.toPathString()
+                    } else {
+                        groqErrorReason = "AI returned no steps: ${navPath.errorMessage}"
+                        Log.w("[PathFinder]", "Groq parse invalid: ${navPath.errorMessage}")
+                        null
+                    }
+
+                } catch (e: java.net.SocketTimeoutException) {
+                    groqErrorReason = "Network timeout — check internet connection"
+                    Log.e("[PathFinder]", "Tier 3 Groq timeout: ${e.message}", e)
+                    null
+                } catch (e: java.net.UnknownHostException) {
+                    groqErrorReason = "No internet — could not reach AI server"
+                    Log.e("[PathFinder]", "Tier 3 Groq no host: ${e.message}", e)
+                    null
+                } catch (e: Exception) {
+                    groqErrorReason = e.message ?: "Unknown error"
+                    Log.e("[PathFinder]", "Tier 3 Groq failed: ${e.message}", e)
+                    null
+                }
+            }
+
+            if (!groqPath.isNullOrEmpty()) {
+                Log.i("[PathFinder]", "Tier 3 Groq: Generated path → \"$groqPath\"")
+
+                // Hold the path — save to Firestore only after the user confirms the task
+                // is done correctly by pressing Stop (tap 1). See handleStop().
+                pendingGroqApp  = parsed.targetApp
+                pendingGroqTask = parsed.exactTask
+                pendingGroqPath = groqPath
+
+                statusText.text =
+                    "✓ Path found (AI):\n" +
+                    "App: ${parsed.targetApp}\n" +
+                    "Task: ${parsed.exactTask}\n\n" +
+                    groqPath
+
+            } else {
+                Log.w("[PathFinder]", "Tier 3 Groq: Failed — reason: $groqErrorReason")
+                statusText.text = buildString {
+                    append("❌ AI path failed\n")
+                    append("App: ${parsed.targetApp}\n")
+                    append("Task: ${parsed.exactTask}\n\n")
+                    if (!groqErrorReason.isNullOrEmpty()) {
+                        append("Reason: $groqErrorReason")
+                    } else {
+                        append("Unknown error — check Logcat ([PathFinder] tag)")
+                    }
+                }
+            }
         }
     }
 
@@ -531,9 +657,19 @@ class FloatingOverlayService : Service() {
             0 -> {
                 // ── Tap 1: stop navigation ─────────────────────────────────
                 NavigationStateMachine.stop()
-                statusText.text = "Stopped"
                 stopTapCount = 1
                 Log.i(TAG, "Stop tap 1 — navigation stopped")
+
+                val app  = pendingGroqApp
+                val task = pendingGroqTask
+                val path = pendingGroqPath
+
+                if (!app.isNullOrEmpty() && !task.isNullOrEmpty() && !path.isNullOrEmpty()) {
+                    // Groq path was shown — ask user if it worked before saving
+                    showSavePathDialog(statusText, app, task, path)
+                } else {
+                    statusText.text = "Stopped"
+                }
             }
             else -> {
                 // ── Tap 2+: prompt for full exit ───────────────────────────
@@ -541,6 +677,69 @@ class FloatingOverlayService : Service() {
                 Log.i(TAG, "Stop tap 2 — showing exit dialog")
                 showExitDialog()
             }
+        }
+    }
+
+    /**
+     * Shows a dialog asking the user whether the AI-generated path worked correctly.
+     *
+     * Yes → saves [path] to Firestore under [app]/[task] so future lookups hit Tier 2.
+     * No  → discards the pending path silently (no Firestore write).
+     */
+    private fun showSavePathDialog(
+        statusText: TextView,
+        app: String,
+        task: String,
+        path: String
+    ) {
+        // Clear pending immediately — dialog handles the decision from here
+        pendingGroqApp  = null
+        pendingGroqTask = null
+        pendingGroqPath = null
+
+        try {
+            val dialogContext = ContextThemeWrapper(
+                applicationContext,
+                android.R.style.Theme_DeviceDefault_Light_Dialog_Alert
+            )
+            AlertDialog.Builder(dialogContext)
+                .setTitle("Did it work?")
+                .setMessage("Was the AI path correct?\nSave it so it's remembered next time?")
+                .setPositiveButton("Yes, Save") { dialog, _ ->
+                    dialog.dismiss()
+                    statusText.text = "Saving path to cloud…"
+                    Log.i("[PathFinder]", "User confirmed path correct — saving to Firestore: app=$app, task=$task")
+                    serviceScope.launch {
+                        try {
+                            kotlinx.coroutines.withTimeout(3000L) {
+                                withContext(Dispatchers.IO) {
+                                    CloudPathDatabase.addEntry(
+                                        targetApp = app,
+                                        exactTask = task,
+                                        path      = path
+                                    )
+                                }
+                            }
+                            Log.i("[PathFinder]", "Tier 3 Groq: Path stored to Firestore ✓ (user confirmed)")
+                            statusText.text = "✓ Saved! This path will be remembered next time."
+                        } catch (e: Exception) {
+                            Log.w("[PathFinder]", "Cloud save timed out or failed (queued locally): ${e.message}")
+                            statusText.text = "✓ Saved locally! (Will sync when online)"
+                        }
+                    }
+                }
+                .setNegativeButton("No, Discard") { dialog, _ ->
+                    dialog.dismiss()
+                    Log.i("[PathFinder]", "User discarded Groq path — not saving to Firestore")
+                    statusText.text = "Stopped (path discarded)"
+                }
+                .setCancelable(false)
+                .create()
+                .apply { window?.setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) }
+                .show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show save dialog: ${e.message}", e)
+            statusText.text = "Stopped"
         }
     }
 

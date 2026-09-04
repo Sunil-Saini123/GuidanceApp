@@ -472,4 +472,120 @@ class NavGraphDatabase private constructor(context: Context)
         cursor.close()
         return result
     }
+
+    data class ScreenRecord(
+        val id: String,
+        val packageName: String,
+        val screenTitle: String,
+        val rootClass: String,
+        val elementsJson: String,
+        val visitCount: Int,
+        val firstSeen: Long,
+        val lastSeen: Long
+    )
+
+    data class TransitionRecord(
+        val id: Long,
+        val fromScreenId: String,
+        val toScreenId: String,
+        val actionLabel: String,
+        val actionType: String,
+        val traversalCount: Int,
+        val weight: Double,
+        val firstSeen: Long,
+        val lastSeen: Long
+    )
+
+    /** Retrieve all screen records, optionally filtered by package name. */
+    fun getScreens(packageName: String? = null): List<ScreenRecord> {
+        val db = readableDatabase
+        val selection = if (packageName != null) "package_name = ?" else null
+        val selectionArgs = if (packageName != null) arrayOf(packageName) else null
+        val cursor = db.query("screens", null, selection, selectionArgs, null, null, "visit_count DESC, last_seen DESC")
+        val result = mutableListOf<ScreenRecord>()
+        while (cursor.moveToNext()) {
+            result.add(
+                ScreenRecord(
+                    id = cursor.getString(cursor.getColumnIndexOrThrow("id")),
+                    packageName = cursor.getString(cursor.getColumnIndexOrThrow("package_name")),
+                    screenTitle = cursor.getString(cursor.getColumnIndexOrThrow("screen_title")),
+                    rootClass = cursor.getString(cursor.getColumnIndexOrThrow("root_class")),
+                    elementsJson = cursor.getString(cursor.getColumnIndexOrThrow("elements_json")),
+                    visitCount = cursor.getInt(cursor.getColumnIndexOrThrow("visit_count")),
+                    firstSeen = cursor.getLong(cursor.getColumnIndexOrThrow("first_seen")),
+                    lastSeen = cursor.getLong(cursor.getColumnIndexOrThrow("last_seen"))
+                )
+            )
+        }
+        cursor.close()
+        return result
+    }
+
+    /** Retrieve transitions, optionally filtered by the package owning the from_screen. */
+    fun getTransitions(packageName: String? = null): List<TransitionRecord> {
+        val db = readableDatabase
+        val cursor = if (packageName != null) {
+            db.rawQuery(
+                """SELECT id, from_screen_id, to_screen_id, action_label, action_type, traversal_count, weight, first_seen, last_seen
+                   FROM transitions
+                   WHERE from_screen_id IN (SELECT id FROM screens WHERE package_name = ?)
+                   ORDER BY traversal_count DESC, last_seen DESC""",
+                arrayOf(packageName)
+            )
+        } else {
+            db.query("transitions", null, null, null, null, null, "traversal_count DESC, last_seen DESC")
+        }
+        val result = mutableListOf<TransitionRecord>()
+        while (cursor.moveToNext()) {
+            result.add(
+                TransitionRecord(
+                    id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
+                    fromScreenId = cursor.getString(cursor.getColumnIndexOrThrow("from_screen_id")),
+                    toScreenId = cursor.getString(cursor.getColumnIndexOrThrow("to_screen_id")),
+                    actionLabel = cursor.getString(cursor.getColumnIndexOrThrow("action_label")),
+                    actionType = cursor.getString(cursor.getColumnIndexOrThrow("action_type")),
+                    traversalCount = cursor.getInt(cursor.getColumnIndexOrThrow("traversal_count")),
+                    weight = cursor.getDouble(cursor.getColumnIndexOrThrow("weight")),
+                    firstSeen = cursor.getLong(cursor.getColumnIndexOrThrow("first_seen")),
+                    lastSeen = cursor.getLong(cursor.getColumnIndexOrThrow("last_seen"))
+                )
+            )
+        }
+        cursor.close()
+        return result
+    }
+
+    /**
+     * Removes all screens (and their associated transitions) whose title matches
+     * a known system-UI or overlay screen title that should never appear in the nav graph.
+     * Call this once on app startup to purge stale captures from previous sessions.
+     */
+    fun pruneOverlayScreens() {
+        val overlayTitles = listOf(
+            "Floating Assistant", "FloatingAssistant",
+            "No recent tasks",   // Android task-switcher captured under the last app's package
+            "Frame Layout",      // Generic unnamed container — FrameLayout with no real toolbar title
+            "AD"                 // Ad dialog captured as a screen
+        )
+        val db = writableDatabase
+        var totalDeleted = 0
+        for (title in overlayTitles) {
+            // Delete outgoing transitions from these screens
+            db.execSQL(
+                "DELETE FROM transitions WHERE from_screen_id IN (SELECT id FROM screens WHERE screen_title = ?)",
+                arrayOf(title)
+            )
+            // Delete incoming transitions to these screens
+            db.execSQL(
+                "DELETE FROM transitions WHERE to_screen_id IN (SELECT id FROM screens WHERE screen_title = ?)",
+                arrayOf(title)
+            )
+            // Delete the screens themselves
+            val rows = db.delete("screens", "screen_title = ?", arrayOf(title))
+            totalDeleted += rows
+        }
+        if (totalDeleted > 0) {
+            Log.i(TAG, "pruneOverlayScreens: removed $totalDeleted junk screen(s) from DB")
+        }
+    }
 }
