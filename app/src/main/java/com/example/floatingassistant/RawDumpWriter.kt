@@ -311,6 +311,9 @@ object RawDumpWriter {
      * screens.  They fall through to text-based keying instead.
      */
     private fun computeKey(node: AccessibilityNodeInfo): String? {
+        val pkg  = node.packageName?.toString() ?: ""
+        if (pkg == "com.example.floatingassistant") return null
+
         val rid  = node.viewIdResourceName?.trim()              ?: ""
         val text = node.text?.toString()?.trim()                ?: ""
         val cd   = node.contentDescription?.toString()?.trim()  ?: ""

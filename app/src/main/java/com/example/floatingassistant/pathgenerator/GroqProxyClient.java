@@ -28,7 +28,7 @@ public class GroqProxyClient {
 
     private static final String TAG = "GroqProxyClient";
 
-    public static final String DEFAULT_PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate";
+    public static final String DEFAULT_PROXY_URL = "https://navigation-app-server.vercel.app/api/groq";
     public static final int DEFAULT_CONNECT_TIMEOUT_MS = 8000;
     public static final int DEFAULT_READ_TIMEOUT_MS = 30000;
 

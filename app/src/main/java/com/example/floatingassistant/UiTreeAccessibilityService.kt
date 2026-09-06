@@ -149,17 +149,44 @@ class UiTreeAccessibilityService : AccessibilityService() {
     // ── NAVIGATION handler ────────────────────────────────────────────────────
 
     private fun handleNavigation(event: AccessibilityEvent) {
-        val packageName = event.packageName?.toString() ?: return
-        val rootNode    = event.source ?: rootInActiveWindow
+        // ── Fix 2: Use rootInActiveWindow as the authoritative package source ──
+        // event.packageName is unreliable — it captures Toast messages, SystemUI
+        // swipes, input-method windows, and invisible overlays, all of which would
+        // falsely trigger OFF-TRACK in the navigation state machine.
+        val trustedRoot   = rootInActiveWindow
+        val activePackage = trustedRoot?.packageName?.toString()
+            ?: event.packageName?.toString()
+            ?: return   // can't determine package — skip entirely
 
-        val filterResult = MainFilter.apply(packageName, rootNode, this.packageName)
-        if (filterResult !is MainFilter.FilterResult.Passed) return
+        // Ignore events from SystemUI (swipe gestures, notification shade, nav bar)
+        // and from our own overlay (the floating bubble / HUD)
+        if (activePackage.startsWith("com.android.systemui") ||
+            activePackage == this.packageName) {
+            trustedRoot?.recycle()
+            Log.v(TAG, "handleNavigation: skipping noise from $activePackage")
+            return
+        }
+
+        // Update the state machine's last-known package (used for fast-forward)
+        NavigationStateMachine.lastKnownActivePackage = activePackage
+
+        // For Phase 1 we still need a rootNode — prefer the live rootInActiveWindow
+        // (already fetched above) over event.source since event.source reflects the
+        // *event origin* node, not necessarily the full window root.
+        val rootNode = trustedRoot ?: event.source ?: return
+
+        val filterResult = MainFilter.apply(activePackage, rootNode, this.packageName, event.className?.toString())
+        if (filterResult !is MainFilter.FilterResult.Passed) {
+            return
+        }
         val passed = filterResult
 
-        val rootClass = event.className?.toString()
-            ?.substringAfterLast('.')
-            ?.takeIf { it.isNotEmpty() }
-            ?: packageName.substringAfterLast('.')
+        val launcherPkg = NavigationStateMachine.getDefaultLauncherPackage()
+        val rootClass = if (launcherPkg != null && activePackage.startsWith(launcherPkg)) {
+            "Home"
+        } else {
+            passed.semanticRootName
+        }
 
         // Phase 1 — synchronous tree traversal (must complete before recycle)
         try {
@@ -177,10 +204,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
         // Phase 2 + 3 — on IO thread
         triggerPipeline(passed.packageName, rootClass, "NAVIGATION")
 
-        // ── Track 4 / Stage 2: Notify alignment tracker on every screen change ──
-        // rootClass is the human-readable screen title resolved from the event
-        // (e.g. "Settings", "About phone"). NavigationStateMachine evaluates it
-        // against the active path steps; it is a no-op when no session is running.
+        // ── Track 4 / Stage 2 + 2.5: Notify alignment tracker ────────────────
+        // passed.packageName is the filtered (authoritative) package name.
+        // rootClass is the human-readable screen title.
         if (NavigationStateMachine.isNavigating) {
             NavigationStateMachine.onScreenChanged(passed.packageName, rootClass)
         }
@@ -199,8 +225,10 @@ class UiTreeAccessibilityService : AccessibilityService() {
             return
         }
 
-        val filterResult = MainFilter.apply(actualPackage, rootNode, this.packageName)
-        if (filterResult !is MainFilter.FilterResult.Passed) return
+        val filterResult = MainFilter.apply(actualPackage, rootNode, this.packageName, null)
+        if (filterResult !is MainFilter.FilterResult.Passed) {
+            return
+        }
         val passed = filterResult
 
         var hadNewNodes = false

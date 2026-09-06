@@ -144,9 +144,9 @@ class FloatingOverlayService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
         addBubble()
 
-        // ── Track 4 / Stage 1+2: Initialise guidance HUD and wire to state machine ──
+        // ── Track 4 / Stage 1+2+2.5: Init guidance HUD and wire to state machine ──
         navigationHud = NavigationHudOverlay(this)
-        NavigationStateMachine.attachHud(navigationHud)
+        NavigationStateMachine.attachHud(navigationHud, this)
         Log.i("[NavigationEngine]", "NavigationHudOverlay created and attached to NavigationStateMachine")
 
         serviceScope.launch {
@@ -525,7 +525,7 @@ class FloatingOverlayService : Service() {
                 val pathStr = searchResult.pathString.orEmpty()
                 val steps   = pathStr.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${steps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(steps, parsed.targetApp)
+                NavigationStateMachine.startNavigation(steps, parsed.targetApp, parsed.exactTask)
                 // HUD is now controlled by NavigationStateMachine; no direct hud calls here.
 
                 return@launch
@@ -551,7 +551,7 @@ class FloatingOverlayService : Service() {
                 // ── BUG-3 / Stage 2: Hand path to central state machine ────────
                 val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 2 → startNavigation(${cloudSteps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp)
+                NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp, parsed.exactTask)
 
                 return@launch
             }
@@ -645,7 +645,7 @@ class FloatingOverlayService : Service() {
                 // ── BUG-3 / Stage 2: Hand path to central state machine ────────
                 val groqSteps = groqPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 3 → startNavigation(${groqSteps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(groqSteps, parsed.targetApp)
+                NavigationStateMachine.startNavigation(groqSteps, parsed.targetApp, parsed.exactTask)
 
             } else {
                 Log.w("[PathFinder]", "Tier 3 Groq: Failed — reason: $groqErrorReason")

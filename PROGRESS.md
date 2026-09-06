@@ -198,22 +198,56 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 
 ---
 
-### Stage 3 — Element Finder Pipeline (`clean_page` → graph scope → `temp_tree` → scroll directive) 🔜
+### Stage 2.5 — Alignment & Context Fixes ✅ DONE
 
-- [ ] **Element lookup in `clean_page.json`** — For the current step's action label, scan `clean_page.json` to find a matching element node (by text, contentDescription, or resource_id fragment)
-- [ ] **Graph-scope narrowing** — Cross-reference `nav_graph.db` Micro-level element records (when available) to prefer stable resource-id fingerprints over fuzzy name matching
-- [ ] **`temp_tree.json` fallback** — If `clean_page.json` has no match, scan `temp_tree.json` raw dump (broader, less filtered)
-- [ ] **Scroll directive** — If the target element is not in the current viewport, emit a scroll instruction: `navigationHud.updateHud("STEP N OF M", "Scroll down to find '${label}'")`
-- [ ] **Highlight bounds for Stage 4** — Record the found node's `bounds` for the future on-screen highlight overlay
+> Real-world testing revealed the Stage 2 engine got trapped in "OFF TRACK" due to flaky event packages, hardcoded launcher strings, and no awareness of the user's current app context at submit time.
+
+- [x] **Fix 1 — Dynamic launcher detection** — `getDefaultLauncherPackage()` queries `PackageManager` with `Intent.ACTION_MAIN + CATEGORY_HOME` at runtime; no hardcoded `"com.android.launcher"` strings; works across all OEM ROMs (Vivo OriginUI, Samsung OneUI, MIUI, OPPO ColorOS, stock AOSP)
+- [x] **Fix 2 — Reliable foreground package** — `handleNavigation()` now uses `rootInActiveWindow?.packageName` as the authoritative source (not `event.packageName`); events from `com.android.systemui` and our own overlay package are silently discarded before they can trigger state changes; `lastKnownActivePackage` is updated on every valid event
+- [x] **Fix 3 — Smart path fast-forwarding** — `startNavigation()` reads `lastKnownActivePackage`; if the user is already inside the target app, leading "Home" and app-root steps are skipped with `coerceAtMost` guard; logged as `"Fast-forwarded path to index N because user is already in $pkg"`
+- [x] **Fix 4 — Flexible app-root matching** — `appRootFuzzyMatch()` detects when a path step is just the app's entry-point name (e.g. `"Gmail"`, `"WhatsApp"`); being in the correct package is sufficient to satisfy such a step — the screen label no longer needs to literally match (e.g. Gmail's root screen `"Primary"` still satisfies the `"Gmail"` step)
+- [x] **`advanceStep()` helper extracted** — Deduplicates the HUD-update + pointer-advance logic shared by on-track match, app-root match, Home-step match, and forward-leap branches
+- [x] **Launcher events filtered in `onScreenChanged`** — Launcher events are silently ignored when the current step is not `"Home"`; only forwarded to state update when step IS "Home" (where they correctly satisfy it)
+- [x] **`attachHud(overlay, ctx)` signature updated** — `Context` now injected at service start; used by `getDefaultLauncherPackage()` and future PackageManager queries
 
 ---
 
-### Stage 4 — Groq Dynamic Healing & Firestore Crowd-Sourcing 🔜
+### Stage 2.6 — App Detection, Fast-Forwarding, Home Scanning & HUD Updates ✅ DONE
 
-- [ ] **Off-track auto-heal** — When `OffTrack` state is detected for > 2 navigations, invoke Groq re-route with fresh `clean_page.json` context; update path and resume from corrected step
-- [ ] **`device_paths` crowd-sourcing** — On guide `Complete`, if path was AI-generated (Tier 3), prompt user to confirm ("Did this work?") and persist to `CloudPathDatabase.addEntry()` for Tier 2 next time (already partially implemented; tie into state machine completion signal)
-- [ ] **Healing HUD status** — While Groq re-routes, show `navigationHud.updateHud("AI HEALING", "Finding alternate path…")`
-- [ ] **Micro-level element highlight overlay** — Draw a translucent coloured rectangle over the target `AccessibilityNodeInfo` bounds using a second `TYPE_APPLICATION_OVERLAY` window
+> Refinements to how target apps are identified, dynamic fast-forwarding upon app entry, strict launcher exclusion for Home scanning, and a richer HUD display.
+
+- [x] **Fix 1 — Smart App Package Matching** — Replaced naive `contains` with `isTargetApp()`, which handles mismatched friendly names (e.g., "clock" matching `com.android.deskclock`) and strict "settings" targeting.
+- [x] **Fix 2 — The "Home" Step Package Exception** — Modified `onScreenChanged` package verification. The launcher is accepted when the step is "Home", but triggers a "WRONG APP" if the user diverges to a random non-target app.
+- [x] **Fix 3 — Dynamic Fast-Forwarding** — In `onScreenChanged`, if the user enters the target app while on step 0, it dynamically jumps ahead past Home/Root steps to the first actionable in-app step and immediately updates the HUD to ON TRACK.
+- [x] **Fix 4 — Home Screen Scanning & Bubble Exclusion** — In `UiTreeAccessibilityService`, events originating from the launcher dynamically force the root name to "Home". In `RawDumpWriter`, any nodes originating from our `com.example.floatingassistant` package return `null` in `computeKey`, fully ignoring the HUD/bubble from the tree dump.
+- [x] **Fix 5 — Expanded HUD Text** — Added a `contextLabel` to `NavigationHudOverlay` to support 3 lines of text. When tracking, it shows `Current: [currStep] | Next: [nextStep]`. When off-track, it provides `Current: [activeScreen] | Expected: [currStep]`.
+
+---
+
+### Stage 3 — Element Finder Pipeline (`clean_page` → graph scope → `temp_tree` → scroll directive) ✅ DONE
+
+
+- [x] **Element lookup in `clean_page.json`** — For the current step's action label, scan `clean_page.json` to find a matching element node (by text, contentDescription, or resource_id fragment)
+- [x] **Graph-scope narrowing** — Cross-reference `nav_graph.db` Micro-level element records (when available) to prefer stable resource-id fingerprints over fuzzy name matching
+- [x] **`temp_tree.json` fallback** — If `clean_page.json` has no match, scan `temp_tree.json` raw dump (broader, less filtered)
+- [x] **Scroll directive** — If the target element is not in the current viewport, emit a scroll instruction: `navigationHud.updateHud("STEP N OF M", "Scroll down to find '${label}'")`
+- [x] **Highlight bounds for Stage 4** — Record the found node's `bounds` for the future on-screen highlight overlay
+
+---
+
+### Stage 3.5 — Semantic Root Naming Extraction Fix ✅ DONE
+
+- [x] **Update Root Naming Algorithm:** Modified `MainFilter` and `UiTreeAccessibilityService` to generate a composite semantic name (`${baseAppName}-${contextualIdentifier}`).
+
+---
+
+### Stage 4 — Groq Dynamic Healing & Firestore Crowd-Sourcing ✅ DONE
+
+- [x] **Off-track auto-heal** — When Element Finder hits a dead end, invoke Groq re-route with fresh `clean_page.json` context; update path and resume from corrected step (detour, backtrack, or synonym).
+- [x] **Secure API Endpoint Migration** — Removed hardcoded API keys and routed Gemini and Groq requests through the Vercel proxy backend.
+- [x] **`device_paths` crowd-sourcing** — On destination reached, prompt user to confirm ("Did this work?") with YES/NO buttons. If YES, persist to `CloudPathDatabase.addEntry()`. If NO, trigger explicit healing.
+- [x] **Healing HUD status** — While Groq re-routes, show `navigationHud.updateHud("AI HEALING", "Finding alternate path…")`
+- [x] **Micro-level element highlight overlay** — Deferred (not part of text-based HUD instruction set).
 
 
 ---

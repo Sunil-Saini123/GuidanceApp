@@ -171,18 +171,14 @@ task: take_selfie"""
         userCommand: String,
         onProgress: suspend (String) -> Unit = {}
     ): ParsedCommand = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY.takeIf { it.isNotBlank() && it != "YOUR_GEMINI_API_KEY_HERE" }
-            ?: DEFAULT_GEMINI_KEY
-
         // ── 1. Direct Gemini REST API (Primary intent classification) ─────────
-        if (apiKey.isNotBlank()) {
-            Log.d(TAG, "Attempting direct Gemini REST API for intent classification")
-            onProgress("Analyzing intent with Gemini…")
+        Log.d(TAG, "Attempting Gemini via proxy for intent classification")
+        onProgress("Analyzing intent with Gemini…")
             for (model in MODEL_FALLBACK_LIST) {
                 var attempt = 0
                 while (attempt < MAX_RETRIES) {
                     try {
-                        val responseText = callGeminiApi(apiKey, model, userCommand)
+                        val responseText = callGeminiApi(model, userCommand)
                         if (responseText != null) {
                             val parsed = parseResponse(responseText)
                             if (parsed != null) {
@@ -206,8 +202,6 @@ task: take_selfie"""
                     }
                 }
             }
-        }
-
         // ── 2. Offline Local Intent Classification Fallback ───────────────────
         Log.i(TAG, "Falling back to offline IntentClassificationEngine")
         onProgress("Resolving intent locally…")
@@ -372,14 +366,13 @@ task: take_selfie"""
      * @return The raw text content from the model, or `null` on non-retryable failure.
      * @throws RetryableException on HTTP 503 / 429 (server busy / rate-limited).
      */
-    private fun callGeminiApi(apiKey: String, model: String, userCommand: String): String? {
-        val url = URL("${endpointUrl(model)}?key=$apiKey")
+    private fun callGeminiApi(model: String, userCommand: String): String? {
+        val url = URL("https://navigation-app-server.vercel.app/api/gemini")
         val connection = url.openConnection() as HttpURLConnection
 
         return try {
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            connection.setRequestProperty("x-goog-api-key", apiKey)
             connection.doOutput = true
             connection.connectTimeout = 15_000
             connection.readTimeout = 45_000   // gemini-flash can be slow; 45 s gives it room

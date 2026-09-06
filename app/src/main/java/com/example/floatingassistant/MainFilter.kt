@@ -1,93 +1,51 @@
 package com.example.floatingassistant
 
+import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 
 /**
- * Main Filter — Phase 2
- *
- * Responsibility: given a raw root [AccessibilityNodeInfo] and the package that owns the
- * current window, decide in O(1) whether the frame should be discarded entirely.
- *
- * Two discard rules (executed in order, cheapest first):
- *
- *  1. CANNOT ACCESS — the root node is null, meaning the service has no window content to
- *     read.  Log "Cannot access" and return [FilterResult.CannotAccess].
- *
- *  2. SYSTEM UI DROP — the package belongs to Android's chrome layer (status bar, nav bar,
- *     notification shade, launcher, IME, etc.) which carries no app-level UI data.
- *     Return [FilterResult.Dropped] so the caller skips all downstream processing.
- *
- * Any frame that survives both checks returns [FilterResult.Passed] with the root node
- * ready for the Inbetween Filter (Phase 3).
- *
- * Performance notes:
- *  - Package look-up is a [HashSet.contains] call → O(1).
- *  - No allocations on the hot path for the DROP case.
- *  - Caller is responsible for calling [AccessibilityNodeInfo.recycle] on the node when
- *    done (see [FilterResult.Passed.rootNode]).
+ * Main Filter — Phase 2 & Stage 3.5 Semantic Root Naming
  */
 object MainFilter {
 
     private const val TAG = "MainFilter"
 
-    // ── System / chrome packages that carry no app UI data ──────────────────
-    //
-    // Rule: if the window's package name STARTS WITH any entry in this set, drop it.
-    // Using startsWith lets us cover sub-packages (e.g. com.android.systemui.something)
-    // without bloating the set.
     private val SYSTEM_UI_PREFIXES = arrayOf(
-        "com.android.systemui",          // Status bar, nav bar, notification shade, QS panel
-        "com.android.launcher",          // AOSP launcher (various sub-packages)
-        "com.google.android.apps.nexuslauncher", // Pixel launcher
-        "com.miui.home",                 // MIUI launcher
-        "com.samsung.android.app.launcher",     // One UI launcher
-        "com.huawei.android.launcher",   // EMUI launcher
-        "com.oppo.launcher",             // OPPO launcher
-        "com.vivo.launcher",             // Vivo launcher
-        "com.vivo.systemuiplugin",       // Vivo system UI plugin (status bar extensions)
-        "com.vivo.SystemPlugin",         // Vivo system plugin variants
-        "com.bbk.launcher",             // BBK / iQOO launcher
-        "com.oneplus.launcher",          // OnePlus launcher
-        "com.android.inputmethod",       // AOSP keyboard
-        "com.google.android.inputmethod",// Gboard
-        "com.swiftkey",                  // SwiftKey
-        "com.samsung.android.honeyboard" // Samsung keyboard
+        "com.android.systemui",
+        "com.android.launcher",
+        "com.google.android.apps.nexuslauncher",
+        "com.miui.home",
+        "com.samsung.android.app.launcher",
+        "com.huawei.android.launcher",
+        "com.oppo.launcher",
+        "com.vivo.launcher",
+        "com.vivo.systemuiplugin",
+        "com.vivo.SystemPlugin",
+        "com.bbk.launcher",
+        "com.oneplus.launcher",
+        "com.android.inputmethod",
+        "com.google.android.inputmethod",
+        "com.swiftkey",
+        "com.samsung.android.honeyboard"
     )
 
-    // ── Public API ───────────────────────────────────────────────────────────
-
     sealed class FilterResult {
-        /** Service could not retrieve a root node for this window. */
         object CannotAccess : FilterResult()
-
-        /** Package belongs to Android chrome — no app UI inside, skip it. */
         data class Dropped(val packageName: String) : FilterResult()
-
-        /**
-         * Frame passed all checks. The caller MUST call [rootNode].recycle() when finished
-         * to avoid AccessibilityNodeInfo object leaks.
-         */
         data class Passed(
             val packageName: String,
-            val rootNode: AccessibilityNodeInfo
+            val rootNode: AccessibilityNodeInfo,
+            val semanticRootName: String
         ) : FilterResult()
     }
 
-    /**
-     * Apply the Main Filter to one accessibility event frame.
-     *
-     * @param packageName  Package that owns the current window (may be null).
-     * @param rootNode     Root node retrieved from the event or [rootInActiveWindow] (may be null).
-     * @param ownPackage   Our app's package name — always dropped to prevent self-capture.
-     */
     fun apply(
         packageName: String?,
         rootNode: AccessibilityNodeInfo?,
-        ownPackage: String
+        ownPackage: String,
+        eventClassName: String? = null
     ): FilterResult {
-
-        // ── Rule 1: Cannot access ────────────────────────────────────────────
         if (rootNode == null) {
             val pkg = packageName ?: "unknown"
             Log.w(TAG, "Cannot access [$pkg]")
@@ -95,20 +53,17 @@ object MainFilter {
         }
 
         val pkg = packageName ?: run {
-            // Root exists but no package — unusual; treat as cannot access.
             Log.w(TAG, "Cannot access [no package name]")
             rootNode.recycle()
             return FilterResult.CannotAccess
         }
 
-        // ── Rule 2: Drop own package ─────────────────────────────────────────
         if (pkg == ownPackage) {
             Log.d(TAG, "Dropped [$pkg] — own app")
             rootNode.recycle()
             return FilterResult.Dropped(pkg)
         }
 
-        // ── Rule 3: Drop System UI / launchers / keyboards ───────────────────
         for (prefix in SYSTEM_UI_PREFIXES) {
             if (pkg.startsWith(prefix)) {
                 Log.d(TAG, "Dropped [$pkg] — System UI")
@@ -117,8 +72,98 @@ object MainFilter {
             }
         }
 
-        // ── Passed ───────────────────────────────────────────────────────────
-        Log.v(TAG, "Passed  [$pkg]")
-        return FilterResult.Passed(packageName = pkg, rootNode = rootNode)
+        val semanticName = generateSemanticRootName(pkg, rootNode, eventClassName)
+        Log.v(TAG, "Passed [$pkg] -> Semantic Root: $semanticName")
+        
+        return FilterResult.Passed(packageName = pkg, rootNode = rootNode, semanticRootName = semanticName)
+    }
+
+    private fun generateSemanticRootName(
+        packageName: String,
+        rootNode: AccessibilityNodeInfo,
+        eventClassName: String?
+    ): String {
+        // 1. Base App Name
+        val baseAppName = packageName.substringAfterLast('.').lowercase()
+
+        // 2. Contextual Identifier
+        var contextId = findSelectedTab(rootNode)
+        
+        if (contextId == null) {
+            contextId = findTopTitle(rootNode)
+        }
+        
+        if (contextId == null) {
+            val cls = eventClassName?.substringAfterLast('.')
+            if (cls != null && !cls.contains("Layout", ignoreCase = true) && !cls.contains("View", ignoreCase = true)) {
+                contextId = cls
+            }
+        }
+        
+        if (contextId == null) {
+            contextId = "main"
+        }
+
+        // Clean up the contextId
+        val cleanContext = contextId.trim().lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .take(20)
+            .removeSuffix("-")
+            
+        return "$baseAppName-$cleanContext"
+    }
+
+    private fun findSelectedTab(node: AccessibilityNodeInfo): String? {
+        if (node.isSelected) {
+            val text = node.text?.toString() ?: node.contentDescription?.toString()
+            if (!text.isNullOrBlank() && text.length < 30) return text
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                val res = findSelectedTab(child)
+                if (res != null) return res
+            } finally {
+                child.recycle()
+            }
+        }
+        return null
+    }
+
+    private fun findTopTitle(node: AccessibilityNodeInfo): String? {
+        val rootBounds = Rect()
+        node.getBoundsInScreen(rootBounds)
+        val screenHeight = rootBounds.height()
+        if (screenHeight <= 0) return null
+
+        val top15 = screenHeight * 0.15f
+        return searchTopTitle(node, top15)
+    }
+
+    private fun searchTopTitle(node: AccessibilityNodeInfo, topThreshold: Float): String? {
+        val bounds = Rect()
+        node.getBoundsInScreen(bounds)
+        if (bounds.bottom > topThreshold && bounds.top > topThreshold) {
+            // Node is entirely below the top 15%, since we are doing DFS, its children are also below.
+            // Wait, a container might span the whole screen. We should check if the node itself is entirely below.
+            if (bounds.top > topThreshold) return null
+        }
+
+        val resId = node.viewIdResourceName?.lowercase() ?: ""
+        if (resId.contains("title") || resId.contains("header") || resId.contains("action_bar")) {
+            val text = node.text?.toString() ?: node.contentDescription?.toString()
+            if (!text.isNullOrBlank() && text.length < 30) return text
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                val res = searchTopTitle(child, topThreshold)
+                if (res != null) return res
+            } finally {
+                child.recycle()
+            }
+        }
+        return null
     }
 }
