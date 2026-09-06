@@ -176,6 +176,14 @@ class UiTreeAccessibilityService : AccessibilityService() {
 
         // Phase 2 + 3 — on IO thread
         triggerPipeline(passed.packageName, rootClass, "NAVIGATION")
+
+        // ── Track 4 / Stage 2: Notify alignment tracker on every screen change ──
+        // rootClass is the human-readable screen title resolved from the event
+        // (e.g. "Settings", "About phone"). NavigationStateMachine evaluates it
+        // against the active path steps; it is a no-op when no session is running.
+        if (NavigationStateMachine.isNavigating) {
+            NavigationStateMachine.onScreenChanged(passed.packageName, rootClass)
+        }
     }
 
     // ── SCROLL / CONTENT handler ──────────────────────────────────────────────

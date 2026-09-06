@@ -132,6 +132,9 @@ class FloatingOverlayService : Service() {
     // ── Whether we are currently in typing mode ───────────────────────────────
     private var typingModeActive = false
 
+    // ── Track 4 / Stage 1: Navigation HUD pill overlay ───────────────────────
+    private lateinit var navigationHud: NavigationHudOverlay
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -140,13 +143,17 @@ class FloatingOverlayService : Service() {
         inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         startForeground(NOTIFICATION_ID, buildNotification())
         addBubble()
+
+        // ── Track 4 / Stage 1+2: Initialise guidance HUD and wire to state machine ──
+        navigationHud = NavigationHudOverlay(this)
+        NavigationStateMachine.attachHud(navigationHud)
+        Log.i("[NavigationEngine]", "NavigationHudOverlay created and attached to NavigationStateMachine")
+
         serviceScope.launch {
             // Firestore security rules require an authenticated (anonymous) user —
             // sign in once up front so the first query submission isn't slowed down by it.
             CloudPathDatabase.ensureSignedIn()
         }
-
-
 
         Log.i(TAG, "Overlay service started")
     }
@@ -157,6 +164,11 @@ class FloatingOverlayService : Service() {
         removePanel()
         if (::bubbleView.isInitialized) {
             runCatching { windowManager.removeView(bubbleView) }
+        }
+        // ── Track 4 / Stage 1: Tear down the guidance pill HUD ───────────────
+        if (::navigationHud.isInitialized) {
+            navigationHud.destroy()
+            Log.i("[NavigationEngine]", "NavigationHudOverlay.destroy() called from FloatingOverlayService.onDestroy()")
         }
         serviceScope.cancel()
         super.onDestroy()
@@ -504,13 +516,18 @@ class FloatingOverlayService : Service() {
             }
 
             if (searchResult.found) {
-                statusText.text =
-                    "✓ Local Graph Match:\n" +
-                    "App: ${parsed.targetApp}\n" +
-                    "Intent: ${parsed.targetApp} → ${parsed.destinationScreen}\n" +
-                    "Path: ${searchResult.pathString}\n" +
-                    "Task: ${parsed.exactTask}"
                 Log.i(TAG, "Local search matched: ${searchResult.pathString}")
+
+                // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
+                withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
+
+                // ── BUG-3 / Stage 2: Hand path to central state machine ────────
+                val pathStr = searchResult.pathString.orEmpty()
+                val steps   = pathStr.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${steps.size} steps, pkg='${parsed.targetApp}')")
+                NavigationStateMachine.startNavigation(steps, parsed.targetApp)
+                // HUD is now controlled by NavigationStateMachine; no direct hud calls here.
+
                 return@launch
             }
 
@@ -527,12 +544,15 @@ class FloatingOverlayService : Service() {
 
             if (cloudPath.isNotEmpty()) {
                 Log.i("[PathFinder]", "Tier 2 Firestore: Match Found → \"$cloudPath\"")
-                statusText.text =
-                    "✓ Path found:\n" +
-                    "App: ${parsed.targetApp}\n" +
-                    "Task: ${parsed.exactTask}\n\n" +
-                    cloudPath
-                // TODO Phase 4: dispatch cloudPath to NavigationStateMachine
+
+                // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
+                withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
+
+                // ── BUG-3 / Stage 2: Hand path to central state machine ────────
+                val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                Log.i("[NavigationEngine]", "Tier 2 → startNavigation(${cloudSteps.size} steps, pkg='${parsed.targetApp}')")
+                NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp)
+
                 return@launch
             }
 
@@ -614,30 +634,31 @@ class FloatingOverlayService : Service() {
             if (!groqPath.isNullOrEmpty()) {
                 Log.i("[PathFinder]", "Tier 3 Groq: Generated path → \"$groqPath\"")
 
-                // Hold the path — save to Firestore only after the user confirms the task
-                // is done correctly by pressing Stop (tap 1). See handleStop().
+                // Hold path for Firestore save when user confirms (Stop tap 1)
                 pendingGroqApp  = parsed.targetApp
                 pendingGroqTask = parsed.exactTask
                 pendingGroqPath = groqPath
 
-                statusText.text =
-                    "✓ Path found (AI):\n" +
-                    "App: ${parsed.targetApp}\n" +
-                    "Task: ${parsed.exactTask}\n\n" +
-                    groqPath
+                // ── BUG-2: Collapse panel so HUD is the sole guide UI ─────────
+                withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
+
+                // ── BUG-3 / Stage 2: Hand path to central state machine ────────
+                val groqSteps = groqPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                Log.i("[NavigationEngine]", "Tier 3 → startNavigation(${groqSteps.size} steps, pkg='${parsed.targetApp}')")
+                NavigationStateMachine.startNavigation(groqSteps, parsed.targetApp)
 
             } else {
                 Log.w("[PathFinder]", "Tier 3 Groq: Failed — reason: $groqErrorReason")
+                // Leave panel open so user can read the error
                 statusText.text = buildString {
                     append("❌ AI path failed\n")
                     append("App: ${parsed.targetApp}\n")
                     append("Task: ${parsed.exactTask}\n\n")
-                    if (!groqErrorReason.isNullOrEmpty()) {
-                        append("Reason: $groqErrorReason")
-                    } else {
-                        append("Unknown error — check Logcat ([PathFinder] tag)")
-                    }
+                    if (!groqErrorReason.isNullOrEmpty()) append("Reason: $groqErrorReason")
+                    else append("Unknown error — check Logcat ([PathFinder] tag)")
                 }
+                navigationHud.hide()
+                Log.i("[NavigationEngine]", "All tiers failed — HUD hidden")
             }
         }
     }
@@ -659,6 +680,10 @@ class FloatingOverlayService : Service() {
                 NavigationStateMachine.stop()
                 stopTapCount = 1
                 Log.i(TAG, "Stop tap 1 — navigation stopped")
+
+                // ── Stage 1: hide the guidance HUD on Stop ────────────────
+                navigationHud.hide()
+                Log.i("[NavigationEngine]", "HUD hidden — user pressed Stop")
 
                 val app  = pendingGroqApp
                 val task = pendingGroqTask

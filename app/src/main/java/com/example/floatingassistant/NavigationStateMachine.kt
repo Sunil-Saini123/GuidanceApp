@@ -1,104 +1,291 @@
-package com.example.floatingassistant
+﻿package com.example.floatingassistant
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * NavigationStateMachine — Phase 7
+ * NavigationStateMachine — Track 4 / Stage 2
  *
- * Minimal state machine that owns the "currently guiding" state. It is the
- * integration point between:
- *   - [FloatingOverlayService] (submits a resolved path string, or stops it)
- *   - a future consumer (the Accessibility Service) that will watch [state]
- *     to find/highlight the live on-screen element matching the current step.
+ * The central, singleton state tracker for an active navigation session.
+ * It receives the resolved path from [FloatingOverlayService], then listens
+ * to screen-change events forwarded from [UiTreeAccessibilityService] to
+ * determine whether the user is on-track, has diverged, or is in the wrong app.
  *
- * Scope of this phase: track *which step we're on* and expose it reactively.
- * Actual on-screen highlight rendering (finding the AccessibilityNodeInfo that
- * matches the current step's name and drawing an overlay around it) is NOT
- * implemented here — that is a distinct follow-up phase. [stop] still clears
- * this state machine's data immediately, which is the signal any future
- * highlight-renderer would use to remove active highlights.
+ * ── State Variables ──────────────────────────────────────────────────────────
+ *   targetPackage   — package name (or short name) the path belongs to
+ *   pathSteps       — ordered list of step names  e.g. ["Home","Settings","System","About phone"]
+ *   currentIndex    — index of the step currently being completed  (0-based)
+ *   prevStep        — step just behind currentIndex (null if at index 0)
+ *   currStep        — step the user must currently navigate to
+ *   nextStep        — step after currStep (null if currStep is the last)
+ *   lastCorrectStep — most recently validated on-path screen
+ *   isNavigating    — true while a session is active
+ *
+ * ── Alignment Decision Tree (onScreenChanged) ────────────────────────────────
+ *  1. Wrong package  → HUD "WRONG APP"
+ *  2. Exact match on currStep → advance HUD to show nextStep
+ *  3. Forward leap (screen == nextStep) → skip index, update HUD
+ *  4. Completion (last step) → HUD "COMPLETE ✓", auto-hide after 3 s
+ *  5. Off-track (correct package, unknown screen) → HUD "OFF TRACK"
+ *
+ * ── Thread Safety ────────────────────────────────────────────────────────────
+ *   [onScreenChanged] may be called from any thread.
+ *   All HUD calls are already thread-safe in NavigationHudOverlay.
+ *   Internal state mutations are confined to the main thread via mainHandler.
  */
 object NavigationStateMachine {
 
-    private const val TAG = "NavStateMachine"
+    private const val TAG = "[NavigationEngine]"
 
-    sealed class State {
-        /** No guide is running. */
-        object Idle : State()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-        /**
-         * A guide is actively running.
-         * @param steps        Ordered list of step names, e.g. ["WhatsApp", "3 dots", "Settings", ...]
-         * @param currentIndex Index into [steps] of the step currently being guided.
-         */
-        data class Running(val steps: List<String>, val currentIndex: Int) : State()
+    // ── Injected reference to the HUD — set by FloatingOverlayService ─────────
+    // Lateinit is safe: it is set in onCreate() before any event can arrive.
+    private lateinit var hud: NavigationHudOverlay
+
+    // ── Navigation session state ──────────────────────────────────────────────
+    @Volatile var isNavigating: Boolean = false
+        private set
+
+    private var targetPackage:    String       = ""
+    private var pathSteps:        List<String> = emptyList()
+    private var currentIndex:     Int          = 0
+    private var prevStep:         String?      = null
+    private var currStep:         String       = ""
+    private var nextStep:         String?      = null
+    private var lastCorrectStep:  String?      = null
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Lifecycle — called by FloatingOverlayService
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /** Wire the HUD reference once at service creation. */
+    fun attachHud(overlay: NavigationHudOverlay) {
+        hud = overlay
+        Log.d(TAG, "HUD reference attached to NavigationStateMachine")
     }
 
-    private val _state = MutableStateFlow<State>(State.Idle)
-    val state: StateFlow<State> = _state.asStateFlow()
-
     /**
-     * Begin guiding the user through [pathString], e.g.
-     * "WhatsApp -> 3 dots -> Settings -> Profile -> Change Profile"
+     * Begin a new navigation session.
      *
-     * Splits on "->", trims each step, drops blanks. No-op (with a warning log)
-     * if the resulting step list is empty.
+     * @param resolvedPath  Ordered step list, e.g. ["Home","Settings","System","About phone"]
+     * @param pkgTarget     Package fragment that identifies the target app,
+     *                      e.g. "settings" (will be matched with String.contains()).
      */
-    fun start(pathString: String) {
-        val steps = pathString
-            .split("->")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-
-        if (steps.isEmpty()) {
-            Log.w(TAG, "start() called with empty/blank path — ignored")
+    fun startNavigation(resolvedPath: List<String>, pkgTarget: String) {
+        if (resolvedPath.isEmpty()) {
+            Log.w(TAG, "startNavigation() called with empty path — ignored")
             return
         }
+        postToMain {
+            targetPackage   = pkgTarget.trim().lowercase()
+            pathSteps       = resolvedPath
+            currentIndex    = 0
+            prevStep        = null
+            currStep        = pathSteps[0]
+            nextStep        = pathSteps.getOrNull(1)
+            lastCorrectStep = null
+            isNavigating    = true
 
-        _state.value = State.Running(steps = steps, currentIndex = 0)
-        Log.i(TAG, "Guide STARTED — ${steps.size} steps: ${steps.joinToString(" → ")}")
-        Log.i(TAG, "Step 1/${steps.size}: \"${steps[0]}\" ← highlight target (future phase will render this)")
+            Log.i(TAG, "Navigation STARTED — ${pathSteps.size} steps toward '$targetPackage'")
+            Log.i(TAG, "Steps: ${pathSteps.joinToString(" → ")}")
+            Log.i(TAG, "Step 1/${pathSteps.size}: '$currStep'  next='$nextStep'")
+
+            hud.updateHud(
+                stepHeader        = "STEP 1 OF ${pathSteps.size}",
+                actionInstruction = currStep,
+                subTag            = "start"
+            )
+            hud.show()
+        }
     }
 
     /**
-     * Advance to the next step. Automatically returns to [State.Idle] once the
-     * last step has been passed. No-op if not currently [State.Running].
+     * Stop the active session and dismiss the HUD.
+     * Safe to call when no session is active.
      */
-    fun advance() {
-        val current = _state.value
-        if (current !is State.Running) return
-
-        val nextIndex = current.currentIndex + 1
-        if (nextIndex >= current.steps.size) {
-            Log.i(TAG, "Guide COMPLETE — all ${current.steps.size} steps done")
-            _state.value = State.Idle
-            return
+    fun stopNavigation() {
+        postToMain {
+            if (!isNavigating) {
+                Log.d(TAG, "stopNavigation() — no active session, no-op")
+                return@postToMain
+            }
+            isNavigating    = false
+            targetPackage   = ""
+            pathSteps       = emptyList()
+            currentIndex    = 0
+            prevStep        = null
+            currStep        = ""
+            nextStep        = null
+            lastCorrectStep = null
+            hud.hide()
+            Log.i(TAG, "Navigation STOPPED — state reset, HUD hidden")
         }
-
-        _state.value = current.copy(currentIndex = nextIndex)
-        Log.i(TAG, "Step ${nextIndex + 1}/${current.steps.size}: \"${current.steps[nextIndex]}\"")
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Screen event — called by UiTreeAccessibilityService
+    // ══════════════════════════════════════════════════════════════════════════
 
     /**
-     * Instantly stop any running guide: resets to [State.Idle].
-     * This is the single source of truth for "clear active highlights" —
-     * any future highlight-rendering consumer observes [state] and removes
-     * its overlay the moment this flips back to Idle.
+     * Evaluate a screen-change event against the active navigation session.
+     *
+     * Called from [UiTreeAccessibilityService] on every TYPE_WINDOW_STATE_CHANGED
+     * event that passes the main filter.
+     *
+     * @param activePackage     Package name of the foreground window, e.g. "com.android.settings"
+     * @param currentScreenName Human-readable screen name resolved by GraphStateMachine,
+     *                          e.g. "System", "About phone", "MainActivity"
      */
-    fun stop() {
-        val wasRunning = _state.value is State.Running
-        _state.value = State.Idle
-        if (wasRunning) {
-            Log.i(TAG, "Guide STOPPED — state reset, highlights cleared")
+    fun onScreenChanged(activePackage: String, currentScreenName: String) {
+        if (!isNavigating) return    // fast exit — no session active
+
+        Log.d(TAG, "onScreenChanged: pkg='$activePackage' screen='$currentScreenName' " +
+                   "| navigating toward '$targetPackage' step[$currentIndex]='$currStep'")
+
+        postToMain {
+            if (!isNavigating) return@postToMain  // re-check after dispatch
+
+            // ── 1. Package check ──────────────────────────────────────────────
+            val pkgMatches = activePackage.contains(targetPackage, ignoreCase = true) ||
+                             targetPackage.contains(activePackage.substringAfterLast('.'), ignoreCase = true)
+
+            if (!pkgMatches) {
+                Log.d(TAG, "Package mismatch: active='$activePackage', expected='$targetPackage'")
+                hud.updateHud(
+                    stepHeader        = "WRONG APP",
+                    actionInstruction = "Open ${targetPackage.replaceFirstChar { it.uppercase() }} or return to Home",
+                    subTag            = "pkg-mismatch"
+                )
+                return@postToMain
+            }
+
+            val screenNorm = currentScreenName.trim().lowercase()
+            val currNorm   = currStep.trim().lowercase()
+            val nextNorm   = nextStep?.trim()?.lowercase()
+
+            // ── 2. Exact / fuzzy match on currStep ────────────────────────────
+            if (fuzzyMatch(screenNorm, currNorm)) {
+                lastCorrectStep = currStep
+                val stepNum     = currentIndex + 1
+
+                if (nextStep == null) {
+                    // Last step reached — navigation complete
+                    Log.i(TAG, "COMPLETE at step $stepNum/'$currStep'")
+                    hud.updateHud(
+                        stepHeader        = "COMPLETE ✓",
+                        actionInstruction = "You're done!",
+                        subTag            = "complete"
+                    )
+                    isNavigating = false
+                    // Auto-hide after 3 s
+                    mainHandler.postDelayed({ hud.hide() }, 3000L)
+                    return@postToMain
+                }
+
+                Log.d(TAG, "On track at step $stepNum: '$currStep'. Next: '$nextStep'")
+                hud.updateHud(
+                    stepHeader        = "STEP $stepNum OF ${pathSteps.size}",
+                    actionInstruction = "Look for '${nextStep!!}'",
+                    subTag            = "on-track"
+                )
+                return@postToMain
+            }
+
+            // ── 3. Forward leap — user is already at nextStep ─────────────────
+            if (nextNorm != null && fuzzyMatch(screenNorm, nextNorm)) {
+                prevStep    = currStep
+                currentIndex++
+                currStep    = pathSteps[currentIndex]
+                nextStep    = pathSteps.getOrNull(currentIndex + 1)
+                lastCorrectStep = currStep
+
+                val stepNum = currentIndex + 1
+
+                if (nextStep == null) {
+                    // Forward leap landed on last step
+                    Log.i(TAG, "Forward leap to FINAL step $stepNum/'$currStep'")
+                    hud.updateHud(
+                        stepHeader        = "COMPLETE ✓",
+                        actionInstruction = "You're done!",
+                        subTag            = "leap-complete"
+                    )
+                    isNavigating = false
+                    mainHandler.postDelayed({ hud.hide() }, 3000L)
+                    return@postToMain
+                }
+
+                Log.d(TAG, "Advanced (leap) to step $stepNum: '$currStep'  next='$nextStep'")
+                hud.updateHud(
+                    stepHeader        = "STEP $stepNum OF ${pathSteps.size}",
+                    actionInstruction = "'$nextStep'",
+                    subTag            = "leap"
+                )
+                return@postToMain
+            }
+
+            // ── 4. Off-track — correct package, unknown screen ────────────────
+            val lcs = lastCorrectStep
+            if (lcs != null) {
+                Log.d(TAG, "Diverged to '$currentScreenName'. Backtrack to '$lcs'")
+                hud.updateHud(
+                    stepHeader        = "OFF TRACK",
+                    actionInstruction = "Press Back to return to '$lcs'",
+                    subTag            = "off-track"
+                )
+            } else {
+                Log.d(TAG, "Off-track at '$currentScreenName' (no correct step yet)")
+                hud.updateHud(
+                    stepHeader        = "OFF TRACK",
+                    actionInstruction = "Return to Home / Main Screen",
+                    subTag            = "off-track-no-anchor"
+                )
+            }
         }
     }
 
-    /** Convenience accessor: the step name currently being guided, or null if idle. */
-    fun currentStepOrNull(): String? =
-        (_state.value as? State.Running)?.let { it.steps.getOrNull(it.currentIndex) }
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Legacy compatibility (used by FloatingOverlayService Stop button)
+    // ══════════════════════════════════════════════════════════════════════════
 
-    fun isRunning(): Boolean = _state.value is State.Running
+    /** Alias for [stopNavigation] — kept so existing call sites compile. */
+    fun stop() = stopNavigation()
+
+    /** True while a session is active. */
+    fun isRunning(): Boolean = isNavigating
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Matching
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Fuzzy match between the screen name reported by the accessibility service
+     * and the expected step name from the resolved path.
+     *
+     * Strategy (in priority order):
+     *   1. Exact equality (case-insensitive already normalised by caller)
+     *   2. One contains the other (handles "About phone" inside "System > About phone" labels)
+     *   3. Any single word in `expected` appears in `actual` when expected.length < 15
+     *      (handles abbreviated OEM screen labels)
+     */
+    private fun fuzzyMatch(actual: String, expected: String): Boolean {
+        if (actual == expected) return true
+        if (actual.contains(expected) || expected.contains(actual)) return true
+        // Word-level fallback for short identifiers
+        if (expected.length < 15) {
+            val words = expected.split(" ", "_", "-").filter { it.length > 2 }
+            if (words.isNotEmpty() && words.all { actual.contains(it) }) return true
+        }
+        return false
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Utility
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private fun postToMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) block()
+        else mainHandler.post(block)
+    }
 }

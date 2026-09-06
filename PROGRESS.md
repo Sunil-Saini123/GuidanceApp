@@ -148,17 +148,73 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 
 ---
 
-## Track 4 — State Machine & Visual Guidance Engine
+## Track 4 — Navigation State Machine & Visual Guidance Engine
 
-> Goal: Receive a resolved path and walk the user through it step-by-step,
-> verifying each transition via live accessibility events.
+> Goal: Receive a resolved path (from any tier) and walk the user through it step-by-step,
+> with a persistent on-screen HUD, real-time step advancement via accessibility events,
+> and dynamic self-healing when the user goes off-track.
 
-- [-] **`NavigationStateMachine`** (old) — Called from `FloatingOverlayService` (`NavigationStateMachine.start(path)` and `.stop()`), but is a Phase 7 **stub** with no real step-tracking or UI feedback logic
-- [ ] **Step-by-step path display** — Show the current step prominently in the bubble panel; advance automatically when the accessibility service detects the expected navigation event
-- [ ] **Step verification via `UiTreeAccessibilityService`** — Cross-check incoming `TYPE_WINDOW_STATE_CHANGED` events against expected next screen in path; mark step complete
-- [ ] **Element highlight / tap guidance** — Optional: visually indicate which element to tap using an overlay highlight at Micro-level bounds
-- [ ] **Backtrack handling** — If user navigates wrong, detect divergence and re-route or alert
-- [ ] **Completion signal** — When final step matched, dismiss guide and show success in bubble
+### Track 4 Checklist Key
+| Symbol | Meaning |
+|--------|---------|
+| `[x]` | Implemented and wired into the live pipeline |
+| `[/]` | In progress / partially wired |
+| `[ ]` | Architectural requirement — no code exists yet |
+
+---
+
+### Stage 1 — Top Floating Pill HUD (UI overlay, positioning, styling, update API) ✅ DONE (+ Bug-fixed)
+
+- [x] **`NavigationHudOverlay.kt`** — Dedicated overlay controller; `TYPE_APPLICATION_OVERLAY`; `FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCH_MODAL | FLAG_LAYOUT_IN_SCREEN`
+- [x] **Positioning** — `Gravity.TOP | Gravity.CENTER_HORIZONTAL`; 36dp top margin; `WRAP_CONTENT` × `WRAP_CONTENT` auto-sizes to text
+- [x] **Visual styling** — Translucent dark-charcoal pill; 1dp `#33FFFFFF` border; 16dp corner radius; 16dp H-pad / 10dp V-pad
+- [x] **Typography** — `stepLabel` (11sp bold uppercase `#A0A0A0`); `actionLabel` (14sp bold `#FFFFFF`)
+- [x] **`updateHud(stepHeader, actionInstruction, subTag?)`** — Sets text + calls `show()` in one atomic `postToMain` block
+- [x] **`show()` / `hide()` / `destroy()`** — Thread-safe; lifecycle-safe
+- [x] **`NavigationStateMachine.attachHud()`** — Wired in `FloatingOverlayService.onCreate()` so Stage 2 can drive the HUD
+- [x] **Bug Fix 1 — Blank text:** Views built in `init{}` (not lazily) so `stepLabel`/`actionLabel` refs are always non-null when `updateHud()` assigns text
+- [x] **Bug Fix 2 — Panel not closing:** `hidePanelAndRestoreIdle()` called on Tier 1/2/3 path success; panel stays open only on failure (error display)
+- [x] **Bug Fix 3 — State loss:** Path handed to `NavigationStateMachine.startNavigation()` (Service-singleton); not held in coroutine-local variables
+- [x] **Bug Fix 4 — Inconsistent show/hide:** `hudContainer.isAttachedToWindow` (real system state) used instead of `@Volatile isAttached` flag to prevent stale-flag races after `WindowManager` exceptions
+
+---
+
+### Stage 2 — Core State Machine Loop (Prev / Curr / Next tracking & `is_correct_page` check) ✅ DONE
+
+- [x] **`NavigationStateMachine` rewritten** — Full singleton; replaces Phase 7 stub
+- [x] **State variables** — `targetPackage`, `pathSteps: List<String>`, `currentIndex`, `prevStep`, `currStep`, `nextStep`, `lastCorrectStep`, `isNavigating`
+- [x] **`startNavigation(resolvedPath, pkgTarget)`** — Initialises all state, logs full step sequence, calls `hud.updateHud("STEP 1 OF N", currStep)` + `hud.show()`
+- [x] **`stopNavigation()` / `stop()`** — Resets all pointers, calls `hud.hide()`; legacy alias kept for existing call sites
+- [x] **`attachHud(overlay)`** — Called by `FloatingOverlayService.onCreate()` to wire HUD into the singleton
+- [x] **`onScreenChanged(activePackage, currentScreenName)`** — 5-branch alignment decision tree:
+  - Branch 1 — Package mismatch → `"WRONG APP"` HUD
+  - Branch 2 — Fuzzy match on `currStep` → `"STEP N OF M — Look for '$nextStep'"` HUD
+  - Branch 3 — Forward leap (`screenName == nextStep`) → advance index → update HUD
+  - Branch 4 — Last step reached → `"COMPLETE ✓"` HUD + auto-hide after 3 s
+  - Branch 5 — Off-track in correct app → `"OFF TRACK — Press Back to '$lastCorrectStep'"` HUD
+- [x] **`fuzzyMatch(actual, expected)`** — 3-level: exact → contains → word-level (handles OEM screen label abbreviations)
+- [x] **Event binding in `UiTreeAccessibilityService`** — Every `TYPE_WINDOW_STATE_CHANGED` (NAVIGATION) event calls `NavigationStateMachine.onScreenChanged(pkg, rootClass)`; guarded by `isNavigating` for zero-cost fast-exit when idle
+- [x] **All state mutations on main thread** — `postToMain` wrapper ensures thread safety
+
+---
+
+### Stage 3 — Element Finder Pipeline (`clean_page` → graph scope → `temp_tree` → scroll directive) 🔜
+
+- [ ] **Element lookup in `clean_page.json`** — For the current step's action label, scan `clean_page.json` to find a matching element node (by text, contentDescription, or resource_id fragment)
+- [ ] **Graph-scope narrowing** — Cross-reference `nav_graph.db` Micro-level element records (when available) to prefer stable resource-id fingerprints over fuzzy name matching
+- [ ] **`temp_tree.json` fallback** — If `clean_page.json` has no match, scan `temp_tree.json` raw dump (broader, less filtered)
+- [ ] **Scroll directive** — If the target element is not in the current viewport, emit a scroll instruction: `navigationHud.updateHud("STEP N OF M", "Scroll down to find '${label}'")`
+- [ ] **Highlight bounds for Stage 4** — Record the found node's `bounds` for the future on-screen highlight overlay
+
+---
+
+### Stage 4 — Groq Dynamic Healing & Firestore Crowd-Sourcing 🔜
+
+- [ ] **Off-track auto-heal** — When `OffTrack` state is detected for > 2 navigations, invoke Groq re-route with fresh `clean_page.json` context; update path and resume from corrected step
+- [ ] **`device_paths` crowd-sourcing** — On guide `Complete`, if path was AI-generated (Tier 3), prompt user to confirm ("Did this work?") and persist to `CloudPathDatabase.addEntry()` for Tier 2 next time (already partially implemented; tie into state machine completion signal)
+- [ ] **Healing HUD status** — While Groq re-routes, show `navigationHud.updateHud("AI HEALING", "Finding alternate path…")`
+- [ ] **Micro-level element highlight overlay** — Draw a translucent coloured rectangle over the target `AccessibilityNodeInfo` bounds using a second `TYPE_APPLICATION_OVERLAY` window
+
 
 ---
 
