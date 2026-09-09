@@ -243,14 +243,41 @@ Step D  NavigationStateMachine.start(path)    ❌ STUB — old Phase 7 placehold
 
 ### Stage 4 — Groq Dynamic Healing & Firestore Crowd-Sourcing ✅ DONE
 
-- [x] **Off-track auto-heal** — When Element Finder hits a dead end, invoke Groq re-route with fresh `clean_page.json` context; update path and resume from corrected step (detour, backtrack, or synonym).
 - [x] **Secure API Endpoint Migration** — Removed hardcoded API keys and routed Gemini and Groq requests through the Vercel proxy backend.
-- [x] **`device_paths` crowd-sourcing** — On destination reached, prompt user to confirm ("Did this work?") with YES/NO buttons. If YES, persist to `CloudPathDatabase.addEntry()`. If NO, trigger explicit healing.
-- [x] **Healing HUD status** — While Groq re-routes, show `navigationHud.updateHud("AI HEALING", "Finding alternate path…")`
+- [x] **`device_paths` crowd-sourcing** — On destination reached, prompt user to confirm ("Did this work?") with YES/NO buttons. If YES, persist to `CloudPathDatabase.addEntry()`. If NO, show retry prompt.
 - [x] **Micro-level element highlight overlay** — Deferred (not part of text-based HUD instruction set).
-
+- [~] **Off-track Groq auto-heal** — **TEMPORARILY DISABLED** per spec. Groq healing caused "HEALED: Press Back" hallucinations. The dead-end path now shows "Manually locate '[Step]'" instead. Will be re-enabled once the 3-layer search + scroll loop is proven stable.
 
 ---
+
+### Pipeline Intelligence Overhaul ✅ DONE
+
+> Moved "intelligence" upstream so every downstream component uses clean, human-readable data instead of raw Android identifiers.
+
+- [x] **`MainFilter.kt` — Friendly app names from PackageManager** — `resolveAppLabel()` converts `com.android.deskclock` → `"Clock"`, `com.google.android.gm` → `"Gmail"` etc. at the extraction stage. `FilterResult.Passed` now carries `appLabel`.
+- [x] **Home Screen universal detection** — `MainFilter.apply()` receives the launcher package; any event from the launcher immediately returns `"Home"` as the semantic root, regardless of OEM package name.
+- [x] **`UiTreeAccessibilityService.kt`** — Passes `applicationContext` and `launcherPackage` to `MainFilter`. `onScreenChanged()` now called with `passed.appLabel` as 3rd argument.
+- [x] **`NavigationStateMachine.kt` — PM-based `isTargetApp()`** — 3-layer match: package string → pre-supplied PM label → fresh PM lookup. `appRootFuzzyMatch()` compares against `targetAppLabel` ("Clock") not raw package suffix ("deskclock").
+- [x] **Fuzzy token matching** — `fuzzyMatch()` tokenises on `-`, ` `, `_`: `"Clock-Alarm"` matches step `"Clock"`.
+- [x] **Breadcrumb Trail HUD** — `NavigationHudOverlay` shows `"Home → [Clock] → Alarm"` on Line 1, bold action on Line 2, dim context on Line 3.
+- [x] **Developer Debug Buttons** — Control panel gains "Clear JSONs", "Clear Graph", "Reset State" buttons at the bottom.
+- [x] **`QUERY_ALL_PACKAGES` permission** — Added to `AndroidManifest.xml` so PM can resolve all installed app labels on Android 11+.
+
+---
+
+### Stage 5 — Stable Core Loop (Tri-State Tracker) ✅ DONE
+
+> Rewired the state machine to exactly match the flowchart: Prev/Curr/Next tri-state, Decision Tree A (app alignment), Decision Tree B (element search), scroll re-trigger, manual locate fallback.
+
+- [x] **Tri-State Tracker (Prev/Curr/Next)** — Variables update on every screen change, click, and scroll. `prevStep` = last confirmed correct step, `currStep` = current target screen, `nextStep` = element to tap.
+- [x] **Decision Tree A — App & Screen Alignment** — Wrong app → "Open [App] or return to Home". On Home when shouldn't be → "ON HOME: Open [App]". Off-track in correct app → element search fires rather than "Press Back".
+- [x] **Decision Tree B — 3-Layer Element Search** — `ElementFinderEngine` searches: (1) `clean_page.json`, (2) `nav_graph.db`, (3) `temp_tree.json`. If found: "Tap '[Next]'". If not found + scrollable container: "Scroll to find '[Next]'". If not found + no scrollable: "Manually locate '[Next]'" — **no Groq fallback**.
+- [x] **Auto-advance on next-step pre-detection** — If `currStep` is already gone from screen but `nextStep` is visible, the state machine auto-advances without user intervention.
+- [x] **Destination verification** — Final step shows "Arrived at destination. Did we find it?" YES = cloud save. NO = "Try again" (Groq re-enabled here later).
+- [x] **Groq healing disabled** — `triggerHealer()` removed from `NavigationStateMachine`. `GroqHealer` import removed. Will be re-introduced as an optional overlay once core loop is stable.
+
+---
+
 
 ## Output Files (on device)
 

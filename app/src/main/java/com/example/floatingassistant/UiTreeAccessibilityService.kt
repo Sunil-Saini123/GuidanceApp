@@ -112,8 +112,16 @@ class UiTreeAccessibilityService : AccessibilityService() {
                     ?: ""
                 if (label.isNotEmpty()) {
                     GraphStateMachine.setLastClickedLabel(pkg, label)
+
+                    // Notify the navigation engine so it can advance when the
+                    // user taps a menu item / bottom-sheet option that matches the
+                    // current path step (overlays never fire WINDOW_STATE_CHANGED).
+                    if (NavigationStateMachine.isNavigating) {
+                        NavigationStateMachine.onElementTapped(label, pkg)
+                    }
                 }
             }
+
 
             // ── Navigation: immediate ──────────────────────────────────────────
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
@@ -175,18 +183,23 @@ class UiTreeAccessibilityService : AccessibilityService() {
         // *event origin* node, not necessarily the full window root.
         val rootNode = trustedRoot ?: event.source ?: return
 
-        val filterResult = MainFilter.apply(activePackage, rootNode, this.packageName, event.className?.toString())
+        val launcherPkg = NavigationStateMachine.getDefaultLauncherPackage()
+
+        val filterResult = MainFilter.apply(
+            context        = applicationContext,
+            packageName    = activePackage,
+            rootNode       = rootNode,
+            ownPackage     = this.packageName,
+            launcherPackage = launcherPkg,
+            eventClassName = event.className?.toString()
+        )
         if (filterResult !is MainFilter.FilterResult.Passed) {
             return
         }
         val passed = filterResult
 
-        val launcherPkg = NavigationStateMachine.getDefaultLauncherPackage()
-        val rootClass = if (launcherPkg != null && activePackage.startsWith(launcherPkg)) {
-            "Home"
-        } else {
-            passed.semanticRootName
-        }
+        // semanticRootName is now always human-readable: "Clock-Alarm", "Gmail-Inbox", "Home"
+        val rootClass = passed.semanticRootName
 
         // Phase 1 — synchronous tree traversal (must complete before recycle)
         try {
@@ -204,11 +217,11 @@ class UiTreeAccessibilityService : AccessibilityService() {
         // Phase 2 + 3 — on IO thread
         triggerPipeline(passed.packageName, rootClass, "NAVIGATION")
 
-        // ── Track 4 / Stage 2 + 2.5: Notify alignment tracker ────────────────
-        // passed.packageName is the filtered (authoritative) package name.
-        // rootClass is the human-readable screen title.
+        // ── Track 4 / Stage 2+: Notify alignment tracker ────────────────────
+        // Pass both the package name and the human-readable app label so the state
+        // machine can do PM-level matching without re-querying PM itself.
         if (NavigationStateMachine.isNavigating) {
-            NavigationStateMachine.onScreenChanged(passed.packageName, rootClass)
+            NavigationStateMachine.onScreenChanged(passed.packageName, rootClass, passed.appLabel)
         }
     }
 
@@ -225,7 +238,14 @@ class UiTreeAccessibilityService : AccessibilityService() {
             return
         }
 
-        val filterResult = MainFilter.apply(actualPackage, rootNode, this.packageName, null)
+        val filterResult = MainFilter.apply(
+            context         = applicationContext,
+            packageName     = actualPackage,
+            rootNode        = rootNode,
+            ownPackage      = this.packageName,
+            launcherPackage = NavigationStateMachine.getDefaultLauncherPackage(),
+            eventClassName  = null
+        )
         if (filterResult !is MainFilter.FilterResult.Passed) {
             return
         }

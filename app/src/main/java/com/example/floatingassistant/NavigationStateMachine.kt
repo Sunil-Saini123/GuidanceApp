@@ -7,13 +7,11 @@ import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.example.floatingassistant.pathgenerator.GroqHealer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 
 object NavigationStateMachine {
 
@@ -31,6 +29,7 @@ object NavigationStateMachine {
         private set
 
     private var targetPackage: String = ""
+    private var targetAppLabel: String = ""  // PM-resolved label, e.g. "Clock"
     private var initialTask: String = ""
     private var pathSteps: MutableList<String> = mutableListOf()
     private var currentIndex: Int = 0
@@ -52,58 +51,127 @@ object NavigationStateMachine {
         if (resolvedPath.isEmpty()) return
         postToMain {
             targetPackage = pkgTarget.trim().lowercase()
+            // Pre-resolve the human-readable label for this target package
+            targetAppLabel = MainFilter.resolveAppLabel(context, pkgTarget).also {
+                Log.i(TAG, "Target resolved: pkg='$targetPackage' label='$it'")
+            }
             initialTask = exactTask
             pathSteps = resolvedPath.toMutableList()
             lastCorrectStep = null
             isNavigating = true
 
-            Log.i(TAG, "Navigation STARTED - ${pathSteps.size} steps toward '$targetPackage'")
-
-            val activePkg = lastKnownActivePackage
-            val alreadyIn = activePkg.isNotEmpty() && isTargetApp(activePkg, targetPackage, pathSteps.firstOrNull())
-            val launcherPkg = getDefaultLauncherPackage()
-
-            val startIdx = if (alreadyIn) {
-                var idx = 0
-                while (idx < pathSteps.size) {
-                    val stepNorm = pathSteps[idx].trim().lowercase()
-                    val isHomeStep = stepNorm == "home" || (launcherPkg != null && launcherPkg.contains(stepNorm))
-                    val isAppRootStep = appRootFuzzyMatch(stepNorm, targetPackage)
-                    if (!isHomeStep && !isAppRootStep) break
-                    idx++
+            // ── First-run home marking ─────────────────────────────────────────
+            // On the very first launch ever, if the path starts with Home, prompt
+            // the user to go to their home screen so we can reference it later.
+            val prefs = context.getSharedPreferences("nav_prefs", android.content.Context.MODE_PRIVATE)
+            val homeEverMarked = prefs.getBoolean("home_marked", false)
+            if (!homeEverMarked) {
+                prefs.edit().putBoolean("home_marked", true).apply()
+                val firstStep = resolvedPath.firstOrNull()?.trim()?.lowercase()
+                if (firstStep == "home" || firstStep == null) {
+                    hud.updateHud(
+                        stepHeader        = "FIRST TIME SETUP",
+                        actionInstruction = "Go to your home screen to begin",
+                        breadcrumb        = null,
+                        contextText       = "Press the Home button on your phone",
+                        subTag            = "first-run-home"
+                    )
+                    hud.show()
+                    // Don't start the main navigation yet — wait for the next onScreenChanged
+                    // which will detect the launcher and fire the real start sequence.
+                    return@postToMain
                 }
-                idx.coerceAtMost(pathSteps.size - 1)
-            } else {
-                0
+            }
+
+            Log.i(TAG, "Navigation STARTED — ${pathSteps.size} steps toward '$targetAppLabel' ($targetPackage)")
+
+            val activePkg     = lastKnownActivePackage
+            val launcherPkg   = getDefaultLauncherPackage()
+            val isOnLauncher  = launcherPkg != null && activePkg.startsWith(launcherPkg)
+            val alreadyInApp  = activePkg.isNotEmpty() && isTargetApp(activePkg, null)
+
+            // ── Determine start position ──────────────────────────────────────
+            val startIdx: Int
+            val startHeader: String
+            val startInstruction: String
+
+            when {
+                alreadyInApp -> {
+                    // User is in the correct app. Use the CURRENT SCREEN NAME to
+                    // find where in the path they already are — then start from
+                    // the NEXT step after that position.
+                    val screenNorm = activeScreenName.trim().lowercase()
+                    val nearest = if (screenNorm.isNotEmpty()) findNearestStep(screenNorm) else null
+                    val nearestIdx = nearest?.first ?: -1
+
+                    startIdx = when {
+                        // Screen matches a known step — start from the step AFTER it
+                        nearestIdx >= 0 -> {
+                            Log.i(TAG, "Fast-forward: screen='$activeScreenName' matches step[$nearestIdx]='${nearest!!.second}' — starting from ${nearestIdx + 1}")
+                            (nearestIdx + 1).coerceAtMost(pathSteps.size - 1)
+                        }
+                        // Screen unrecognized — skip Home and AppRoot steps only
+                        else -> {
+                            var idx = 0
+                            while (idx < pathSteps.size) {
+                                val sn = pathSteps[idx].trim().lowercase()
+                                val isHome    = sn == "home" || (launcherPkg != null && launcherPkg.contains(sn))
+                                val isAppRoot = appRootFuzzyMatch(sn)
+                                if (!isHome && !isAppRoot) break
+                                idx++
+                            }
+                            idx.coerceAtMost(pathSteps.size - 1)
+                        }
+                    }
+
+                    startHeader      = "STEP ${startIdx + 1} OF ${pathSteps.size}"
+                    startInstruction = "Look for '${pathSteps[startIdx]}'"
+                }
+
+                isOnLauncher -> {
+                    // User is on the home screen
+                    startIdx         = 0
+                    startHeader      = "ON HOME"
+                    startInstruction = "Open $targetAppLabel"
+                }
+
+                else -> {
+                    // User is in a DIFFERENT app entirely
+                    startIdx         = 0
+                    startHeader      = "WRONG APP"
+                    startInstruction = "Close this and open $targetAppLabel"
+                }
             }
 
             currentIndex = startIdx
-            prevStep = if (startIdx > 0) pathSteps[startIdx - 1] else null
-            currStep = pathSteps[currentIndex]
-            nextStep = pathSteps.getOrNull(currentIndex + 1)
+            prevStep     = if (startIdx > 0) pathSteps[startIdx - 1] else null
+            currStep     = pathSteps[currentIndex]
+            nextStep     = pathSteps.getOrNull(currentIndex + 1)
 
-            val ctxText = "Current: $currStep | Next: ${nextStep ?: "None"}"
-            
-            val isLauncherNow = launcherPkg != null && activePkg.startsWith(launcherPkg)
-            val header = if (isLauncherNow) "ON HOME" else if (!alreadyIn) "WRONG APP" else "STEP ${currentIndex + 1} OF ${pathSteps.size}"
-            val instruction = if (!alreadyIn) "Open ${targetPackage.replaceFirstChar { it.uppercase() }}" else "Look for '$currStep'"
-            
+            Log.i(TAG, "Navigation READY: startIdx=$startIdx currStep='$currStep' nextStep='$nextStep'")
+
             hud.updateHud(
-                stepHeader = header,
-                actionInstruction = instruction,
-                contextText = ctxText,
-                subTag = if (startIdx > 0) "fast-forwarded" else "start"
+                stepHeader        = startHeader,
+                actionInstruction = startInstruction,
+                breadcrumb        = buildBreadcrumb(),
+                contextText       = if (alreadyInApp) "Next: ${nextStep ?: "Done"}" else null,
+                subTag            = if (startIdx > 0) "smart-fast-forward" else "start"
             )
             hud.show()
-            triggerSearchPipeline(currStep, activePkg, activeScreenName)
+
+            if (alreadyInApp) {
+                triggerSearchPipeline(currStep, activePkg, activeScreenName)
+            }
         }
     }
+
 
     fun stopNavigation() {
         postToMain {
             if (!isNavigating) return@postToMain
             isNavigating = false
             targetPackage = ""
+            targetAppLabel = ""
             pathSteps = mutableListOf()
             currentIndex = 0
             prevStep = null
@@ -114,103 +182,160 @@ object NavigationStateMachine {
             hud.hide()
         }
     }
-    
+
     fun stop() = stopNavigation()
     fun isRunning() = isNavigating
 
-    fun onScreenChanged(activePackage: String, currentScreenName: String) {
+    /**
+     * Called by UiTreeAccessibilityService on every TYPE_VIEW_CLICKED event.
+     *
+     * This is the PRIMARY advancement signal for overlay / bottom-sheet screens
+     * (e.g. WhatsApp Settings sliding in as a fragment, 3-dot menus, dialogs).
+     * These screens never fire TYPE_WINDOW_STATE_CHANGED, so onScreenChanged()
+     * can't detect them. But we DO get a click event when the user taps an item.
+     *
+     * If [tappedLabel] fuzzy-matches [currStep], we treat it as "user completed
+     * this step" and advance the state machine forward.
+     *
+     * A short de-dupe guard prevents double-advancing if both onElementTapped
+     * and onScreenChanged fire for the same action (e.g. a full-screen transition
+     * that also has a click event).
+     */
+    fun onElementTapped(tappedLabel: String, fromPackage: String) {
+        if (!isNavigating) return
+
+        val tapNorm  = tappedLabel.trim().lowercase()
+        val currNorm = currStep.trim().lowercase()
+
+        // Only act if the tap matches the current step
+        if (!fuzzyMatch(tapNorm, currNorm)) return
+
+        // Ignore taps from our own overlay or system UI
+        if (fromPackage == context.packageName) return
+        if (fromPackage.startsWith("com.android.systemui")) return
+
+        Log.i(TAG, "onElementTapped: tapped='$tappedLabel' matches currStep='$currStep' — advancing")
+
+        postToMain {
+            if (!isNavigating) return@postToMain
+            // Guard: if we already advanced past this step (e.g. screen changed first), skip
+            if (!fuzzyMatch(currStep.trim().lowercase(), currNorm)) return@postToMain
+
+            lastCorrectStep = currStep
+            advanceStep(currentIndex)
+        }
+    }
+
+    /**
+     * Called from UiTreeAccessibilityService on every WINDOW_STATE_CHANGED event.
+     *
+     * @param activePackage  Raw Android package name, e.g. "com.android.deskclock"
+     * @param currentScreenName  Human-readable semantic root, e.g. "Clock-Alarm"
+     * @param activeAppLabel     PM-resolved display name, e.g. "Clock" (may be empty)
+     */
+    fun onScreenChanged(
+        activePackage: String,
+        currentScreenName: String,
+        activeAppLabel: String = ""
+    ) {
         if (!isNavigating) return
         lastKnownActivePackage = activePackage
 
         postToMain {
             if (!isNavigating) return@postToMain
-            
+
             val launcherPkg = getDefaultLauncherPackage()
             val isLauncherEvent = launcherPkg != null && activePackage.startsWith(launcherPkg)
-            
-            if (isLauncherEvent) {
-                activeScreenName = "Home"
-            } else {
-                activeScreenName = currentScreenName
-            }
 
-            val currStepIsHome = currStep.trim().lowercase() == "home"
-            val inTargetApp = isTargetApp(activePackage, targetPackage, currStep)
+            activeScreenName = if (isLauncherEvent) "Home" else currentScreenName
 
+            val currStepIsHome = currStep.trim().equals("home", ignoreCase = true)
+            // Use the PM label if available, otherwise fall back to package-level matching
+            val inTargetApp = isTargetApp(activePackage, activeAppLabel.ifBlank { null })
+
+            Log.d(TAG, "Screen: pkg='$activePackage' label='$activeAppLabel' screen='$activeScreenName' | currStep='$currStep' inTarget=$inTargetApp isLauncher=$isLauncherEvent")
+
+            // ── Fast-forward: already in the target app before navigation tapped ──
             if (currentIndex == 0 && inTargetApp && !isLauncherEvent) {
                 var startIdx = 0
                 while (startIdx < pathSteps.size) {
                     val stepNorm = pathSteps[startIdx].trim().lowercase()
                     val isHome = stepNorm == "home" || (launcherPkg != null && launcherPkg.contains(stepNorm))
-                    val isAppRoot = appRootFuzzyMatch(stepNorm, targetPackage)
+                    val isAppRoot = appRootFuzzyMatch(stepNorm)
                     if (!isHome && !isAppRoot) break
                     startIdx++
                 }
                 startIdx = startIdx.coerceAtMost(pathSteps.size - 1)
-                
+
                 if (startIdx > currentIndex) {
                     currentIndex = startIdx
                     prevStep = if (startIdx > 0) pathSteps[startIdx - 1] else null
                     currStep = pathSteps[currentIndex]
                     nextStep = pathSteps.getOrNull(currentIndex + 1)
                     lastCorrectStep = prevStep
-                    
-                    val ctxText = "Current: $currStep | Next: ${nextStep ?: "None"}"
                     hud.updateHud(
-                        stepHeader = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
                         actionInstruction = "Look for '$currStep'",
-                        contextText = ctxText,
-                        subTag = "dynamic-fast-forward"
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Current: $activeScreenName",
+                        subTag            = "dynamic-fast-forward"
                     )
                     triggerSearchPipeline(currStep, activePackage, activeScreenName)
                     return@postToMain
                 }
             }
 
+            // ── Off-app states ─────────────────────────────────────────────────
             if (isLauncherEvent && !currStepIsHome) {
-                val targetName = targetPackage.replaceFirstChar { it.uppercase() }
                 hud.updateHud(
-                    stepHeader = "ON HOME",
-                    actionInstruction = "Open $targetName",
-                    contextText = "Expected: $currStep",
-                    subTag = "on-home-diverged"
-                )
-                return@postToMain
-            } else if (!currStepIsHome && !inTargetApp && !isLauncherEvent) {
-                val targetName = targetPackage.replaceFirstChar { it.uppercase() }
-                val actualAppName = getAppLabel(activePackage) ?: activeScreenName
-                hud.updateHud(
-                    stepHeader = "WRONG APP",
-                    actionInstruction = "Open $targetName or return to Home",
-                    contextText = "Current: $actualAppName | Expected: $targetName",
-                    subTag = "pkg-mismatch"
+                    stepHeader        = "ON HOME",
+                    actionInstruction = "Open $targetAppLabel",
+                    breadcrumb        = buildBreadcrumb(),
+                    contextText       = "Expected: $currStep",
+                    subTag            = "on-home-diverged"
                 )
                 return@postToMain
             }
 
-            val screenNorm = activeScreenName.trim().lowercase()
-            val currNorm = currStep.trim().lowercase()
-            val nextNorm = nextStep?.trim()?.lowercase()
+            if (!currStepIsHome && !inTargetApp && !isLauncherEvent) {
+                val actualName = activeAppLabel.ifBlank { activeScreenName }
+                hud.updateHud(
+                    stepHeader        = "WRONG APP",
+                    actionInstruction = "Open $targetAppLabel or return to Home",
+                    breadcrumb        = buildBreadcrumb(),
+                    contextText       = "Current: $actualName | Expected: $targetAppLabel",
+                    subTag            = "pkg-mismatch"
+                )
+                return@postToMain
+            }
 
+            // ── On-app screen matching ─────────────────────────────────────────
+            val screenNorm = activeScreenName.trim().lowercase()
+            val currNorm   = currStep.trim().lowercase()
+            val nextNorm   = nextStep?.trim()?.lowercase()
+
+            // Home step confirmation
             if (isLauncherEvent && currStepIsHome) {
                 lastCorrectStep = currStep
                 advanceStep(currentIndex)
                 return@postToMain
             }
 
-            val currStepIsAppRoot = appRootFuzzyMatch(currNorm, targetPackage)
-            if (currStepIsAppRoot && inTargetApp) {
+            // App-root step: being in the target app is enough to advance
+            if (appRootFuzzyMatch(currNorm) && inTargetApp) {
                 lastCorrectStep = currStep
                 advanceStep(currentIndex)
                 return@postToMain
             }
 
+            // Exact/fuzzy screen name match for current step
             if (fuzzyMatch(screenNorm, currNorm)) {
                 lastCorrectStep = currStep
                 advanceStep(currentIndex)
                 return@postToMain
             }
 
+            // Skip-ahead: next step matches current screen
             if (nextNorm != null && fuzzyMatch(screenNorm, nextNorm)) {
                 prevStep = currStep
                 currentIndex++
@@ -221,45 +346,198 @@ object NavigationStateMachine {
                 return@postToMain
             }
 
+            // We're in the right app but couldn't match current/next step name.
+            // Before searching for elements, check if the user went BACKWARD
+            // (e.g. navigated to Settings when currStep is Chat Backup).
             if (inTargetApp) {
-                // We are in the correct app! Let's search for the current step (or next step) on this screen.
-                triggerSearchPipeline(currStep, activePackage, activeScreenName)
+                val nearest = findNearestStep(screenNorm)
+                val nearestIdx = nearest?.first ?: -1
+
+                if (nearestIdx in 0 until currentIndex) {
+                    // User is behind — they went back. Guide them forward.
+                    val nearestName = nearest!!.second
+                    val stepsAhead  = currentIndex - nearestIdx
+                    Log.i(TAG, "User went back: at '$nearestName' (idx $nearestIdx), need '$currStep' ($stepsAhead ahead)")
+                    val action = if (stepsAhead == 1)
+                        "Tap '$currStep' to continue"
+                    else
+                        "Return to '$nearestName', then tap '$currStep'"
+                    hud.updateHud(
+                        stepHeader        = "GO FORWARD",
+                        actionInstruction = action,
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "At '$nearestName' | Need: '$currStep'",
+                        subTag            = "went-back"
+                    )
+                } else {
+                    // Screen unrecognized but we're in the right app — hunt for the element
+                    hud.updateHud(
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        actionInstruction = "Look for '$currStep'",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Current: $activeScreenName",
+                        subTag            = "in-app-searching"
+                    )
+                    triggerSearchPipeline(currStep, activePackage, activeScreenName)
+                }
                 return@postToMain
             }
 
-            val lcs = lastCorrectStep
-            if (lcs != null) {
-                hud.updateHud(
-                    stepHeader = "OFF TRACK",
-                    actionInstruction = "Press Back to return to '$lcs'",
-                    contextText = "Current: $activeScreenName | Expected: $currStep",
-                    subTag = "off-track"
-                )
-            } else {
-                val targetName = targetPackage.replaceFirstChar { it.uppercase() }
-                hud.updateHud(
-                    stepHeader = "OFF TRACK",
-                    actionInstruction = "Open $targetName",
-                    contextText = "Current: $activeScreenName | Expected: $currStep",
-                    subTag = "off-track-no-anchor"
-                )
+
+            // ── Nearest-step recovery ──────────────────────────────────────────
+            // Scan ALL path steps and find which one the current screen is
+            // closest to. This gives hyper-specific guidance:
+            //   "You're near 'Settings'. Go back to Settings, then tap 'Chat Backup'."
+            // rather than the generic "Press Back to Home".
+            val nearest = findNearestStep(screenNorm)
+            val nearestName = nearest?.second
+            val nearestIdx  = nearest?.first ?: -1
+
+            when {
+                // User is ON a step that is behind the current position — they went back
+                nearestIdx in 0 until currentIndex && nearestName != null -> {
+                    val stepsAhead = currentIndex - nearestIdx
+                    val action = if (stepsAhead == 1)
+                        "Tap '$currStep' to continue"
+                    else
+                        "Go to '$currStep' (${stepsAhead} steps ahead)"
+                    hud.updateHud(
+                        stepHeader        = "GO FORWARD",
+                        actionInstruction = action,
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "You're at '$nearestName' | Need: '$currStep'",
+                        subTag            = "nearest-step-forward"
+                    )
+                    Log.i(TAG, "Off-track recovery: nearest='$nearestName' idx=$nearestIdx, guiding to currStep='$currStep'")
+                }
+
+                // User is beyond the current step — they skipped ahead
+                nearestIdx > currentIndex && nearestName != null -> {
+                    // Fast-forward to the nearest matched step
+                    Log.i(TAG, "Off-track recovery: user jumped ahead to nearestIdx=$nearestIdx, fast-forwarding")
+                    currentIndex = nearestIdx
+                    prevStep = if (nearestIdx > 0) pathSteps[nearestIdx - 1] else null
+                    currStep = pathSteps[currentIndex]
+                    nextStep = pathSteps.getOrNull(currentIndex + 1)
+                    lastCorrectStep = nearestName
+                    hud.updateHud(
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        actionInstruction = "Look for '$currStep'",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Jumped ahead to '$nearestName'",
+                        subTag            = "nearest-step-jumped"
+                    )
+                    triggerSearchPipeline(currStep, activePackage, activeScreenName)
+                }
+
+                // No close match found — fall back to lastCorrectStep anchor
+                lastCorrectStep != null -> {
+                    hud.updateHud(
+                        stepHeader        = "OFF TRACK",
+                        actionInstruction = "Go back to '${lastCorrectStep}'",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Current: $activeScreenName | Need: $currStep",
+                        subTag            = "off-track-anchor"
+                    )
+                }
+
+                // Completely lost — guide to the app entry point
+                else -> {
+                    hud.updateHud(
+                        stepHeader        = "OFF TRACK",
+                        actionInstruction = "Open $targetAppLabel to restart",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Current: $activeScreenName | Expected: $currStep",
+                        subTag            = "off-track-no-anchor"
+                    )
+                }
             }
         }
     }
+
+    // ── Breadcrumb builder ─────────────────────────────────────────────────────
+
+    /**
+     * Builds a compact breadcrumb string showing past → [current] → next.
+     * Example: "Home → [WhatsApp] → Settings"
+     */
+    private fun buildBreadcrumb(): String {
+        val parts = mutableListOf<String>()
+        if (currentIndex > 0) {
+            parts.add(pathSteps[currentIndex - 1])
+        }
+        parts.add("[${pathSteps.getOrElse(currentIndex) { currStep }}]")
+        val n = nextStep
+        if (n != null) parts.add(n)
+        return parts.joinToString(" → ")
+    }
+
+    // ── Nearest-step finder ────────────────────────────────────────────────────
+
+    /**
+     * Scans every step in [pathSteps] and returns the one whose name best
+     * matches [screenNorm] (lowercase current screen name).
+     *
+     * Scoring (higher = better match):
+     *   3 pts — exact match
+     *   2 pts — one string contains the other
+     *   1 pt  — any shared token (word longer than 2 chars)
+     *   0 pts — no overlap
+     *
+     * Returns Pair(stepIndex, stepName) of the highest-scoring step, or null
+     * if no step scores above 0 (completely unrecognised screen).
+     */
+    private fun findNearestStep(screenNorm: String): Pair<Int, String>? {
+        var bestScore = 0
+        var bestIdx   = -1
+        var bestName  = ""
+
+        pathSteps.forEachIndexed { idx, step ->
+            val stepNorm = step.trim().lowercase()
+            val score = when {
+                stepNorm == screenNorm                            -> 3
+                stepNorm.contains(screenNorm) ||
+                    screenNorm.contains(stepNorm)                -> 2
+                else -> {
+                    // Token overlap: count shared words longer than 2 chars
+                    val stepTokens   = stepNorm.split(" ", "-", "_").filter { it.length > 2 }
+                    val screenTokens = screenNorm.split(" ", "-", "_").filter { it.length > 2 }
+                    val shared = stepTokens.count { tok -> screenTokens.any { it.contains(tok) || tok.contains(it) } }
+                    if (shared > 0) 1 else 0
+                }
+            }
+
+            if (score > bestScore) {
+                bestScore = score
+                bestIdx   = idx
+                bestName  = step
+            }
+        }
+
+        Log.d(TAG, "findNearestStep('$screenNorm') → idx=$bestIdx step='$bestName' score=$bestScore")
+        return if (bestScore > 0) Pair(bestIdx, bestName) else null
+    }
+
+    // ── Step advancement ───────────────────────────────────────────────────────
 
     private fun advanceStep(confirmedIndex: Int) {
         val stepNum = confirmedIndex + 1
 
         if (nextStep == null) {
-            Log.i(TAG, "COMPLETE - step $stepNum/'$currStep' was the last step")
+            Log.i(TAG, "COMPLETE — step $stepNum/'$currStep' was the last step")
             hud.showVerificationPrompt(
-                onYes = {
+                onYes = { hud.resetFocusability(); handleSuccess() },
+                onNo  = {
                     hud.resetFocusability()
-                    handleSuccess()
-                },
-                onNo = {
-                    hud.resetFocusability()
-                    triggerHealer(true)
+                    // Per spec: Groq healing disabled for now — ask user to retry manually
+                    hud.updateHud(
+                        stepHeader        = "NOT FOUND",
+                        actionInstruction = "Try again or restart",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Tap the bubble to submit a new command",
+                        subTag            = "destination-no"
+                    )
+                    isNavigating = false
                 }
             )
             return
@@ -270,145 +548,120 @@ object NavigationStateMachine {
         currStep = pathSteps[currentIndex]
         nextStep = pathSteps.getOrNull(currentIndex + 1)
 
-        val ctxText = "Current: $currStep | Next: ${nextStep ?: "None"}"
         hud.updateHud(
-            stepHeader = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+            stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
             actionInstruction = "Look for '$currStep'",
-            contextText = ctxText,
-            subTag = "on-track"
+            breadcrumb        = buildBreadcrumb(),
+            contextText       = "Next: ${nextStep ?: "Done"}",
+            subTag            = "on-track"
         )
-        
+
         triggerSearchPipeline(currStep, lastKnownActivePackage, activeScreenName)
     }
 
+    // ── Element search pipeline ────────────────────────────────────────────────
+
     private fun triggerSearchPipeline(targetStep: String, activePkg: String, activeScreen: String) {
         if (!::elementFinder.isInitialized) return
-        
+
         stateMachineScope.launch(Dispatchers.IO) {
-            delay(400) 
+            delay(400)
             if (!isNavigating) return@launch
-            
-            // Search for current step
+
             val result = elementFinder.findElement(targetStep, activePkg, activeScreen, prevStep ?: "")
             currentTargetBounds = result.bounds
-            
+
             if (result.found) {
                 postToMain {
                     if (!isNavigating) return@postToMain
                     hud.updateHud(
-                        stepHeader = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
                         actionInstruction = "Tap '$targetStep'",
-                        contextText = "Current: $activeScreenName | Next: ${nextStep ?: "None"}",
-                        subTag = "target-found"
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Found on screen",
+                        subTag            = "target-found"
                     )
                 }
                 return@launch
             }
-            
-            // If current step is missing, check if we accidentally advanced to the NEXT step already
-            val nStep = nextStep
-            if (nStep != null) {
-                val nextResult = elementFinder.findElement(nStep, activePkg, activeScreen, targetStep)
-                if (nextResult.found) {
-                    Log.i(TAG, "Current step '$targetStep' missing but next step '$nStep' found! Advancing.")
-                    postToMain {
-                        if (!isNavigating) return@postToMain
-                        lastCorrectStep = targetStep
-                        advanceStep(currentIndex)
-                    }
-                    return@launch
-                }
-            }
-            
+
+
+            // ── IMPORTANT: Do NOT auto-advance here based on next-step visibility.
+            // Advancement is ONLY driven by onScreenChanged() when the screen name
+            // matches a path step. Auto-advancing from the search pipeline caused
+            // a chain reaction that skipped all steps to the last one.
+            //
+            // If the current step isn't visible, build a combined hint so the user
+            // can take 1–2 actions in one go.
+
             postToMain {
                 if (!isNavigating) return@postToMain
-                
-                val hasScrollable = elementFinder.hasScrollableContainer()
-                if (hasScrollable) {
-                    Log.i(TAG, "Target missing, scrollable container found. Prompting user to scroll.")
+                val nStep = nextStep
+                if (elementFinder.hasScrollableContainer()) {
                     hud.updateHud(
-                        stepHeader = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
                         actionInstruction = "Scroll to find '$targetStep'",
-                        contextText = "Current: $activeScreenName | Next: ${nextStep ?: "None"}",
-                        subTag = "scroll-directive"
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Not visible yet",
+                        subTag            = "scroll-directive"
+                    )
+                } else if (nStep != null) {
+                    // Combined 2-step hint: find the current element, then immediately tap next
+                    val combinedHint = buildCombinedHint(targetStep, nStep)
+                    hud.updateHud(
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        actionInstruction = combinedHint,
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Not found — try combined action",
+                        subTag            = "combined-hint"
                     )
                 } else {
-                    Log.i(TAG, "Target missing, dead end. Stage 4 Groq Healing needed.")
+                    // Last step and not found — keep it simple
                     hud.updateHud(
-                        stepHeader = "AI HEALING",
-                        actionInstruction = "Finding alternate path…",
-                        contextText = "Current: $targetStep | Next: ${nextStep ?: "None"}",
-                        subTag = "healing"
-                    )
-                    triggerHealer(false)
-                }
-            }
-        }
-    }
-    
-    private fun triggerHealer(blacklistedFailedSequence: Boolean) {
-        stateMachineScope.launch(Dispatchers.IO) {
-            val cleanPageStr = try { File(context.filesDir, "clean_page.json").readText() } catch (e: Exception) { "{}" }
-            
-            val failedSeq = if (blacklistedFailedSequence) pathSteps else pathSteps.take(currentIndex + 1)
-            
-            val newSubPath = GroqHealer.requestHealing(
-                context = context,
-                targetPackage = targetPackage,
-                initialIntent = initialTask,
-                failedSequence = failedSeq,
-                cleanPageJsonStr = cleanPageStr
-            )
-            
-            postToMain {
-                if (!isNavigating || newSubPath == null || newSubPath.isEmpty()) {
-                    hud.updateHud(
-                        stepHeader = "HEALING FAILED",
-                        actionInstruction = "No alternate path found.",
-                        subTag = "healing-failed"
-                    )
-                    return@postToMain
-                }
-                
-                if (newSubPath.size == 1 && newSubPath[0].uppercase() == "BACK") {
-                    if (currentIndex > 0) currentIndex--
-                    currStep = pathSteps[currentIndex]
-                    nextStep = pathSteps.getOrNull(currentIndex + 1)
-                    hud.updateHud(
-                        stepHeader = "HEALED",
-                        actionInstruction = "Press Back",
-                        contextText = "Going back to $currStep"
-                    )
-                } else {
-                    val stepsBefore = pathSteps.take(currentIndex)
-                    val stepsAfter = pathSteps.drop(currentIndex + 1) // drops the failed step
-                    pathSteps = (stepsBefore + newSubPath + stepsAfter).toMutableList()
-                    currStep = pathSteps[currentIndex]
-                    nextStep = pathSteps.getOrNull(currentIndex + 1)
-                    
-                    hud.updateHud(
-                        stepHeader = "HEALED - STEP ${currentIndex + 1} OF ${pathSteps.size}",
-                        actionInstruction = "Tap '$currStep'",
-                        contextText = "Updated route"
+                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                        actionInstruction = "Find and tap '$targetStep'",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = "Last step",
+                        subTag            = "final-step-hint"
                     )
                 }
             }
         }
     }
-    
+
+    /**
+     * Builds a short combined 2-step instruction for when the current element
+     * can't be found automatically.
+     * Examples:
+     *   "Tap '3 dots' → Settings"
+     *   "Find 'Menu' → tap 'Chat Backup'"
+     */
+    private fun buildCombinedHint(curr: String, next: String): String {
+        // Keep it short: if curr is a symbol/short word use "Tap", else "Find"
+        val verb = if (curr.length <= 6 || curr.contains("dot") || curr.contains("menu", ignoreCase = true))
+            "Tap '$curr'" else "Find '$curr'"
+        return "$verb → $next"
+    }
+
+
+    // ── Groq Healing (DISABLED — re-enable after core loop is stable) ─────────
+    // triggerHealer() was removed per spec. Re-add GroqHealer.requestHealing()
+    // call here once the 3-layer search + scroll loop is proven flawless.
+
+    // ── Destination verification & cloud sync ─────────────────────────────────
+
     private fun handleSuccess() {
         stateMachineScope.launch(Dispatchers.IO) {
             val pathStr = pathSteps.joinToString(" -> ")
-            Log.d(TAG, "Saving path to Cloud: $pathStr")
-            
             Log.i("[NetworkClient]", "Uploading successful path to Firestore: $pathStr")
             CloudPathDatabase.addEntry(targetPackage, initialTask, pathStr)
-            
+
             postToMain {
                 hud.updateHud(
-                    stepHeader = "SUCCESS",
-                    actionInstruction = "Path saved successfully!",
-                    subTag = "saved"
+                    stepHeader        = "SUCCESS ✓",
+                    actionInstruction = "Path saved!",
+                    breadcrumb        = buildBreadcrumb(),
+                    subTag            = "saved"
                 )
                 isNavigating = false
                 mainHandler.postDelayed({ hud.hide() }, 3000L)
@@ -416,64 +669,78 @@ object NavigationStateMachine {
         }
     }
 
-    fun isTargetApp(activePackage: String, targetApp: String, currentExpectedStep: String?): Boolean {
-        val pkg = activePackage.lowercase()
-        val target = targetApp.lowercase()
-        if (pkg.contains(target)) return true
-        
-        // Also check if the active package contains the expected step (e.g. step is "Clock" and pkg is "com.android.deskclock")
-        if (currentExpectedStep != null && currentExpectedStep.isNotBlank()) {
-            val stepLower = currentExpectedStep.lowercase()
-            if (pkg.contains(stepLower)) return true
-            if (stepLower == "clock" && pkg.contains("deskclock")) return true
-        }
-        
-        // Generalised check using PackageManager label
-        try {
-            val pm = context.packageManager
-            val info = pm.getApplicationInfo(activePackage, 0)
-            val label = pm.getApplicationLabel(info).toString().lowercase()
-            if (label.contains(target) || target.contains(label)) return true
-            if (currentExpectedStep != null && currentExpectedStep.isNotBlank()) {
-                val stepLower = currentExpectedStep.lowercase()
-                if (label.contains(stepLower) || stepLower.contains(label)) return true
-            }
-        } catch (e: Exception) {
-            // Ignore
-        }
-        
-        return false
-    }
+    // ── App matching helpers ───────────────────────────────────────────────────
 
-    private fun getAppLabel(packageName: String): String? {
-        if (!::context.isInitialized) return null
+    /**
+     * Returns true if [activePackage] belongs to the navigation target.
+     *
+     * Matching is done in layers (most reliable first):
+     * 1. Package string contains target package string (e.g. "com.whatsapp" ⊇ "whatsapp")
+     * 2. PM label matches target package or targetAppLabel (handles deskclock → "Clock")
+     * 3. Fuzzy token overlap between appLabel and targetAppLabel
+     */
+    fun isTargetApp(activePackage: String, activeAppLabel: String? = null): Boolean {
+        val pkg    = activePackage.lowercase()
+        val target = targetPackage.lowercase()
+        val label  = targetAppLabel.lowercase()
+
+        // Layer 1: direct package substring
+        if (pkg.contains(target) || target.contains(pkg)) return true
+
+        // Layer 2: PM label exact / contains match
+        val pLabel = (activeAppLabel ?: "").lowercase()
+        if (pLabel.isNotBlank()) {
+            if (pLabel == label || pLabel.contains(label) || label.contains(pLabel)) return true
+        }
+
+        // Layer 3: resolve label fresh from PM and compare
         return try {
-            val pm = context.packageManager
-            val info = pm.getApplicationInfo(packageName, 0)
-            pm.getApplicationLabel(info).toString()
+            val resolvedLabel = MainFilter.resolveAppLabel(context, activePackage).lowercase()
+            resolvedLabel == label ||
+                resolvedLabel.contains(label) ||
+                label.contains(resolvedLabel)
         } catch (e: Exception) {
-            null
+            false
         }
     }
 
-    private fun appRootFuzzyMatch(stepNorm: String, targetPkg: String): Boolean {
-        val pkgSimple = targetPkg.substringAfterLast('.')
-        return stepNorm == targetPkg ||
-               stepNorm == pkgSimple ||
-               targetPkg.contains(stepNorm, ignoreCase = true) ||
-               pkgSimple.contains(stepNorm, ignoreCase = true) ||
-               stepNorm.contains(pkgSimple, ignoreCase = true)
+    /**
+     * Returns true when [stepNorm] (a path step in lowercase) refers to the
+     * root/launch step of the target app — e.g. "clock", "whatsapp", "gmail".
+     */
+    private fun appRootFuzzyMatch(stepNorm: String): Boolean {
+        val label  = targetAppLabel.lowercase()
+        val pkgEnd = targetPackage.substringAfterLast('.').lowercase()
+        return stepNorm == label ||
+               stepNorm == pkgEnd ||
+               stepNorm == targetPackage ||
+               label.contains(stepNorm) ||
+               stepNorm.contains(label) ||
+               pkgEnd.contains(stepNorm) ||
+               stepNorm.contains(pkgEnd)
     }
 
+    /**
+     * Fuzzy screen name match.
+     * Handles "Clock-Alarm" matching step "Alarm", or "Chats" matching "WhatsApp".
+     * Tokenises both sides on "-" and " " and checks for shared tokens.
+     */
     private fun fuzzyMatch(actual: String, expected: String): Boolean {
         if (actual == expected) return true
         if (actual.contains(expected) || expected.contains(actual)) return true
-        if (expected.length < 20) {
-            val words = expected.split(" ", "_", "-").filter { it.length > 2 }
-            if (words.isNotEmpty() && words.all { actual.contains(it) }) return true
-        }
+
+        // Token-level: split on dash, space, underscore and require all expected tokens in actual
+        val expectedTokens = expected.split(" ", "-", "_").filter { it.length > 2 }
+        if (expectedTokens.isNotEmpty() && expectedTokens.all { tok -> actual.contains(tok) }) return true
+
+        // Reverse: all actual tokens in expected
+        val actualTokens = actual.split(" ", "-", "_").filter { it.length > 2 }
+        if (actualTokens.isNotEmpty() && actualTokens.all { tok -> expected.contains(tok) }) return true
+
         return false
     }
+
+    // ── Launcher detection ────────────────────────────────────────────────────
 
     fun getDefaultLauncherPackage(): String? {
         if (!::context.isInitialized) return null
@@ -485,6 +752,8 @@ object NavigationStateMachine {
             null
         }
     }
+
+    // ── Utilities ──────────────────────────────────────────────────────────────
 
     private fun postToMain(block: () -> Unit) {
         if (Looper.myLooper() == Looper.getMainLooper()) block()

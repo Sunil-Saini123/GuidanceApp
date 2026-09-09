@@ -409,6 +409,89 @@ class FloatingOverlayService : Service() {
             addView(stopButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         }
 
+
+        // ── Developer Tools ────────────────────────────────────────────────────
+        val devToolsLabel = TextView(this).apply {
+            text = "DEV TOOLS"
+            setTextColor(Color.parseColor("#505050"))
+            textSize = 10f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            letterSpacing = 0.12f
+            setPadding(0, dp(14), 0, dp(4))
+        }
+
+        val btnClearJson = Button(this).apply {
+            text = "Clear JSONs"
+            isAllCaps = false
+            textSize = 11f
+            setTextColor(Color.parseColor("#FFFFFF"))
+            background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(8).toFloat())
+            setOnClickListener {
+                val filesDir = applicationContext.filesDir
+                val deleted = listOf("clean_page.json", "temp_tree.json").map { name ->
+                    val f = java.io.File(filesDir, name)
+                    if (f.exists()) { f.delete(); name } else null
+                }.filterNotNull()
+                statusText.text = if (deleted.isEmpty()) "No JSON files found"
+                                  else "Deleted: ${deleted.joinToString(", ")}"
+                Log.i("[DevTools]", "Cleared JSONs: $deleted")
+            }
+        }
+
+        val btnClearGraph = Button(this).apply {
+            text = "Clear Graph"
+            isAllCaps = false
+            textSize = 11f
+            setTextColor(Color.parseColor("#FFFFFF"))
+            background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(8).toFloat())
+            setOnClickListener {
+                try {
+                    // Close the singleton, then delete the DB file
+                    val db = NavGraphDatabase.getInstance(applicationContext)
+                    db.close()
+                    NavGraphDatabase::class.java.getDeclaredField("INSTANCE").apply {
+                        isAccessible = true
+                        set(null, null)
+                    }
+                    val dbFile = applicationContext.getDatabasePath("nav_graph.db")
+                    val deleted = dbFile.delete()
+                    statusText.text = if (deleted) "Graph DB cleared" else "Graph DB not found"
+                    Log.i("[DevTools]", "nav_graph.db deleted=$deleted")
+                } catch (e: Exception) {
+                    statusText.text = "Error clearing graph: ${e.message}"
+                    Log.e("[DevTools]", "Graph clear failed", e)
+                }
+            }
+        }
+
+        val btnResetState = Button(this).apply {
+            text = "Reset State"
+            isAllCaps = false
+            textSize = 11f
+            setTextColor(Color.parseColor("#FFFFFF"))
+            background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(8).toFloat())
+            setOnClickListener {
+                NavigationStateMachine.stop()
+                // Also clear first-run flag so it can be re-tested
+                getSharedPreferences("nav_prefs", MODE_PRIVATE).edit()
+                    .remove("home_marked").apply()
+                statusText.text = "State + first-run flag reset"
+                Log.i("[DevTools]", "NavigationStateMachine stopped + home_marked cleared")
+            }
+        }
+
+
+        val devRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 0, 0, 0)
+            val btnLp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = dp(4)
+            }
+            addView(btnClearJson,  btnLp)
+            addView(btnClearGraph, btnLp)
+            addView(btnResetState, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        }
+
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(20), dp(20), dp(20))
@@ -422,6 +505,8 @@ class FloatingOverlayService : Service() {
             addView(input)
             addView(buttonRow)
             addView(statusText)
+            addView(devToolsLabel)
+            addView(devRow)
         }
 
         // Panel uses its own params; NOT_FOCUSABLE not set here so IME works

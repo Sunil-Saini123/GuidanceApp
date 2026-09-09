@@ -10,18 +10,21 @@ import java.util.Map;
 public class PromptBuilder {
 
     public static final String SYSTEM_PROMPT =
-            "You are an Android Navigation Assistant expert. Your task is to produce the exact sequence of UI screens and " +
-            "menu items required for a user to accomplish an intended task on their Android device.\n\n" +
+            "You are an Android Navigation Assistant expert. Your task is to produce the COMPLETE, EXACT sequence of every UI screen and menu item required for a user to accomplish a task on their Android device.\n\n" +
             "CRITICAL INSTRUCTIONS:\n" +
             "1. Output MUST be strict JSON only. Do NOT include markdown code blocks (```json) or extra text.\n" +
             "2. Required JSON format:\n" +
             "{\n" +
             "  \"destination\": \"<Final Target Screen or Option Name>\",\n" +
-            "  \"path\": [\"<Step 1>\", \"<Step 2>\", \"<Step 3>\"]\n" +
+            "  \"path\": [\"<Step 1>\", \"<Step 2>\", \"<Step 3>\", \"<Step 4>\", \"<Step 5>\", \"...all steps...\"]\n" +
             "}\n" +
-            "3. Keep screen and item names accurate for the specific device manufacturer and OEM ROM.\n" +
-            "4. Verify that each consecutive navigation step is realistically reachable from the previous step.\n" +
-            "5. If insufficient information, return: {\"destination\": \"Unknown\", \"path\": []}";
+            "3. ALWAYS start the path from 'Home' (the device home screen) unless the user is already inside the target app.\n" +
+            "4. Include EVERY intermediate step — do NOT skip steps. For example:\n" +
+            "   Wrong (too short): [\"Settings\", \"Profile Picture\"]\n" +
+            "   Correct (complete): [\"Home\", \"WhatsApp\", \"Menu\", \"Settings\", \"Account\", \"Profile Picture\"]\n" +
+            "5. Keep screen and item names accurate for the specific device manufacturer and OEM ROM.\n" +
+            "6. Verify that each consecutive navigation step is realistically reachable from the previous step.\n" +
+            "7. If insufficient information, return: {\"destination\": \"Unknown\", \"path\": []}";
 
     public static String buildUserPrompt(PathRequest request) {
         StringBuilder sb = new StringBuilder();
@@ -125,14 +128,17 @@ public class PromptBuilder {
         // Path starting point instruction based on current context
         if (isOnTargetApp) {
             sb.append("IMPORTANT: The user is ALREADY INSIDE the target app (").append(targetApp).append("). ");
-            sb.append("Start the navigation path FROM WITHIN the app — do NOT include 'Home' or the app launch step. ");
-            sb.append("Example format: \"").append(targetApp).append(" → Menu → Settings → ...\"\n\n");
+            sb.append("Start the path from inside the app — do NOT include 'Home' or the app launch step. ");
+            sb.append("Include EVERY intermediate screen, menu, or tap needed. Do NOT skip steps.\n");
+            sb.append("Example for WhatsApp profile picture: [\"Menu\", \"Settings\", \"Account\", \"Profile Picture\"]\n\n");
         } else {
             sb.append("IMPORTANT: The user is on a DIFFERENT app or the home screen. ");
             sb.append("Start the navigation path from the device HOME SCREEN, then open the app. ");
-            sb.append("Example format: \"Home → ").append(targetApp).append(" → Menu → Settings → ...\"\n\n");
+            sb.append("Include EVERY intermediate screen, menu, or tap needed. Do NOT skip steps.\n");
+            sb.append("Example for WhatsApp profile picture: [\"Home\", \"WhatsApp\", \"Menu\", \"Settings\", \"Account\", \"Profile Picture\"]\n\n");
         }
 
+        sb.append("CRITICAL: The path array must be COMPLETE with ALL steps — short paths with missing intermediate steps are WRONG. ");
         sb.append("Generate the exact ordered navigation path to accomplish the task. ");
         sb.append("Use real UI element names for this device ROM.");
         return sb.toString();

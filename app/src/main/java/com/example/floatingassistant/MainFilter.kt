@@ -1,11 +1,21 @@
-package com.example.floatingassistant
+﻿package com.example.floatingassistant
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 
 /**
  * Main Filter — Phase 2 & Stage 3.5 Semantic Root Naming
+ *
+ * Determines if an accessibility event should be processed, and generates a
+ * clean, human-readable semantic root name for the current screen.
+ *
+ * The base app name is now resolved via PackageManager so that:
+ *   com.android.deskclock  -> "Clock"
+ *   com.google.android.gm -> "Gmail"
+ *   com.whatsapp           -> "WhatsApp"
  */
 object MainFilter {
 
@@ -36,14 +46,18 @@ object MainFilter {
         data class Passed(
             val packageName: String,
             val rootNode: AccessibilityNodeInfo,
-            val semanticRootName: String
+            val semanticRootName: String,
+            /** Human-readable display name of the app, e.g. "Clock", "Gmail" */
+            val appLabel: String
         ) : FilterResult()
     }
 
     fun apply(
+        context: Context,
         packageName: String?,
         rootNode: AccessibilityNodeInfo?,
         ownPackage: String,
+        launcherPackage: String?,
         eventClassName: String? = null
     ): FilterResult {
         if (rootNode == null) {
@@ -72,45 +86,80 @@ object MainFilter {
             }
         }
 
-        val semanticName = generateSemanticRootName(pkg, rootNode, eventClassName)
-        Log.v(TAG, "Passed [$pkg] -> Semantic Root: $semanticName")
-        
-        return FilterResult.Passed(packageName = pkg, rootNode = rootNode, semanticRootName = semanticName)
+        // Resolve the human-readable app label from PackageManager
+        val appLabel = resolveAppLabel(context, pkg)
+
+        // If this is the launcher/home screen, always name it "Home"
+        val semanticName = if (launcherPackage != null && pkg.startsWith(launcherPackage)) {
+            "Home"
+        } else {
+            generateSemanticRootName(appLabel, rootNode, eventClassName)
+        }
+
+        Log.v(TAG, "Passed [$pkg] -> appLabel='$appLabel' semanticRoot='$semanticName'")
+
+        return FilterResult.Passed(
+            packageName = pkg,
+            rootNode = rootNode,
+            semanticRootName = semanticName,
+            appLabel = appLabel
+        )
+    }
+
+    /**
+     * Resolves a human-readable app name from PackageManager.
+     * Falls back to the last segment of the package name if PM lookup fails.
+     */
+    fun resolveAppLabel(context: Context, packageName: String): String {
+        return try {
+            val pm = context.packageManager
+            val info = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(info).toString()
+        } catch (e: Exception) {
+            // Fallback: last segment of package name, capitalised
+            packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }
+        }
     }
 
     private fun generateSemanticRootName(
-        packageName: String,
+        appLabel: String,
         rootNode: AccessibilityNodeInfo,
         eventClassName: String?
     ): String {
-        // 1. Base App Name
-        val baseAppName = packageName.substringAfterLast('.').lowercase()
+        // Base is the real app label ("Clock", "WhatsApp", "Gmail")
+        val baseAppName = appLabel.trim()
 
-        // 2. Contextual Identifier
+        // Contextual Identifier — in priority order:
         var contextId = findSelectedTab(rootNode)
-        
+
         if (contextId == null) {
             contextId = findTopTitle(rootNode)
         }
-        
+
         if (contextId == null) {
             val cls = eventClassName?.substringAfterLast('.')
-            if (cls != null && !cls.contains("Layout", ignoreCase = true) && !cls.contains("View", ignoreCase = true)) {
+            if (cls != null &&
+                !cls.contains("Layout", ignoreCase = true) &&
+                !cls.contains("View", ignoreCase = true) &&
+                !cls.contains("Activity", ignoreCase = true)) {
                 contextId = cls
             }
         }
-        
-        if (contextId == null) {
-            contextId = "main"
+
+        // If context matches the base name (e.g. tab says "Clock"), skip it to avoid "Clock-clock"
+        if (contextId != null && contextId.equals(baseAppName, ignoreCase = true)) {
+            contextId = null
         }
 
-        // Clean up the contextId
-        val cleanContext = contextId.trim().lowercase()
-            .replace(Regex("[^a-z0-9]+"), "-")
-            .take(20)
-            .removeSuffix("-")
-            
-        return "$baseAppName-$cleanContext"
+        return if (contextId.isNullOrBlank()) {
+            baseAppName
+        } else {
+            val cleanContext = contextId.trim()
+                .replace(Regex("[^a-zA-Z0-9]+"), "-")
+                .take(25)
+                .removeSuffix("-")
+            "$baseAppName-$cleanContext"
+        }
     }
 
     private fun findSelectedTab(node: AccessibilityNodeInfo): String? {
@@ -143,16 +192,13 @@ object MainFilter {
     private fun searchTopTitle(node: AccessibilityNodeInfo, topThreshold: Float): String? {
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
-        if (bounds.bottom > topThreshold && bounds.top > topThreshold) {
-            // Node is entirely below the top 15%, since we are doing DFS, its children are also below.
-            // Wait, a container might span the whole screen. We should check if the node itself is entirely below.
-            if (bounds.top > topThreshold) return null
-        }
+        // Skip nodes entirely below the top 15%
+        if (bounds.top > topThreshold) return null
 
         val resId = node.viewIdResourceName?.lowercase() ?: ""
-        if (resId.contains("title") || resId.contains("header") || resId.contains("action_bar")) {
+        if (resId.contains("title") || resId.contains("header") || resId.contains("action_bar") || resId.contains("toolbar")) {
             val text = node.text?.toString() ?: node.contentDescription?.toString()
-            if (!text.isNullOrBlank() && text.length < 30) return text
+            if (!text.isNullOrBlank() && text.length < 40) return text
         }
 
         for (i in 0 until node.childCount) {
