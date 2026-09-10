@@ -202,12 +202,9 @@ task: take_selfie"""
                     }
                 }
             }
-        // ── 2. Offline Local Intent Classification Fallback ───────────────────
-        Log.i(TAG, "Falling back to offline IntentClassificationEngine")
-        onProgress("Resolving intent locally…")
-        val localParsed = resolveLocally(userCommand)
-        Log.i("[PathFinder]", "Parsed Intent (Offline Fallback) -> App: ${localParsed.targetApp}, Screen: ${localParsed.destinationScreen}, Task: ${localParsed.exactTask}")
-        localParsed
+        // All Gemini/proxy models exhausted — return a generic fallback
+        Log.w(TAG, "All models exhausted — returning generic fallback")
+        ParsedCommand(targetApp = userCommand, destinationScreen = "", exactTask = userCommand)
     }
 
     private const val PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate"
@@ -275,89 +272,6 @@ task: take_selfie"""
         }
     }
 
-    /**
-     * Resolves intent locally using offline IntentClassificationEngine and IntentProvider.
-     */
-    fun resolveLocally(userCommand: String): ParsedCommand {
-        val query = userCommand.trim()
-        val queryLower = query.lowercase(java.util.Locale.US)
-
-        // 1. Try local IntentClassificationEngine
-        try {
-            val engine = com.example.floatingassistant.intent.IntentClassificationEngine()
-            val match = engine.classify(query)
-            if (match.isConfident && match.userIntent != null) {
-                return mapUserIntentToCommand(match.userIntent, query)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Local IntentClassificationEngine failed: ${e.message}")
-        }
-
-        // 2. Try IntentProvider predefined intents
-        val predefined = com.example.floatingassistant.pathgenerator.IntentProvider.findMatchingIntent(query)
-        if (predefined.intentName != "UNKNOWN" && predefined.intentName != "GENERIC_NAVIGATE") {
-            return mapUserIntentToCommand(predefined, query)
-        }
-
-        // 3. Fallback heuristics for common apps
-        return when {
-            queryLower.contains("whatsapp") -> {
-                val feature = query.replace(Regex("(?i)\\b(open|go to|change|set|show|view|my|whatsapp|in whatsapp|on whatsapp)\\b"), "").trim()
-                val screen = when {
-                    queryLower.contains("profile") || queryLower.contains("dp") -> "Profile"
-                    feature.isNotBlank() -> feature
-                    else -> "Chats"
-                }
-                ParsedCommand(targetApp = "WhatsApp", destinationScreen = screen, exactTask = query)
-            }
-            queryLower.contains("youtube") -> {
-                ParsedCommand(targetApp = "YouTube", destinationScreen = "Home", exactTask = query)
-            }
-            queryLower.contains("call") || queryLower.contains("dial") || queryLower.contains("phone") -> {
-                ParsedCommand(targetApp = "Phone", destinationScreen = "Dialer", exactTask = query)
-            }
-            queryLower.contains("camera") || queryLower.contains("photo") || queryLower.contains("selfie") -> {
-                ParsedCommand(targetApp = "Camera", destinationScreen = "Camera", exactTask = query)
-            }
-            queryLower.contains("map") || queryLower.contains("direction") || queryLower.contains("navigate to") -> {
-                ParsedCommand(targetApp = "Maps", destinationScreen = "Search", exactTask = query)
-            }
-            queryLower.contains("wifi") || queryLower.contains("wi-fi") -> {
-                ParsedCommand(targetApp = "Settings", destinationScreen = "Wi-Fi", exactTask = query)
-            }
-            queryLower.contains("bluetooth") -> {
-                ParsedCommand(targetApp = "Settings", destinationScreen = "Bluetooth", exactTask = query)
-            }
-            queryLower.contains("display") || queryLower.contains("brightness") || queryLower.contains("dark mode") -> {
-                ParsedCommand(targetApp = "Settings", destinationScreen = "Display", exactTask = query)
-            }
-            queryLower.contains("battery") -> {
-                ParsedCommand(targetApp = "Settings", destinationScreen = "Battery saver", exactTask = query)
-            }
-            queryLower.contains("sound") || queryLower.contains("volume") -> {
-                ParsedCommand(targetApp = "Settings", destinationScreen = "Sound & vibration", exactTask = query)
-            }
-            else -> {
-                val feature = query.replace(Regex("^(open|go to|change|set|turn on|turn off|show|view)\\s+", RegexOption.IGNORE_CASE), "").trim()
-                val dest = if (feature.isNotBlank()) feature else "Settings"
-                ParsedCommand(targetApp = "Settings", destinationScreen = dest, exactTask = query)
-            }
-        }
-    }
-
-    private fun mapUserIntentToCommand(intent: com.example.floatingassistant.pathgenerator.UserIntent, rawQuery: String): ParsedCommand {
-        return when (intent.intentName.uppercase(java.util.Locale.US)) {
-            "ENABLE_BLUETOOTH" -> ParsedCommand("Settings", "Bluetooth", "Enable Bluetooth")
-            "OPEN_WIFI_SETTINGS", "CONNECT_WIFI" -> ParsedCommand("Settings", "Wi-Fi", "Open Wi-Fi settings")
-            "OPEN_DISPLAY_SETTINGS" -> ParsedCommand("Settings", "Display", "Open display settings")
-            "OPEN_SECURITY_PRIVACY" -> ParsedCommand("Settings", "Security & privacy", "Open security settings")
-            "CHANGE_WALLPAPER" -> ParsedCommand("Settings", "Wallpaper & style", "Change wallpaper")
-            "OPEN_BATTERY_SAVER" -> ParsedCommand("Settings", "Battery saver", "Turn on battery saver")
-            "OPEN_ACCESSIBILITY_SETTINGS" -> ParsedCommand("Settings", "Accessibility", "Open accessibility settings")
-            "OPEN_SOUND_SETTINGS" -> ParsedCommand("Settings", "Sound & vibration", "Adjust sound settings")
-            else -> ParsedCommand(intent.targetCategory.ifEmpty { "Settings" }, intent.intentName, rawQuery)
-        }
-    }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-﻿package com.example.floatingassistant
+package com.example.floatingassistant
 
 import android.content.Context
 import android.graphics.Color
@@ -101,6 +101,57 @@ class NavigationHudOverlay(private val context: Context) {
             addView(actionLabel)
             addView(contextLabel)
             addView(buttonContainer)
+
+            var initialX = 0
+            var initialY = 0
+            var initialTouchX = 0f
+            var initialTouchY = 0f
+
+            setOnTouchListener { view, event ->
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        initialX = this@NavigationHudOverlay.layoutParams.x
+                        initialY = this@NavigationHudOverlay.layoutParams.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        true
+                    }
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        val dx = event.rawX - initialTouchX
+                        val dy = event.rawY - initialTouchY
+
+                        var newX = initialX + dx.toInt()
+                        var newY = initialY + dy.toInt()
+
+                        // Constrain within screen bounds
+                        val metrics = context.resources.displayMetrics
+                        val screenW = metrics.widthPixels
+                        val screenH = metrics.heightPixels
+                        val viewW = view.width
+                        val viewH = view.height
+
+                        // gravity is TOP | CENTER_HORIZONTAL
+                        // x=0 is center. Max x is half screen minus half view.
+                        val maxX = (screenW / 2) - (viewW / 2)
+                        if (newX > maxX) newX = maxX
+                        if (newX < -maxX) newX = -maxX
+
+                        // y=0 is top. Max y is screenHeight - viewHeight.
+                        val maxY = screenH - viewH
+                        if (newY > maxY) newY = maxY
+                        if (newY < 0) newY = 0
+
+                        this@NavigationHudOverlay.layoutParams.x = newX
+                        this@NavigationHudOverlay.layoutParams.y = newY
+
+                        if (isAttachedToWindow) {
+                            windowManager.updateViewLayout(this, this@NavigationHudOverlay.layoutParams)
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
         }
 
         Log.d(TAG, "NavigationHudOverlay: view hierarchy built ✓")
