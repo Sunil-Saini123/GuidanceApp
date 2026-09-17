@@ -43,10 +43,13 @@ class NavigationHudOverlay(private val context: Context) {
     private val breadcrumbLabel: TextView   // Line 1 — path trail
     private val headerLabel:     TextView   // Line 2a — step header (e.g. "STEP 2 OF 4")
     private val actionLabel:     TextView   // Line 2b — main instruction
-    private val contextLabel:    TextView   // Line 3 — debug / context
+    private val contextLabel:    TextView   // Line 3 — current screen vs expected
     private val buttonContainer: LinearLayout
 
-    @Volatile private var isDestroyed = false
+    var onHudLongPressed: (() -> Unit)? = null
+
+    private var isDestroyed = false
+
     private val layoutParams: WindowManager.LayoutParams by lazy { buildLayoutParams() }
 
     init {
@@ -106,6 +109,14 @@ class NavigationHudOverlay(private val context: Context) {
             var initialY = 0
             var initialTouchX = 0f
             var initialTouchY = 0f
+            var isLongPress = false
+            val longPressHandler = Handler(Looper.getMainLooper())
+            val longPressRunnable = Runnable {
+                isLongPress = true
+                hudContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                Log.i(TAG, "HUD long-pressed — triggering manual destination options")
+                onHudLongPressed?.invoke()
+            }
 
             setOnTouchListener { view, event ->
                 when (event.action) {
@@ -114,11 +125,17 @@ class NavigationHudOverlay(private val context: Context) {
                         initialY = this@NavigationHudOverlay.layoutParams.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
+                        isLongPress = false
+                        longPressHandler.postDelayed(longPressRunnable, 500L)
                         true
                     }
                     android.view.MotionEvent.ACTION_MOVE -> {
                         val dx = event.rawX - initialTouchX
                         val dy = event.rawY - initialTouchY
+
+                        if (Math.abs(dx) > 15 || Math.abs(dy) > 15) {
+                            longPressHandler.removeCallbacks(longPressRunnable)
+                        }
 
                         var newX = initialX + dx.toInt()
                         var newY = initialY + dy.toInt()
@@ -149,6 +166,10 @@ class NavigationHudOverlay(private val context: Context) {
                         }
                         true
                     }
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                        longPressHandler.removeCallbacks(longPressRunnable)
+                        true
+                    }
                     else -> false
                 }
             }
@@ -156,6 +177,7 @@ class NavigationHudOverlay(private val context: Context) {
 
         Log.d(TAG, "NavigationHudOverlay: view hierarchy built ✓")
     }
+
 
     /**
      * Main update method.
@@ -203,15 +225,18 @@ class NavigationHudOverlay(private val context: Context) {
         }
     }
 
-    fun showVerificationPrompt(onYes: () -> Unit, onNo: () -> Unit) {
+    fun showVerificationPrompt(destination: String = "", onYes: () -> Unit, onNo: () -> Unit) {
         if (isDestroyed) return
-        Log.d(TAG, "HUD — Showing verification prompt")
+        Log.d(TAG, "HUD — Showing verification prompt for '$destination'")
 
         postToMain {
+            val destLabel = if (destination.isNotEmpty()) "'$destination'" else "the destination"
+
             breadcrumbLabel.visibility = android.view.View.GONE
-            headerLabel.text           = "DESTINATION REACHED"
-            actionLabel.text           = "Did we find what you were looking for?"
-            contextLabel.visibility    = android.view.View.GONE
+            headerLabel.text           = "FINAL DESTINATION"
+            actionLabel.text           = "Check if it's on this page"
+            contextLabel.text          = if (destination.isNotEmpty()) "Looking for $destLabel" else "Tap YES if found, NO if not here"
+            contextLabel.visibility    = android.view.View.VISIBLE
 
             buttonContainer.removeAllViews()
 
@@ -243,9 +268,88 @@ class NavigationHudOverlay(private val context: Context) {
         }
     }
 
+    /**
+     * Shows manual override options when the user holds down (long-presses) on the HUD or GUI.
+     * Allows marking as reached, requesting AI fix, or canceling back to step instructions.
+     */
+    fun showManualDestinationPrompt(
+        destination: String = "",
+        onReached: () -> Unit,
+        onNotReached: () -> Unit,
+        onCancel: () -> Unit
+    ) {
+        if (isDestroyed) return
+        Log.d(TAG, "HUD — Showing manual destination options for '$destination'")
+
+        postToMain {
+            val destLabel = if (destination.isNotEmpty()) "'$destination'" else "destination"
+
+            breadcrumbLabel.visibility = android.view.View.GONE
+            headerLabel.text           = "MANUAL OVERRIDE"
+            actionLabel.text           = "Are you at $destLabel?"
+            contextLabel.text          = "Save path if reached, or request AI fix"
+            contextLabel.visibility    = android.view.View.VISIBLE
+
+            buttonContainer.removeAllViews()
+
+            val btnParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply { setMargins(dpToPx(4), 0, dpToPx(4), 0) }
+
+            val reachedBtn = Button(context).apply {
+                text = "REACHED ✓"
+                textSize = 11f
+                isAllCaps = false
+                setTextColor(Color.parseColor("#001412"))
+                background = roundedRectDrawable(Color.parseColor("#00D4C0"), dpToPx(6).toFloat())
+                setOnClickListener { onReached() }
+            }
+            val fixBtn = Button(context).apply {
+                text = "FIX ROUTE ✗"
+                textSize = 11f
+                isAllCaps = false
+                setTextColor(Color.WHITE)
+                background = roundedRectDrawable(Color.parseColor("#3A1414"), dpToPx(6).toFloat())
+                setOnClickListener { onNotReached() }
+            }
+            val cancelBtn = Button(context).apply {
+                text = "CANCEL"
+                textSize = 11f
+                isAllCaps = false
+                setTextColor(Color.parseColor("#8A8A8A"))
+                background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dpToPx(6).toFloat())
+                setOnClickListener { onCancel() }
+            }
+
+            buttonContainer.addView(reachedBtn, btnParams)
+            buttonContainer.addView(fixBtn, btnParams)
+            buttonContainer.addView(cancelBtn, btnParams)
+            buttonContainer.visibility = android.view.View.VISIBLE
+
+            // Enable touch / focus so buttons are clickable
+            layoutParams.flags = layoutParams.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
+            if (hudContainer.isAttachedToWindow) {
+                windowManager.updateViewLayout(hudContainer, layoutParams)
+            } else {
+                attachIfNeeded()
+            }
+        }
+    }
+
+    private fun roundedRectDrawable(color: Int, radius: Float): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = radius
+            setColor(color)
+        }
+    }
+
     fun resetFocusability() {
         postToMain {
             layoutParams.flags = layoutParams.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+
             if (hudContainer.isAttachedToWindow) {
                 windowManager.updateViewLayout(hudContainer, layoutParams)
             }

@@ -38,14 +38,21 @@ object NavigationStateMachine {
     private var nextStep: String? = null
     private var lastCorrectStep: String? = null
     private var activeScreenName: String = ""
+    private var userHasNavigated: Boolean = false
     @Volatile var currentTargetBounds: Rect? = null
 
     fun attachHud(overlay: NavigationHudOverlay, ctx: Context) {
         hud = overlay
         context = ctx.applicationContext
         elementFinder = ElementFinderEngine(context)
+        hud.onHudLongPressed = {
+            if (isNavigating) {
+                showManualDestinationPrompt()
+            }
+        }
         Log.d(TAG, "HUD + Context attached to NavigationStateMachine")
     }
+
 
     fun startNavigation(resolvedPath: List<String>, pkgTarget: String, exactTask: String = "") {
         if (resolvedPath.isEmpty()) return
@@ -58,6 +65,7 @@ object NavigationStateMachine {
             initialTask = exactTask
             pathSteps = resolvedPath.toMutableList()
             lastCorrectStep = null
+            userHasNavigated = false
             isNavigating = true
 
             // ── First-run home marking ─────────────────────────────────────────
@@ -170,6 +178,7 @@ object NavigationStateMachine {
         postToMain {
             if (!isNavigating) return@postToMain
             isNavigating = false
+            userHasNavigated = false
             targetPackage = ""
             targetAppLabel = ""
             pathSteps = mutableListOf()
@@ -185,6 +194,57 @@ object NavigationStateMachine {
 
     fun stop() = stopNavigation()
     fun isRunning() = isNavigating
+    fun getCurrentTask(): String = initialTask
+    fun getCurrentStep(): String = currStep
+    fun getTargetAppLabel(): String = targetAppLabel
+    fun getCurrentStepIndex(): Int = currentIndex
+    fun getTotalSteps(): Int = pathSteps.size
+    fun getDestination(): String = pathSteps.lastOrNull() ?: ""
+
+    /**
+     * Shows manual override prompt on the HUD when user holds down on the HUD or GUI.
+     */
+    fun showManualDestinationPrompt() {
+        if (!isNavigating) return
+        postToMain {
+            hud.showManualDestinationPrompt(
+                destination = currStep.ifEmpty { initialTask },
+                onReached = {
+                    hud.resetFocusability()
+                    handleSuccess()
+                },
+                onNotReached = {
+                    hud.resetFocusability()
+                    handleDestinationNotFound()
+                },
+                onCancel = {
+                    hud.resetFocusability()
+                    updateCurrentStepHud()
+                }
+            )
+        }
+    }
+
+    /**
+     * Directly marks destination as reached from manual GUI button and saves the path.
+     */
+    fun onManualDestinationReached() {
+        if (!isNavigating) return
+        Log.i(TAG, "Manual destination reached by user from GUI — saving path")
+        hud.resetFocusability()
+        handleSuccess()
+    }
+
+    private fun updateCurrentStepHud() {
+        if (!isNavigating) return
+        hud.updateHud(
+            stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+            actionInstruction = "Look for '$currStep'",
+            breadcrumb        = buildBreadcrumb(),
+            contextText       = if (nextStep != null) "Next: $nextStep" else "Final step",
+            subTag            = "manual-cancel"
+        )
+    }
 
     /**
      * Called by UiTreeAccessibilityService on every TYPE_VIEW_CLICKED event.
@@ -221,10 +281,12 @@ object NavigationStateMachine {
             // Guard: if we already advanced past this step (e.g. screen changed first), skip
             if (!fuzzyMatch(currStep.trim().lowercase(), currNorm)) return@postToMain
 
+            userHasNavigated = true
             lastCorrectStep = currStep
             advanceStep(currentIndex)
         }
     }
+
 
     /**
      * Called from UiTreeAccessibilityService on every WINDOW_STATE_CHANGED event.
@@ -316,6 +378,7 @@ object NavigationStateMachine {
 
             // Home step confirmation
             if (isLauncherEvent && currStepIsHome) {
+                userHasNavigated = true
                 lastCorrectStep = currStep
                 advanceStep(currentIndex)
                 return@postToMain
@@ -323,6 +386,7 @@ object NavigationStateMachine {
 
             // App-root step: being in the target app is enough to advance
             if (appRootFuzzyMatch(currNorm) && inTargetApp) {
+                userHasNavigated = true
                 lastCorrectStep = currStep
                 advanceStep(currentIndex)
                 return@postToMain
@@ -331,12 +395,24 @@ object NavigationStateMachine {
             // Exact/fuzzy screen name match for current step
             if (fuzzyMatch(screenNorm, currNorm)) {
                 lastCorrectStep = currStep
+                // If this is the LAST step, we arrived on its screen, and user actually navigated:
+                if (nextStep == null && inTargetApp && userHasNavigated) {
+                    Log.i(TAG, "Arrived at final screen '$screenNorm' matching '$currStep'")
+                    hud.showVerificationPrompt(
+                        destination = currStep,
+                        onYes = { hud.resetFocusability(); handleSuccess() },
+                        onNo  = { hud.resetFocusability(); handleDestinationNotFound() }
+                    )
+                    return@postToMain
+                }
+                userHasNavigated = true
                 advanceStep(currentIndex)
                 return@postToMain
             }
 
             // Skip-ahead: next step matches current screen
             if (nextNorm != null && fuzzyMatch(screenNorm, nextNorm)) {
+                userHasNavigated = true
                 prevStep = currStep
                 currentIndex++
                 currStep = pathSteps[currentIndex]
@@ -345,6 +421,7 @@ object NavigationStateMachine {
                 advanceStep(currentIndex)
                 return@postToMain
             }
+
 
             // We're in the right app but couldn't match current/next step name.
             // Before searching for elements, check if the user went BACKWARD
@@ -524,22 +601,23 @@ object NavigationStateMachine {
         val stepNum = confirmedIndex + 1
 
         if (nextStep == null) {
-            Log.i(TAG, "COMPLETE — step $stepNum/'$currStep' was the last step")
-            hud.showVerificationPrompt(
-                onYes = { hud.resetFocusability(); handleSuccess() },
-                onNo  = {
-                    hud.resetFocusability()
-                    // Per spec: Groq healing disabled for now — ask user to retry manually
-                    hud.updateHud(
-                        stepHeader        = "NOT FOUND",
-                        actionInstruction = "Try again or restart",
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Tap the bubble to submit a new command",
-                        subTag            = "destination-no"
-                    )
-                    isNavigating = false
-                }
-            )
+            val inTarget = isTargetApp(lastKnownActivePackage, null)
+            if (inTarget && userHasNavigated) {
+                Log.i(TAG, "COMPLETE — step $stepNum/'$currStep' was the last step")
+                hud.showVerificationPrompt(
+                    destination = currStep,
+                    onYes = { hud.resetFocusability(); handleSuccess() },
+                    onNo  = { hud.resetFocusability(); handleDestinationNotFound() }
+                )
+            } else {
+                hud.updateHud(
+                    stepHeader        = "STEP $stepNum OF ${pathSteps.size}",
+                    actionInstruction = "Look for '$currStep'",
+                    breadcrumb        = buildBreadcrumb(),
+                    contextText       = "Final step",
+                    subTag            = "final-step-target"
+                )
+            }
             return
         }
 
@@ -574,16 +652,31 @@ object NavigationStateMachine {
             if (result.found) {
                 postToMain {
                     if (!isNavigating) return@postToMain
-                    hud.updateHud(
-                        stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
-                        actionInstruction = "Tap '$targetStep'",
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Found on screen",
-                        subTag            = "target-found"
-                    )
+                    val isLastStep = nextStep == null
+                    val inTarget = isTargetApp(lastKnownActivePackage, null)
+
+                    // Never show destination check on startup or if user hasn't navigated yet
+                    if (isLastStep && userHasNavigated && inTarget) {
+                        Log.i(TAG, "Final element '$targetStep' found on target screen — showing destination check")
+                        hud.showVerificationPrompt(
+                            destination = targetStep,
+                            onYes = { hud.resetFocusability(); handleSuccess() },
+                            onNo  = { hud.resetFocusability(); handleDestinationNotFound() }
+                        )
+                    } else {
+                        // Either not the last step, or we haven't moved yet — normal tap hint
+                        hud.updateHud(
+                            stepHeader        = "STEP ${currentIndex + 1} OF ${pathSteps.size}",
+                            actionInstruction = "Tap '$targetStep'",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = if (isLastStep) "Last step" else "Found on screen",
+                            subTag            = if (isLastStep) "final-step-found" else "target-found"
+                        )
+                    }
                 }
                 return@launch
             }
+
 
 
             // ── IMPORTANT: Do NOT auto-advance here based on next-step visibility.
@@ -653,8 +746,12 @@ object NavigationStateMachine {
     private fun handleSuccess() {
         stateMachineScope.launch(Dispatchers.IO) {
             val pathStr = pathSteps.joinToString(" -> ")
-            Log.i("[NetworkClient]", "Uploading successful path to Firestore: $pathStr")
-            CloudPathDatabase.addEntry(targetPackage, initialTask, pathStr)
+            if (pathSteps.size > 1) {
+                Log.i("[NetworkClient]", "Uploading successful path to Firestore: $pathStr")
+                CloudPathDatabase.addEntry(targetPackage, initialTask, pathStr)
+            } else {
+                Log.w("[NetworkClient]", "Not uploading trivial 1-step path to Firestore: $pathStr")
+            }
 
             postToMain {
                 hud.updateHud(
@@ -668,6 +765,102 @@ object NavigationStateMachine {
             }
         }
     }
+
+    /**
+     * Called when the user says NO at the destination verification prompt, or
+     * when the final element is found but not reached correctly.
+     *
+     * Asks Groq for a corrected path using:
+     * - current screen context (clean_page.json)
+     * - current active package (where we are now)
+     * - the original intended task (where we want to go)
+     */
+    private fun handleDestinationNotFound() {
+        Log.i(TAG, "Destination NOT confirmed — requesting Groq corrected path from '$activeScreenName'")
+        hud.updateHud(
+            stepHeader        = "ASKING AI",
+            actionInstruction = "Finding a better route…",
+            breadcrumb        = buildBreadcrumb(),
+            contextText       = "Current: $activeScreenName",
+            subTag            = "groq-recovery"
+        )
+
+        stateMachineScope.launch(Dispatchers.IO) {
+            try {
+                // CleanPageProcessor is in the same package — no FQN needed
+                val cleanPageFile = java.io.File(
+                    context.getExternalFilesDir(null) ?: context.cacheDir,
+                    CleanPageProcessor.CLEAN_FILE_NAME
+                )
+                val cleanPageContent = if (cleanPageFile.exists()) cleanPageFile.readText() else ""
+
+                val deviceInfo = com.example.floatingassistant.pathgenerator.DeviceInfoGatherer.gather(context)
+                val isOnTargetApp = isTargetApp(lastKnownActivePackage, null)
+
+                val userPrompt = com.example.floatingassistant.pathgenerator.PromptBuilder.buildRecoveryPrompt(
+                    targetAppLabel,
+                    initialTask,
+                    activeScreenName,
+                    lastKnownActivePackage,
+                    cleanPageContent,
+                    deviceInfo,
+                    isOnTargetApp
+                )
+
+                Log.d(TAG, "Sending recovery prompt to Groq…")
+                val rawResponse = com.example.floatingassistant.pathgenerator.GroqProxyClient()
+                    .sendDirectRequest(com.example.floatingassistant.pathgenerator.PromptBuilder.SYSTEM_PROMPT, userPrompt)
+                Log.d(TAG, "Groq recovery response: $rawResponse")
+
+                val navPath = com.example.floatingassistant.pathgenerator.GroqResponseParser.parse(rawResponse)
+                val pathStr = navPath.toPathString()  // returns "" (not null) when empty
+
+                postToMain {
+                    if (navPath.isValid && pathStr.isNotEmpty()) {
+                        val newSteps = pathStr.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                        Log.i(TAG, "Groq recovery path (${newSteps.size} steps): $newSteps")
+                        pathSteps       = newSteps.toMutableList()
+                        currentIndex    = 0
+                        prevStep        = null
+                        currStep        = pathSteps[0]
+                        nextStep        = pathSteps.getOrNull(1)
+                        lastCorrectStep = null
+                        hud.updateHud(
+                            stepHeader        = "NEW ROUTE — STEP 1 OF ${pathSteps.size}",
+                            actionInstruction = "Look for '$currStep'",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "AI found a different path",
+                            subTag            = "groq-recovery-start"
+                        )
+                        triggerSearchPipeline(currStep, lastKnownActivePackage, activeScreenName)
+                    } else {
+                        Log.w(TAG, "Groq recovery returned no valid path: ${navPath.errorMessage}")
+                        hud.updateHud(
+                            stepHeader        = "NOT FOUND",
+                            actionInstruction = "Couldn't find route — try submitting again",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "Tap the bubble to start a new command",
+                            subTag            = "groq-recovery-failed"
+                        )
+                        isNavigating = false
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Groq recovery error: ${e.message}", e)
+                postToMain {
+                    hud.updateHud(
+                        stepHeader        = "AI ERROR",
+                        actionInstruction = "Tap bubble to try again",
+                        breadcrumb        = buildBreadcrumb(),
+                        contextText       = e.message ?: "Network error",
+                        subTag            = "groq-recovery-error"
+                    )
+                    isNavigating = false
+                }
+            }
+        }
+    }
+
 
     // ── App matching helpers ───────────────────────────────────────────────────
 

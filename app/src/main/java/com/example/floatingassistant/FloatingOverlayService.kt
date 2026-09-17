@@ -11,7 +11,9 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.util.TypedValue
@@ -236,13 +238,12 @@ class FloatingOverlayService : Service() {
         val sizePx = dp(56)
 
         bubbleView = FrameLayout(this).apply {
-            background = circleDrawable(Color.parseColor("#00D4C0"))
+            background = circleDrawable(Color.parseColor("#0D1F6E"))  // deep navy matches icon gradient
             addView(
-                TextView(this@FloatingOverlayService).apply {
-                    text = "⚡"
-                    textSize = 22f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.parseColor("#001412"))
+                android.widget.ImageView(this@FloatingOverlayService).apply {
+                    setImageResource(R.drawable.ic_navvy_bubble)
+                    scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                    setPadding(dp(10), dp(10), dp(10), dp(10))
                 },
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -250,6 +251,7 @@ class FloatingOverlayService : Service() {
                 )
             )
         }
+
 
         // Start in idle mode — fully pass-through to system UI
         bubbleParams = WindowManager.LayoutParams(
@@ -283,6 +285,16 @@ class FloatingOverlayService : Service() {
         var initialTouchY = 0f
         var totalMovement = 0f
         var dragLocked = false
+        var isLongPress = false
+        val longPressHandler = Handler(Looper.getMainLooper())
+        val longPressRunnable = Runnable {
+            isLongPress = true
+            bubbleView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+            Log.i(TAG, "Bubble long-pressed — triggering manual destination options")
+            if (NavigationStateMachine.isRunning()) {
+                NavigationStateMachine.showManualDestinationPrompt()
+            }
+        }
 
         bubbleView.setOnTouchListener { _, event ->
             when (event.action) {
@@ -293,12 +305,18 @@ class FloatingOverlayService : Service() {
                     initialTouchY = event.rawY
                     totalMovement = 0f
                     dragLocked = false
+                    isLongPress = false
+                    longPressHandler.postDelayed(longPressRunnable, 500L)
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = event.rawX - initialTouchX
                     val dy = event.rawY - initialTouchY
                     totalMovement += abs(dx) + abs(dy)
+
+                    if (totalMovement > TAP_SLOP_PX) {
+                        longPressHandler.removeCallbacks(longPressRunnable)
+                    }
 
                     if (!dragLocked && totalMovement > TAP_SLOP_PX) {
                         // Drag threshold exceeded → drag takes priority over everything
@@ -324,8 +342,9 @@ class FloatingOverlayService : Service() {
                     runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
                     true
                 }
-                MotionEvent.ACTION_UP -> {
-                    if (totalMovement < TAP_SLOP_PX) {
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    longPressHandler.removeCallbacks(longPressRunnable)
+                    if (event.action == MotionEvent.ACTION_UP && !isLongPress && totalMovement < TAP_SLOP_PX) {
                         toggleControlPanel()
                     }
                     true
@@ -334,6 +353,7 @@ class FloatingOverlayService : Service() {
             }
         }
     }
+
 
     // ── Control panel ─────────────────────────────────────────────────────────
 
@@ -356,18 +376,16 @@ class FloatingOverlayService : Service() {
             setPadding(0, dp(8), 0, 0)
         }
 
+        // ── Idle mode: input + Submit + Stop row ──────────────────────────────
         val input = EditText(this).apply {
-            hint = "Enter a command (e.g., \"Call Mom\")"
+            hint = "What do you want to do?"
             setHintTextColor(Color.parseColor("#8A8A8A"))
             setTextColor(Color.WHITE)
             minLines = 1
             maxLines = 4
             background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(10).toFloat())
             setPadding(dp(12), dp(10), dp(12), dp(10))
-            // Switch to typing flags when the user taps the field
-            setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) applyTypingFlags()
-            }
+            setOnFocusChangeListener { _, hasFocus -> if (hasFocus) applyTypingFlags() }
         }
         panelInputRef = input
 
@@ -376,23 +394,9 @@ class FloatingOverlayService : Service() {
             isAllCaps = false
             setTextColor(Color.parseColor("#001412"))
             background = roundedRectDrawable(Color.parseColor("#00D4C0"), dp(50).toFloat())
-            setOnClickListener {
-                val query = input.text?.toString()?.trim().orEmpty()
-
-                // ── Step 1: client-side validation ────────────────────────────
-                val validationResult = CommandValidator.validate(query)
-                if (validationResult is ValidationResult.Invalid) {
-                    statusText.text = validationResult.reason
-                    return@setOnClickListener
-                }
-
-                // ── Step 2: send to AI ────────────────────────────────────────
-                stopTapCount = 0  // reset on new submission
-                handleSubmittedQuery(query, statusText)
-            }
         }
 
-        val stopButton = Button(this).apply {
+        val stopButtonIdle = Button(this).apply {
             text = "Stop"
             isAllCaps = false
             setTextColor(Color.WHITE)
@@ -400,14 +404,141 @@ class FloatingOverlayService : Service() {
             setOnClickListener { handleStop(statusText) }
         }
 
-        val buttonRow = LinearLayout(this).apply {
+        val idleButtonRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(16), 0, 0)
             addView(submitButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginEnd = dp(8)
             })
-            addView(stopButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(stopButtonIdle, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         }
+
+        // ── Searching mode: status label + Stop ───────────────────────────────
+        val searchingLabel = TextView(this).apply {
+            setTextColor(Color.parseColor("#00D4C0"))
+            textSize = 13f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(0, 0, 0, dp(4))
+        }
+
+        val reachedButton = Button(this).apply {
+            text = "At Final Page / Reached ✓"
+            isAllCaps = false
+            textSize = 12f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#001412"))
+            background = roundedRectDrawable(Color.parseColor("#00D4C0"), dp(50).toFloat())
+            setOnClickListener {
+                hidePanelAndRestoreIdle()
+                NavigationStateMachine.onManualDestinationReached()
+            }
+        }
+
+        val stopButtonSearching = Button(this).apply {
+            text = "Stop"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            background = roundedRectDrawable(Color.parseColor("#3A1414"), dp(50).toFloat())
+            setOnClickListener {
+                handleStop(statusText)
+                // Restore idle UI — show search text field and submit button
+                searchingLabel.visibility = android.view.View.GONE
+                reachedButton.visibility = android.view.View.GONE
+                this.visibility = android.view.View.GONE
+                input.visibility = android.view.View.VISIBLE
+                idleButtonRow.visibility = android.view.View.VISIBLE
+                input.setText("")
+                statusText.text = "Stopped"
+            }
+        }
+
+        // Initialize view visibility based on whether search/navigation is currently active
+        val isNavActive = NavigationStateMachine.isRunning()
+        if (isNavActive) {
+            input.visibility = android.view.View.GONE
+            idleButtonRow.visibility = android.view.View.GONE
+
+            val task = NavigationStateMachine.getCurrentTask()
+            val app = NavigationStateMachine.getTargetAppLabel()
+            val step = NavigationStateMachine.getCurrentStep()
+            val stepIdx = NavigationStateMachine.getCurrentStepIndex() + 1
+            val total = NavigationStateMachine.getTotalSteps()
+
+            searchingLabel.text = buildString {
+                if (task.isNotEmpty()) {
+                    append("Searching: \"$task\"\n")
+                }
+                if (app.isNotEmpty()) {
+                    append("Target App: $app\n")
+                }
+                if (total > 0 && step.isNotEmpty()) {
+                    append("Step $stepIdx of $total: Look for '$step'")
+                } else if (step.isNotEmpty()) {
+                    append("Current step: Look for '$step'")
+                }
+            }
+            searchingLabel.visibility = android.view.View.VISIBLE
+            reachedButton.visibility = android.view.View.VISIBLE
+            stopButtonSearching.visibility = android.view.View.VISIBLE
+        } else {
+            input.visibility = android.view.View.VISIBLE
+            idleButtonRow.visibility = android.view.View.VISIBLE
+            searchingLabel.visibility = android.view.View.GONE
+            reachedButton.visibility = android.view.View.GONE
+            stopButtonSearching.visibility = android.view.View.GONE
+        }
+
+        // Wrap searching-mode widgets so they can be shown/hidden as a unit
+        val searchingRow = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(searchingLabel, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(reachedButton, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(10)
+            })
+            addView(stopButtonSearching, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8)
+            })
+        }
+
+
+        // Wire submit: switch to searching mode, then dispatch query
+        submitButton.setOnClickListener {
+            val query = input.text?.toString()?.trim().orEmpty()
+            val validationResult = CommandValidator.validate(query)
+            if (validationResult is ValidationResult.Invalid) {
+                statusText.text = validationResult.reason
+                return@setOnClickListener
+            }
+
+            // Switch to searching UI
+            stopTapCount = 0
+            input.visibility = android.view.View.GONE
+            idleButtonRow.visibility = android.view.View.GONE
+            searchingLabel.text = "Searching: \"$query\""
+            searchingLabel.visibility = android.view.View.VISIBLE
+            reachedButton.visibility = android.view.View.VISIBLE
+            stopButtonSearching.visibility = android.view.View.VISIBLE
+            handleSubmittedQuery(
+                query = query,
+                statusText = statusText,
+                onStatusUpdate = { currentStatus -> searchingLabel.text = currentStatus },
+                onFinished = { success ->
+                    if (!success) {
+                        searchingLabel.visibility = android.view.View.GONE
+                        reachedButton.visibility = android.view.View.GONE
+                        stopButtonSearching.visibility = android.view.View.GONE
+                        input.visibility = android.view.View.VISIBLE
+                        idleButtonRow.visibility = android.view.View.VISIBLE
+                    }
+                }
+            )
+        }
+
+
+
 
 
         // ── Developer Tools ────────────────────────────────────────────────────
@@ -497,17 +628,20 @@ class FloatingOverlayService : Service() {
             setPadding(dp(20), dp(20), dp(20), dp(20))
             background = roundedRectDrawable(Color.parseColor("#1E1E1E"), dp(20).toFloat())
             addView(TextView(this@FloatingOverlayService).apply {
-                text = "Floating Assistant"
+                text = "Navvy"
                 setTextColor(Color.WHITE)
                 textSize = 16f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
                 setPadding(0, 0, 0, dp(12))
             })
             addView(input)
-            addView(buttonRow)
+            addView(idleButtonRow)
+            addView(searchingRow)
             addView(statusText)
             addView(devToolsLabel)
             addView(devRow)
         }
+
 
         // Panel uses its own params; NOT_FOCUSABLE not set here so IME works
         val panelParams = WindowManager.LayoutParams(
@@ -549,6 +683,22 @@ class FloatingOverlayService : Service() {
     // ── Query handling: Gemini → [Tier 1 local] → [Tier 2 cloud] → [Tier 3 Groq] ──
 
     /**
+     * Rejects paths that contain only a single trivial step (e.g. just the app name "Settings" or "Home").
+     * Such paths only launch the app and don't navigate to the intended task inside the app.
+     */
+    private fun isPathTrivialOrIncomplete(steps: List<String>, targetApp: String): Boolean {
+        if (steps.isEmpty()) return true
+        if (steps.size == 1) {
+            val s0 = steps[0].trim().lowercase()
+            val app = targetApp.trim().lowercase()
+            if (s0 == app || s0 == "settings" || s0 == "home" || app.contains(s0) || s0.contains(app)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
      * Full pipeline entry point for a validated user command.
      *
      * Phase 1  — Gemini parses the raw query into a structured intent
@@ -558,9 +708,20 @@ class FloatingOverlayService : Service() {
      * Every major step logs to Logcat under the [PathFinder] tag so the
      * complete execution flow is traceable without a debugger.
      */
-    private fun handleSubmittedQuery(query: String, statusText: TextView) {
+    private fun handleSubmittedQuery(
+
+        query: String,
+        statusText: TextView,
+        onStatusUpdate: ((String) -> Unit)? = null,
+        onFinished: ((Boolean) -> Unit)? = null
+    ) {
+        fun setStatus(msg: String) {
+            statusText.text = msg
+            onStatusUpdate?.invoke(msg)
+        }
+
         Log.i("[PathFinder]", "── New query ── \"$query\"")
-        statusText.text = "Analysing…"
+        setStatus("Analysing…")
 
         // Clear any pending path from a previous query — a new query means the old
         // one is abandoned, so it should not be saved to Firestore on Stop.
@@ -569,28 +730,19 @@ class FloatingOverlayService : Service() {
         pendingGroqPath = null
 
         serviceScope.launch {
-            // ── PHASE 1 STEP A: Intent classification (Proxy Server -> Gemini -> Local Fallback) ──
+            // ── PHASE 1: Intent classification (Gemini / Local Fallback) ───────
             Log.d("[PathFinder]", "Phase 1 — calling Command Parser")
             val parsed = withContext(Dispatchers.IO) {
                 GeminiCommandParser.parse(query) { progressMsg ->
-                    withContext(Dispatchers.Main) { statusText.text = progressMsg }
+                    withContext(Dispatchers.Main) { setStatus(progressMsg) }
                 }
             }
 
-            // GeminiCommandParser already emits the [PathFinder] log:
-            //   "Parsed Intent -> App: X, Screen: Y, Task: Z"
-            // Show structured result in the panel status area.
-            statusText.text =
-                "App: ${parsed.targetApp}\n" +
-                "Screen: ${parsed.destinationScreen}\n" +
-                "Task: ${parsed.exactTask}"
-
-            Log.d("[PathFinder]", "Phase 1 complete — " +
-                "targetApp=\"${parsed.targetApp}\" | " +
-                "destinationScreen=\"${parsed.destinationScreen}\" | " +
-                "exactTask=\"${parsed.exactTask}\"")
+            setStatus("App: ${parsed.targetApp}\nTask: ${parsed.exactTask}")
+            Log.d("[PathFinder]", "Phase 1 complete — targetApp=\"${parsed.targetApp}\" task=\"${parsed.exactTask}\"")
 
             // ── PHASE 2 (Tier 1 — Local Graph Search) ─────────────────────────
+            setStatus("Searching local graph…")
             val searchResult = withContext(Dispatchers.IO) {
                 SearchPathEngine.findPath(
                     context = applicationContext,
@@ -600,25 +752,20 @@ class FloatingOverlayService : Service() {
                 )
             }
 
-            if (searchResult.found) {
-                Log.i(TAG, "Local search matched: ${searchResult.pathString}")
-
-                // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
+            val localSteps = searchResult.pathString.orEmpty().split("->").map { it.trim() }.filter { it.isNotEmpty() }
+            if (searchResult.found && !isPathTrivialOrIncomplete(localSteps, parsed.targetApp)) {
+                Log.i(TAG, "Tier 1 Local DB: Valid path matched (${localSteps.size} steps) -> ${searchResult.pathString}")
                 withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
-
-                // ── BUG-3 / Stage 2: Hand path to central state machine ────────
-                val pathStr = searchResult.pathString.orEmpty()
-                val steps   = pathStr.split("->").map { it.trim() }.filter { it.isNotEmpty() }
-                Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${steps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(steps, parsed.targetApp, parsed.exactTask)
-                // HUD is now controlled by NavigationStateMachine; no direct hud calls here.
-
+                Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${localSteps.size} steps)")
+                NavigationStateMachine.startNavigation(localSteps, parsed.targetApp, parsed.exactTask)
                 return@launch
+            } else if (searchResult.found) {
+                Log.w(TAG, "Tier 1 Local DB returned trivial 1-step path (${searchResult.pathString}) — discarding and falling through to cloud/AI")
             }
 
             // ── PHASE 3 (Tier 2 — Firestore) ─────────────────────────────────
-            Log.d("[PathFinder]", "Phase 3 — Tier 2 Firestore lookup (app=${parsed.targetApp}, task=${parsed.exactTask})")
-            statusText.text = "Searching cloud database…"
+            Log.d("[PathFinder]", "Phase 3 — Tier 2 Firestore lookup")
+            setStatus("Searching cloud database…")
 
             val cloudPath = withContext(Dispatchers.IO) {
                 CloudPathDatabase.lookup(
@@ -627,25 +774,22 @@ class FloatingOverlayService : Service() {
                 )
             }
 
-            if (cloudPath.isNotEmpty()) {
-                Log.i("[PathFinder]", "Tier 2 Firestore: Match Found → \"$cloudPath\"")
-
-                // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
+            val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+            if (cloudPath.isNotEmpty() && !isPathTrivialOrIncomplete(cloudSteps, parsed.targetApp)) {
+                Log.i("[PathFinder]", "Tier 2 Firestore: Match Found (${cloudSteps.size} steps) -> \"$cloudPath\"")
                 withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
-
-                // ── BUG-3 / Stage 2: Hand path to central state machine ────────
-                val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 2 → startNavigation(${cloudSteps.size} steps, pkg='${parsed.targetApp}')")
                 NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp, parsed.exactTask)
-
                 return@launch
+            } else if (cloudPath.isNotEmpty()) {
+                Log.w("[PathFinder]", "Tier 2 Firestore returned trivial 1-step path (\"$cloudPath\") — discarding and falling through to AI")
             }
 
             Log.w("[PathFinder]", "Tier 2 Firestore: Miss — falling through to Tier 3 (Groq)")
 
             // ── PHASE 4 (Tier 3 — Groq) ──────────────────────────────────────
-            Log.d("[PathFinder]", "Phase 4 — Tier 3 Groq fallback for app=${parsed.targetApp}, task=${parsed.exactTask}")
-            statusText.text = "Asking AI for path…"
+            Log.d("[PathFinder]", "Phase 4 — Tier 3 Groq fallback for app=${parsed.targetApp}")
+            setStatus("Asking AI for path…")
 
             // Capture the actual failure reason so it can be shown in the bubble
             var groqErrorReason: String? = null
@@ -657,26 +801,26 @@ class FloatingOverlayService : Service() {
                         getExternalFilesDir(null) ?: cacheDir,
                         CleanPageProcessor.CLEAN_FILE_NAME
                     )
-                    val cleanPageContent = if (cleanPageFile.exists()) cleanPageFile.readText() else ""
-                    Log.d("[PathFinder]", "clean_page.json read: ${cleanPageContent.length} chars")
+                    val cleanPageContent = if (cleanPageFile.exists()) {
+                        cleanPageFile.readText()
+                    } else {
+                        Log.w("[PathFinder]", "clean_page.json not found — sending empty screen context")
+                        ""
+                    }
 
-                    // 2. Detect whether the user is already on the target app.
-                    //    clean_page.json has: { "meta": { "package_name": "com.whatsapp" }, ... }
-                    //    We compare the app's simple name (e.g. "whatsapp") against targetApp.
+                    // 2. Gather device hardware and OS context
+                    val deviceInfo = DeviceInfoGatherer.gather(applicationContext)
+
+                    // 3. Determine whether the user is already on the target app
                     val currentPackage = try {
                         org.json.JSONObject(cleanPageContent)
                             .optJSONObject("meta")
                             ?.optString("package_name", "") ?: ""
                     } catch (_: Exception) { "" }
-                    // Match: "com.whatsapp" contains "whatsapp", "com.android.settings" contains "settings"
                     val isOnTargetApp = currentPackage.isNotEmpty() &&
                             currentPackage.contains(parsed.targetApp.trim().lowercase(), ignoreCase = true)
-                    Log.d("[PathFinder]", "currentPackage=$currentPackage, targetApp=${parsed.targetApp}, isOnTargetApp=$isOnTargetApp")
 
-                    // 3. Gather device info
-                    val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
-
-                    // 4. Build prompt and call Groq
+                    // 4. Build prompt incorporating Gemini-parsed intent
                     val userPrompt = PromptBuilder.buildGeminiDrivenPrompt(
                         parsed.targetApp,
                         parsed.exactTask,
@@ -716,8 +860,9 @@ class FloatingOverlayService : Service() {
                 }
             }
 
-            if (!groqPath.isNullOrEmpty()) {
-                Log.i("[PathFinder]", "Tier 3 Groq: Generated path → \"$groqPath\"")
+            val groqSteps = groqPath?.split("->")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+            if (!groqPath.isNullOrEmpty() && !isPathTrivialOrIncomplete(groqSteps, parsed.targetApp)) {
+                Log.i("[PathFinder]", "Tier 3 Groq: Generated path (${groqSteps.size} steps) → \"$groqPath\"")
 
                 // Hold path for Firestore save when user confirms (Stop tap 1)
                 pendingGroqApp  = parsed.targetApp
@@ -728,23 +873,25 @@ class FloatingOverlayService : Service() {
                 withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
 
                 // ── BUG-3 / Stage 2: Hand path to central state machine ────────
-                val groqSteps = groqPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 3 → startNavigation(${groqSteps.size} steps, pkg='${parsed.targetApp}')")
                 NavigationStateMachine.startNavigation(groqSteps, parsed.targetApp, parsed.exactTask)
 
             } else {
-                Log.w("[PathFinder]", "Tier 3 Groq: Failed — reason: $groqErrorReason")
-                // Leave panel open so user can read the error
-                statusText.text = buildString {
-                    append("❌ AI path failed\n")
-                    append("App: ${parsed.targetApp}\n")
-                    append("Task: ${parsed.exactTask}\n\n")
-                    if (!groqErrorReason.isNullOrEmpty()) append("Reason: $groqErrorReason")
-                    else append("Unknown error — check Logcat ([PathFinder] tag)")
+                Log.w("[PathFinder]", "Tier 3 Groq: Failed or returned trivial path ($groqPath) — reason: $groqErrorReason")
+                withContext(Dispatchers.Main) {
+                    onFinished?.invoke(false)
+                    statusText.text = buildString {
+                        append("❌ AI path failed\n")
+                        append("App: ${parsed.targetApp}\n")
+                        append("Task: ${parsed.exactTask}\n\n")
+                        if (!groqErrorReason.isNullOrEmpty()) append("Reason: $groqErrorReason")
+                        else append("Could not generate valid multi-step route")
+                    }
                 }
                 navigationHud.hide()
                 Log.i("[NavigationEngine]", "All tiers failed — HUD hidden")
             }
+
         }
     }
 

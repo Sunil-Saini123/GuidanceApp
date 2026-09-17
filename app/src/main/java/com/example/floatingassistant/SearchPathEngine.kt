@@ -205,20 +205,24 @@ object SearchPathEngine {
             val targetScreen = candidate.screen
             val targetElement = candidate.elementName
 
-            // If root IS the target screen, just return the element
+            // If root IS the target screen, only accept if a specific action element was found on it
             if (startScreen.id == targetScreen.id) {
-                val steps = mutableListOf<String>()
-                if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
-                else steps.add(targetScreen.screenTitle)
-                return PathSearchResult.found(
-                    pathString = steps.joinToString(" -> "),
-                    steps = steps,
-                    fromScreenId = startScreen.id,
-                    toScreenId = targetScreen.id,
-                    targetElement = targetElement,
-                    message = "Target is on the app home screen"
-                )
+                if (!targetElement.isNullOrEmpty()) {
+                    val steps = mutableListOf(targetElement)
+                    return PathSearchResult.found(
+                        pathString = steps.joinToString(" -> "),
+                        steps = steps,
+                        fromScreenId = startScreen.id,
+                        toScreenId = targetScreen.id,
+                        targetElement = targetElement,
+                        message = "Target element found on the app home screen"
+                    )
+                }
+                // Root screen matched without a specific element -> not a complete path to the task
+                Log.d(TAG, "Root screen matched for candidate but no specific element identified; continuing search")
+                continue
             }
+
 
             // Otherwise run Dijkstra
             val shortestPathEdges = dijkstra(
