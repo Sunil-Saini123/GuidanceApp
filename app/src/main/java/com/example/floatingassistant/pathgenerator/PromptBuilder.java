@@ -1,5 +1,6 @@
 package com.example.floatingassistant.pathgenerator;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Map;
@@ -22,9 +23,12 @@ public class PromptBuilder {
             "4. Include EVERY intermediate step — do NOT skip steps. For example:\n" +
             "   Wrong (too short): [\"Settings\", \"Profile Picture\"]\n" +
             "   Correct (complete): [\"Home\", \"WhatsApp\", \"Menu\", \"Settings\", \"Account\", \"Profile Picture\"]\n" +
-            "5. Keep screen and item names accurate for the specific device manufacturer and OEM ROM.\n" +
-            "6. Verify that each consecutive navigation step is realistically reachable from the previous step.\n" +
-            "7. If insufficient information, return: {\"destination\": \"Unknown\", \"path\": []}";
+            "5. The path array MUST ONLY contain the names of clickable buttons, menus, and tabs. NEVER include instructional actions like 'Scroll down', 'Swipe', 'Click', or 'Wait'. If a user needs to scroll to see 'About phone', just output 'About phone' as the next step.\n" +
+            "   Wrong: [\"Settings\", \"Scroll down\", \"About phone\"]\n" +
+            "   Correct: [\"Settings\", \"About phone\"]\n" +
+            "6. Keep screen and item names accurate for the specific device manufacturer and OEM ROM.\n" +
+            "7. Verify that each consecutive navigation step is realistically reachable from the previous step.\n" +
+            "8. If insufficient information, return: {\"destination\": \"Unknown\", \"path\": []}";
 
     public static String buildUserPrompt(PathRequest request) {
         StringBuilder sb = new StringBuilder();
@@ -82,16 +86,14 @@ public class PromptBuilder {
      *           e.g.  WhatsApp → 3 dots → Settings → ...
      *   false → user is on a different app / home screen → start from Home
      *           e.g.  Home → WhatsApp → 3 dots → Settings → ...
-     *
-     * cleanPageContent is truncated to GroqProxyClient.MAX_SCREEN_CONTENT_CHARS to avoid
-     * HTTP 413 (Request Entity Too Large) from the Vercel proxy.
      */
     public static String buildGeminiDrivenPrompt(
             String targetApp,
             String exactTask,
             String cleanPageContent,
             JSONObject deviceInfo,
-            boolean isOnTargetApp) {
+            boolean isOnTargetApp,
+            String failedPath) {
 
         StringBuilder sb = new StringBuilder();
 
@@ -113,22 +115,13 @@ public class PromptBuilder {
             sb.append("\n");
         }
 
-        // Truncate screen content to avoid HTTP 413 from Vercel proxy
-        if (cleanPageContent != null && !cleanPageContent.trim().isEmpty()) {
-            String screen = cleanPageContent.trim();
-            if (screen.length() > GroqProxyClient.MAX_SCREEN_CONTENT_CHARS) {
-                screen = screen.substring(0, GroqProxyClient.MAX_SCREEN_CONTENT_CHARS) + "\n... [truncated]";
-            }
-            sb.append("Current Screen Elements (live UI snapshot):\n");
-            sb.append(screen).append("\n\n");
-        } else {
-            sb.append("Current Screen Elements: Not available - use standard app navigation.\n\n");
-        }
+        // [PERMANENT FIX] Do not remove this! Format screen elements concisely so the AI sees all elements on screen without truncation.
+        sb.append(formatScreenElements(cleanPageContent));
 
         // Path starting point instruction based on current context
         if (isOnTargetApp) {
             sb.append("IMPORTANT: The user is ALREADY INSIDE the target app (").append(targetApp).append("). ");
-            sb.append("Start the path from inside the app — do NOT include 'Home' or the app launch step. ");
+            sb.append("Start the path from the current screen — do NOT include 'Home' or the app launch step. ");
             sb.append("Include EVERY intermediate screen, menu, or tap needed. Do NOT skip steps.\n");
             sb.append("Example for WhatsApp profile picture: [\"Menu\", \"Settings\", \"Account\", \"Profile Picture\"]\n\n");
         } else {
@@ -138,9 +131,54 @@ public class PromptBuilder {
             sb.append("Example for WhatsApp profile picture: [\"Home\", \"WhatsApp\", \"Menu\", \"Settings\", \"Account\", \"Profile Picture\"]\n\n");
         }
 
-        sb.append("CRITICAL: The path array must be COMPLETE with ALL steps — short paths with missing intermediate steps are WRONG. ");
-        sb.append("Generate the exact ordered navigation path to accomplish the task. ");
-        sb.append("Use real UI element names for this device ROM.");
+        sb.append("CRITICAL RULES:\n");
+        if (failedPath != null && !failedPath.trim().isEmpty()) {
+            sb.append("0. [PERMANENT FIX] The user previously tried this path but it FAILED because the menus did not exist: [").append(failedPath).append("]. DO NOT suggest this path again! You MUST find an alternative route using the visible Screen Elements.\n");
+        }
+        sb.append("1. The path array must be COMPLETE with ALL steps — short paths with missing intermediate steps are WRONG.\n");
+        sb.append("2. DO NOT output action verbs like 'Scroll down', 'Swipe', 'Click', or 'Wait' — only the exact names of buttons/elements to tap.\n");
+        sb.append("3. If the 'Current Screen Elements' section above lists visible UI elements, you MUST use those EXACT element names in your path. Do NOT invent different names for elements that are already visible.\n");
+        sb.append("4. If the target element is NOT visible in the screen snapshot (user needs to scroll), use the CORRECT name for THIS specific device and OEM ROM. ");
+        sb.append("Different OEMs use different names! For example:\n");
+        sb.append("   - AOSP/Pixel: 'About phone'  |  ColorOS/Realme/OPPO: 'About device'  |  Samsung OneUI: 'About phone'  |  MIUI/Xiaomi: 'About phone'\n");
+        sb.append("   - AOSP: 'Display'  |  ColorOS: 'Display & brightness'\n");
+        sb.append("   Check the Device Context above to determine the correct OEM naming.\n");
+        sb.append("5. Generate the exact ordered navigation path to accomplish the task.\n");
         return sb.toString();
+    }
+
+    // [PERMANENT FIX] Do not remove this! Format screen elements concisely so the AI can see the ENTIRE screen without hitting character limits.
+    private static String formatScreenElements(String rawContent) {
+        if (rawContent == null || rawContent.trim().isEmpty()) {
+            return "Current Screen Elements: Not available - use standard app navigation.\n\n";
+        }
+        try {
+            JSONObject obj = new JSONObject(rawContent);
+            JSONArray elements = obj.optJSONArray("elements");
+            if (elements != null && elements.length() > 0) {
+                StringBuilder list = new StringBuilder("Current Screen Elements (live UI snapshot):\n");
+                for (int i = 0; i < elements.length(); i++) {
+                    JSONObject el = elements.optJSONObject(i);
+                    if (el == null) continue;
+                    String name = el.optString("name", "").trim();
+                    if (!name.isEmpty()) {
+                        boolean clickable = el.optBoolean("is_clickable", false);
+                        list.append("- \"").append(name).append("\"");
+                        if (clickable) list.append(" [clickable]");
+                        list.append("\n");
+                    }
+                }
+                list.append("\n");
+                return list.toString();
+            }
+        } catch (Exception ignored) {
+            // If it's not standard JSON, fall back to string handling with generous limit
+        }
+
+        String screen = rawContent.trim();
+        if (screen.length() > GroqProxyClient.MAX_SCREEN_CONTENT_CHARS) {
+            screen = screen.substring(0, GroqProxyClient.MAX_SCREEN_CONTENT_CHARS) + "\n... [truncated]";
+        }
+        return "Current Screen Elements (live UI snapshot):\n" + screen + "\n\n";
     }
 }

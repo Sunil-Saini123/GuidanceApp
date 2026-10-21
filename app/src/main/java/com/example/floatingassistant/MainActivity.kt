@@ -39,7 +39,7 @@
 //
 //    override fun onCreate(savedInstanceState: Bundle?) {
 //        super.onCreate(savedInstanceState)
-//        hasPermission.value = isAccessibilityServiceEnabled()
+//        hasPermission.value = ensureAccessibilityServiceEnabled()
 //
 //        // ── Capture device/OS info at the permission step ────────────────────
 //        // Runs whenever MainActivity is created, i.e. right as the user reaches
@@ -93,7 +93,7 @@
 //    override fun onResume() {
 //        super.onResume()
 //        // Re-check every time we return (e.g. from Accessibility settings).
-//        val nowGranted = isAccessibilityServiceEnabled()
+//        val nowGranted = ensureAccessibilityServiceEnabled()
 //        if (nowGranted && !hasPermission.value) {
 //            // Permission just got granted → refresh the device-info snapshot
 //            // one more time to record the state at the moment of grant.
@@ -455,6 +455,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
@@ -486,7 +487,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        hasPermission.value = isAccessibilityServiceEnabled()
+        // [PERMANENT FIX] Do not remove this! Stream heartbeat to Live Dashboard whenever app is open
+        DebugTelemetryClient.startHeartbeat()
+        DebugTelemetryClient.emit(
+            type = "APP_START",
+            tag = "MainActivity",
+            title = "GuidanceApp Active",
+            description = "Main dashboard opened on device"
+        )
+        hasPermission.value = ensureAccessibilityServiceEnabled()
 
         // ── Capture device/OS info at the permission step ────────────────────
         // Runs whenever MainActivity is created, i.e. right as the user reaches
@@ -540,7 +549,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // Re-check every time we return (e.g. from Accessibility settings).
-        val nowGranted = isAccessibilityServiceEnabled()
+        val nowGranted = ensureAccessibilityServiceEnabled()
         if (nowGranted && !hasPermission.value) {
             // Permission just got granted → refresh the device-info snapshot
             // one more time to record the state at the moment of grant.
@@ -556,6 +565,36 @@ class MainActivity : ComponentActivity() {
         // and the capture switch is already ON, start the bubble now.
         if (ServiceStateManager.isServiceEnabled.value && FloatingOverlayService.hasOverlayPermission(this)) {
             FloatingOverlayService.start(this)
+        }
+    }
+
+    // [PERMANENT FIX] Do not remove this! Check and self-activate AccessibilityService if WRITE_SECURE_SETTINGS is granted via ADB
+    private fun ensureAccessibilityServiceEnabled(): Boolean {
+        if (isAccessibilityServiceEnabled()) return true
+
+        return try {
+            val target = ComponentName(
+                packageName,
+                "$packageName.UiTreeAccessibilityService"
+            ).flattenToString()
+            val resolver = contentResolver
+            val current = Settings.Secure.getString(
+                resolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: ""
+            val newServices = if (current.isBlank()) {
+                target
+            } else if (!current.split(':').any { it.equals(target, ignoreCase = true) }) {
+                "$current:$target"
+            } else {
+                current
+            }
+            Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, newServices)
+            Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
+            Log.i("MainActivity", "[PERMANENT FIX] Self-activated accessibility service via WRITE_SECURE_SETTINGS!")
+            true
+        } catch (e: SecurityException) {
+            false
         }
     }
 

@@ -171,108 +171,31 @@ task: take_selfie"""
         userCommand: String,
         onProgress: suspend (String) -> Unit = {}
     ): ParsedCommand = withContext(Dispatchers.IO) {
-        // ── 1. Direct Gemini REST API (Primary intent classification) ─────────
-        Log.d(TAG, "Attempting Gemini via proxy for intent classification")
-        onProgress("Analyzing intent with Gemini…")
-            for (model in MODEL_FALLBACK_LIST) {
-                var attempt = 0
-                while (attempt < MAX_RETRIES) {
-                    try {
-                        val responseText = callGeminiApi(model, userCommand)
-                        if (responseText != null) {
-                            val parsed = parseResponse(responseText)
-                            if (parsed != null) {
-                                Log.i(TAG, "Gemini intent classification succeeded with $model: $parsed")
-                                return@withContext parsed
-                            }
-                        }
-                        break
-                    } catch (e: QuotaExceededException) {
-                        Log.w(TAG, "Model $model hit quota limit (429). Skipping.")
-                        break
-                    } catch (e: RetryableException) {
-                        attempt++
-                        if (attempt >= MAX_RETRIES) break
-                        val delayMs = RETRY_DELAY_MS * (1L shl (attempt - 1))
-                        onProgress("Gemini busy — retrying…")
-                        kotlinx.coroutines.delay(delayMs)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Model $model failed: ${e.message}")
-                        break
-                    }
+        // ── 1. Direct API (Groq via Proxy) ─────────
+        Log.d(TAG, "Attempting Groq via proxy for intent classification")
+        onProgress("Analyzing intent with Groq…")
+        
+        try {
+            val proxy = com.example.floatingassistant.pathgenerator.GroqProxyClient()
+            val responseText = proxy.sendDirectRequest(SYSTEM_PROMPT, userCommand)
+            
+            if (responseText != null) {
+                val parsed = parseResponse(responseText)
+                if (parsed != null) {
+                    Log.i(TAG, "Groq intent classification succeeded: $parsed")
+                    return@withContext parsed
                 }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Groq proxy failed: ${e.message}")
+        }
+        
         // ── 2. Offline Local Intent Classification Fallback ───────────────────
         Log.i(TAG, "Falling back to offline IntentClassificationEngine")
         onProgress("Resolving intent locally…")
         val localParsed = resolveLocally(userCommand)
         Log.i("[PathFinder]", "Parsed Intent (Offline Fallback) -> App: ${localParsed.targetApp}, Screen: ${localParsed.destinationScreen}, Task: ${localParsed.exactTask}")
         localParsed
-    }
-
-    private const val PROXY_URL = "https://navigation-app-server.vercel.app/api/navigate"
-
-    /**
-     * Calls our deployed proxy server (does not require any device-side API key).
-     */
-    private fun callProxyApi(userCommand: String): String? {
-        var connection: HttpURLConnection? = null
-        return try {
-            val url = URL(PROXY_URL)
-            connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            connection.setRequestProperty("Accept", "application/json")
-            connection.doOutput = true
-            connection.connectTimeout = 8_000
-            connection.readTimeout = 15_000
-
-            val requestBody = JSONObject().apply {
-                put("model", "llama-3.3-70b-versatile")
-                put("temperature", 0.0)
-                put("max_tokens", 250)
-
-                val messages = JSONArray()
-                messages.put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", SYSTEM_PROMPT)
-                })
-                messages.put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", userCommand)
-                })
-                put("messages", messages)
-            }
-
-            OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { writer ->
-                writer.write(requestBody.toString())
-                writer.flush()
-            }
-
-            val statusCode = connection.responseCode
-            val stream = if (statusCode in 200..299) connection.inputStream else connection.errorStream
-            val responseText = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-
-            if (statusCode in 200..299) {
-                val root = JSONObject(responseText)
-                if (root.has("choices")) {
-                    val choices = root.getJSONArray("choices")
-                    if (choices.length() > 0) {
-                        val message = choices.getJSONObject(0).optJSONObject("message")
-                        return message?.optString("content", "")
-                    }
-                }
-                responseText
-            } else {
-                Log.w(TAG, "Proxy returned HTTP $statusCode: $responseText")
-                null
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Proxy call failed: ${e.message}")
-            null
-        } finally {
-            connection?.disconnect()
-        }
     }
 
     /**
@@ -521,13 +444,22 @@ task: take_selfie"""
      *
      * @return [ParsedCommand] or `null` if the format cannot be recognised at all.
      */
-    private fun parseResponse(rawText: String): ParsedCommand? {
-        // Normalise line endings and split into non-blank lines
+    // [PERMANENT FIX] Do not remove this! Handle markdown code fences, bolding (**label:**), bullet lists (- or *), and quotes in intent responses
+    internal fun parseResponse(rawText: String): ParsedCommand? {
+        fun cleanLine(raw: String): String {
+            var s = raw.trim()
+            s = s.replace(Regex("^[0-9]+[.)]\\s*"), "")
+            s = s.replace(Regex("^[-*•]\\s*"), "")
+            s = s.replace("**", "").replace("*", "").replace("`", "")
+            return s.trim()
+        }
+
+        // Normalise line endings, clean markdown noise, and split into non-blank lines
         val lines = rawText
             .replace("\r\n", "\n")
             .replace("\r",   "\n")
             .split("\n")
-            .map    { it.trim() }
+            .map    { cleanLine(it) }
             .filter { it.isNotBlank() }
 
         if (BuildConfig.DEBUG) Log.d(TAG, "Model response lines: $lines")
@@ -543,7 +475,7 @@ task: take_selfie"""
         fun extractValue(prefix: String): String? {
             val idx = lines.indexOfFirst { it.startsWith(prefix, ignoreCase = true) }
             if (idx < 0) return null
-            val sameLine = lines[idx].substringAfter(":").trim()
+            val sameLine = lines[idx].substringAfter(":").trim().trim('"', '\'', '`')
             if (sameLine.isNotEmpty()) return sameLine
             // Value split to next line (model formatting quirk)
             val nextLine = lines.getOrNull(idx + 1)
@@ -553,6 +485,7 @@ task: take_selfie"""
                     }
                 }
                 ?.trim()
+                ?.trim('"', '\'', '`')
             return if (!nextLine.isNullOrEmpty()) nextLine else null
         }
 

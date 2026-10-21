@@ -85,6 +85,47 @@ public class PathGeneratorTest {
     }
 
     @Test
+    public void testGroqResponseParserWithConversationalPreambleAndPostscript() {
+        String conversational = "Sure! Here is the JSON navigation path for your request:\n\n" +
+                "```json\n" +
+                "{\n" +
+                "  \"destination\": \"Sound & vibration\",\n" +
+                "  \"path\": [\"1. SettingsHomepage\", \"2. Sound & vibration\", \"3. Media volume\"]\n" +
+                "}\n" +
+                "```\n\n" +
+                "Hope this helps! Let me know if you need more details.";
+
+        NavigationPath path = GroqResponseParser.parse(conversational);
+        assertTrue(path.isValid());
+        assertEquals("Media volume", path.getSteps().get(2));
+        assertEquals("Sound & vibration", path.getDestination());
+        assertEquals("SettingsHomepage -> Sound & vibration -> Media volume", path.toPathString());
+    }
+
+    @Test
+    public void testGroqResponseParserDirectJsonArray() {
+        String arrayJson = "Here is the path:\n```json\n[\"Settings\", \"Display\", \"Dark theme\"]\n```";
+
+        NavigationPath path = GroqResponseParser.parse(arrayJson);
+        assertTrue(path.isValid());
+        assertEquals("Dark theme", path.getDestination());
+        assertEquals(3, path.getSteps().size());
+        assertEquals("Settings -> Display -> Dark theme", path.toPathString());
+    }
+
+    @Test
+    public void testGroqResponseParserAlternativeKeysAndBullets() {
+        String json = "{\n" +
+                "  \"steps\": [\"- Settings\", \"- Apps\", \"- Default apps\"]\n" +
+                "}";
+
+        NavigationPath path = GroqResponseParser.parse(json);
+        assertTrue(path.isValid());
+        assertEquals("Default apps", path.getDestination());
+        assertEquals("Settings -> Apps -> Default apps", path.toPathString());
+    }
+
+    @Test
     public void testGroqResponseParserInvalidJson() {
         String invalidJson = "This is not json output";
         NavigationPath path = GroqResponseParser.parse(invalidJson);

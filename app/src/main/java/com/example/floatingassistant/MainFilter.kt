@@ -1,8 +1,6 @@
-﻿package com.example.floatingassistant
+package com.example.floatingassistant
 
 import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -66,22 +64,22 @@ object MainFilter {
             return FilterResult.CannotAccess
         }
 
+        // [PERMANENT FIX] Do not remove this! The caller (UiTreeAccessibilityService) owns rootNode lifecycle
+        // and recycles it upon non-Passed filter results. Removing premature rootNode.recycle() here prevents
+        // native Binder double-recycle pool corruption.
         val pkg = packageName ?: run {
             Log.w(TAG, "Cannot access [no package name]")
-            rootNode.recycle()
             return FilterResult.CannotAccess
         }
 
         if (pkg == ownPackage) {
             Log.d(TAG, "Dropped [$pkg] — own app")
-            rootNode.recycle()
             return FilterResult.Dropped(pkg)
         }
 
         for (prefix in SYSTEM_UI_PREFIXES) {
             if (pkg.startsWith(prefix)) {
                 Log.d(TAG, "Dropped [$pkg] — System UI")
-                rootNode.recycle()
                 return FilterResult.Dropped(pkg)
             }
         }
@@ -93,7 +91,7 @@ object MainFilter {
         val semanticName = if (launcherPackage != null && pkg.startsWith(launcherPackage)) {
             "Home"
         } else {
-            generateSemanticRootName(appLabel, rootNode, eventClassName)
+            generateSemanticRootName(appLabel, rootNode, eventClassName, pkg)
         }
 
         Log.v(TAG, "Passed [$pkg] -> appLabel='$appLabel' semanticRoot='$semanticName'")
@@ -121,95 +119,18 @@ object MainFilter {
         }
     }
 
+    // [PERMANENT FIX] Do not remove this! Universal ScreenTitleResolver prevents SIM card hijacking and naive DFS misnaming
     private fun generateSemanticRootName(
         appLabel: String,
         rootNode: AccessibilityNodeInfo,
-        eventClassName: String?
+        eventClassName: String?,
+        packageName: String
     ): String {
-        // Base is the real app label ("Clock", "WhatsApp", "Gmail")
-        val baseAppName = appLabel.trim()
-
-        // Contextual Identifier — in priority order:
-        var contextId = findSelectedTab(rootNode)
-
-        if (contextId == null) {
-            contextId = findTopTitle(rootNode)
-        }
-
-        if (contextId == null) {
-            val cls = eventClassName?.substringAfterLast('.')
-            if (cls != null &&
-                !cls.contains("Layout", ignoreCase = true) &&
-                !cls.contains("View", ignoreCase = true) &&
-                !cls.contains("Activity", ignoreCase = true)) {
-                contextId = cls
-            }
-        }
-
-        // If context matches the base name (e.g. tab says "Clock"), skip it to avoid "Clock-clock"
-        if (contextId != null && contextId.equals(baseAppName, ignoreCase = true)) {
-            contextId = null
-        }
-
-        return if (contextId.isNullOrBlank()) {
-            baseAppName
-        } else {
-            val cleanContext = contextId.trim()
-                .replace(Regex("[^a-zA-Z0-9]+"), "-")
-                .take(25)
-                .removeSuffix("-")
-            "$baseAppName-$cleanContext"
-        }
-    }
-
-    private fun findSelectedTab(node: AccessibilityNodeInfo): String? {
-        if (node.isSelected) {
-            val text = node.text?.toString() ?: node.contentDescription?.toString()
-            if (!text.isNullOrBlank() && text.length < 30) return text
-        }
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            try {
-                val res = findSelectedTab(child)
-                if (res != null) return res
-            } finally {
-                child.recycle()
-            }
-        }
-        return null
-    }
-
-    private fun findTopTitle(node: AccessibilityNodeInfo): String? {
-        val rootBounds = Rect()
-        node.getBoundsInScreen(rootBounds)
-        val screenHeight = rootBounds.height()
-        if (screenHeight <= 0) return null
-
-        val top15 = screenHeight * 0.15f
-        return searchTopTitle(node, top15)
-    }
-
-    private fun searchTopTitle(node: AccessibilityNodeInfo, topThreshold: Float): String? {
-        val bounds = Rect()
-        node.getBoundsInScreen(bounds)
-        // Skip nodes entirely below the top 15%
-        if (bounds.top > topThreshold) return null
-
-        val resId = node.viewIdResourceName?.lowercase() ?: ""
-        if (resId.contains("title") || resId.contains("header") || resId.contains("action_bar") || resId.contains("toolbar")) {
-            val text = node.text?.toString() ?: node.contentDescription?.toString()
-            if (!text.isNullOrBlank() && text.length < 40) return text
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            try {
-                val res = searchTopTitle(child, topThreshold)
-                if (res != null) return res
-            } finally {
-                child.recycle()
-            }
-        }
-        return null
+        return ScreenTitleResolver.resolveTitle(
+            rootNode = rootNode,
+            appLabel = appLabel,
+            packageName = packageName,
+            eventClassName = eventClassName
+        )
     }
 }

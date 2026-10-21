@@ -263,4 +263,58 @@ class SearchPathEngineTest {
         assertEquals("Settings -> Chats -> Chat backup", result.pathString)
         assertEquals(listOf("Settings", "Chats", "Chat backup"), result.steps)
     }
+
+    // [PERMANENT FIX] Verify Dijkstra routes from user's current sub-screen rather than restarting from root
+    @Test
+    fun testMidAppRoutingFromCurrentSubScreen() {
+        val s1 = createScreen("com.android.settings::Settings", title = "Settings")
+        val s2 = createScreen("com.android.settings::Connected devices", title = "Connected devices")
+        val s3 = createScreen("com.android.settings::Bluetooth", title = "Bluetooth")
+
+        val t1 = createTransition(s1.id, s2.id, "Connected devices")
+        val t2 = createTransition(s2.id, s3.id, "Bluetooth")
+
+        // User is ALREADY on Connected devices (s2) and wants Bluetooth
+        val result = SearchPathEngine.findPathInGraph(
+            screens = listOf(s1, s2, s3),
+            transitions = listOf(t1, t2),
+            currentScreenId = s2.id,
+            destinationScreen = "Bluetooth",
+            exactTask = "Enable Bluetooth",
+            appDisplayName = "Settings"
+        )
+
+        assertTrue("Path from current screen should be found", result.found)
+        assertEquals("Bluetooth", result.pathString)
+        assertEquals(listOf("Bluetooth"), result.steps)
+        assertEquals(s2.id, result.fromScreenId)
+    }
+
+    // [PERMANENT FIX] Verify Dijkstra falls back to root screen if destination is unreachable from current sub-screen
+    @Test
+    fun testFallbackToRootWhenUnreachableFromSubScreen() {
+        val sRoot = createScreen("com.android.settings::Settings", title = "Settings")
+        val sConnected = createScreen("com.android.settings::Connected devices", title = "Connected devices")
+        val sBluetooth = createScreen("com.android.settings::Bluetooth", title = "Bluetooth")
+        val sDisplay = createScreen("com.android.settings::Display", title = "Display")
+
+        val t1 = createTransition(sRoot.id, sConnected.id, "Connected devices")
+        val t2 = createTransition(sConnected.id, sBluetooth.id, "Bluetooth")
+        val t3 = createTransition(sRoot.id, sDisplay.id, "Display")
+
+        // User is currently on Display (sDisplay) and wants Bluetooth (only reachable from root)
+        val result = SearchPathEngine.findPathInGraph(
+            screens = listOf(sRoot, sConnected, sBluetooth, sDisplay),
+            transitions = listOf(t1, t2, t3),
+            currentScreenId = sDisplay.id,
+            destinationScreen = "Bluetooth",
+            exactTask = "Enable Bluetooth",
+            appDisplayName = "Settings"
+        )
+
+        assertTrue("Fallback path from root should be found", result.found)
+        assertEquals("Connected devices -> Bluetooth", result.pathString)
+        assertEquals(listOf("Connected devices", "Bluetooth"), result.steps)
+        assertEquals(sRoot.id, result.fromScreenId)
+    }
 }

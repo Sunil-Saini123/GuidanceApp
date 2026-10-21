@@ -196,11 +196,16 @@ object GraphStateMachine {
     /** Per-package last-clicked label. Cleared after each navigation event. */
     private val lastClickedLabels = HashMap<String, String>()
 
+    // [PERMANENT FIX] Do not remove this! In-memory element cache for Scroll Mediator.
+    // Tracks previously known element names per screen so scrolls with 0 new elements are skipped.
+    private val screenElementCache = HashMap<String, MutableSet<String>>()
+
     // ── Initialisation ────────────────────────────────────────────────────────
 
     fun init(context: Context, navGraphFile: File) {
         db                = NavGraphDatabase.getInstance(context)
         this.navGraphFile = navGraphFile
+        screenElementCache.clear()
         // Prune any old Floating Assistant overlay screens from previous sessions
         db.pruneOverlayScreens()
         Log.i(TAG, "Initialised — DB: nav_graph.db  JSON: ${navGraphFile.name}")
@@ -233,18 +238,52 @@ object GraphStateMachine {
 
         when (eventType) {
             "SCROLL", "CONTENT_CHANGED" -> {
-                // Scroll: same screen, just update accumulated elements.
-                // No stack change, no new transitions.
+                // ── [PERMANENT FIX] SCROLL MEDIATOR DELTA FILTER ──
+                // Extract element names from the current visible screen
+                val incomingNames = cleanElements.mapNotNull {
+                    it.optString("name", "").trim().takeIf { name -> name.isNotEmpty() }
+                }
+                val knownSet = screenElementCache.getOrPut(screenId) { HashSet() }
+                val newElements = incomingNames.filter { it !in knownSet }
+
+                if (newElements.isEmpty()) {
+                    // Nothing changed! Completely skip disk dump and DB updates
+                    Log.v(TAG, "[$eventType] Mediator: 0 new elements on $screenId — skipping redundant DB write")
+                    DebugTelemetryClient.sendMediatorDiff(
+                        totalVisible = incomingNames.size,
+                        previouslyKnown = knownSet.size,
+                        newAdded = emptyList(),
+                        action = "SKIPPED_NO_CHANGE"
+                    )
+                    return
+                }
+
+                // New elements were revealed by the scroll!
+                knownSet.addAll(newElements)
                 db.upsertScreen(screenId, packageName, screenTitle, rootClass, cleanElements)
-                Log.d(TAG, "[$eventType] Elements updated for $screenId (${cleanElements.size} elements)")
+                Log.d(TAG, "[$eventType] Mediator: +${newElements.size} new elements added for $screenId: $newElements")
+                
+                DebugTelemetryClient.sendMediatorDiff(
+                    totalVisible = incomingNames.size,
+                    previouslyKnown = knownSet.size - newElements.size,
+                    newAdded = newElements,
+                    action = "DELTA_ADDED"
+                )
+                // Do NOT dump the full multi-app JSON snapshot during scrolls to prevent disk lag
+                return
             }
             else -> {  // NAVIGATION
+                val knownSet = screenElementCache.getOrPut(screenId) { HashSet() }
+                cleanElements.forEach { el ->
+                    val name = el.optString("name", "").trim()
+                    if (name.isNotEmpty()) knownSet.add(name)
+                }
                 handleNavigation(screenId, packageName, screenTitle, rootClass, cleanElements)
+                DebugTelemetryClient.sendScreenChanged(packageName, screenTitle, cleanElements)
+                // Write snapshot only on full screen navigation transitions
+                writeNavGraphSnapshot()
             }
         }
-
-        // Rewrite the full hierarchical graph snapshot after every event
-        writeNavGraphSnapshot()
     }
 
     // ── Navigation logic ──────────────────────────────────────────────────────
@@ -319,6 +358,17 @@ object GraphStateMachine {
      * "Static" = length ≤ 35 chars AND passes the dynamic-data guard.
      */
     private fun resolveScreenTitle(elements: List<JSONObject>, rootClass: String): String {
+        // Navigation-only words that should NEVER become a screen title
+        val NAV_ONLY_LABELS = setOf(
+            "back", "close", "next", "done", "cancel", "ok", "yes", "no",
+            "skip", "forward", "continue", "dismiss", "navigate up", "search"
+        )
+
+        // [PERMANENT FIX] Do not remove this! Priority 0: If rootClass is already a semantic screen title resolved by ScreenTitleResolver, prioritize it to ensure DB, graph, and UI match 100%
+        if (rootClass.isNotBlank() && !rootClass.contains('.') && isStaticTitle(rootClass) && rootClass.lowercase() !in NAV_ONLY_LABELS && ScreenTitleResolver.isAcceptableTitle(rootClass)) {
+            return rootClass
+        }
+
         if (elements.isEmpty()) return cleanRootClass(rootClass)
 
         val sh = try {
@@ -326,12 +376,6 @@ object GraphStateMachine {
         } catch (e: Exception) { 2400 }
 
         val topZoneLimit = sh * 0.20f
-
-        // Navigation-only words that should NEVER become a screen title
-        val NAV_ONLY_LABELS = setOf(
-            "back", "close", "next", "done", "cancel", "ok", "yes", "no",
-            "skip", "forward", "continue", "dismiss", "navigate up", "search"
-        )
 
         /** Primary label of an element — stripped of any composite suffix. */
         fun primaryName(el: JSONObject): String =
@@ -345,6 +389,7 @@ object GraphStateMachine {
                     && name.lowercase() !in NAV_ONLY_LABELS
                     && top.toFloat() <= topZoneLimit
                     && isStaticTitle(name)
+                    && ScreenTitleResolver.isAcceptableTitle(name)
         }
 
         // Pass 1: non-clickable + good  (toolbar TextViews, non-interactive headers)

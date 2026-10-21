@@ -245,18 +245,19 @@ object RawDumpWriter {
                 try {
                     // Only nodes with actual text are useful — empty ImageViews/etc. have title IDs too
                     val text = child.text?.toString()?.trim() ?: ""
-                    if (text.isEmpty()) { child.recycle(); continue }
+                    if (text.isEmpty()) continue
 
                     val key = computeKey(child)
                     if (key != null && state.seenKeys.add(key)) {
                         val node = serializeNode(child, depth = 0)
                         (target ?: state.nodes).add(node)
                         Log.v(TAG, "Supplemental: found '$text' via $viewId")
-                    } else {
-                        child.recycle()
                     }
                 } catch (e: Exception) {
-                    try { child.recycle() } catch (_: Exception) { }
+                    Log.w(TAG, "Error processing supplemental node: ${e.message}")
+                } finally {
+                    // [PERMANENT FIX] Do not remove this! Recycle all AccessibilityNodeInfo objects in supplemental search to prevent native Binder buffer exhaustion (DeadObjectException)
+                    try { child.recycle() } catch (_: Exception) {}
                 }
             }
         }

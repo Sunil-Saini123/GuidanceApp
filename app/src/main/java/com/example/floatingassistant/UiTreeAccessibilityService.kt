@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -61,12 +62,16 @@ class UiTreeAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG         = "UiTreeService"
         private const val DEBOUNCE_MS = 300L
+
+        var instance: UiTreeAccessibilityService? = null
+            private set
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var captureEnabled = false
     private var debounceJob: Job? = null
+    private var fastTrackJob: Job? = null
 
     private lateinit var tempTreeFile:  File
     private lateinit var cleanPageFile: File
@@ -78,13 +83,20 @@ class UiTreeAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         serviceInfo = buildServiceInfo()
 
-        val extDir     = getExternalFilesDir(null) ?: cacheDir
-        tempTreeFile   = File(extDir, RawDumpWriter.TEMP_FILE_NAME)
-        cleanPageFile  = File(extDir, CleanPageProcessor.CLEAN_FILE_NAME)
-        navGraphFile   = File(extDir, GraphStateMachine.NAV_GRAPH_FILE_NAME)
+        // [PERMANENT FIX] Do not remove this! Save all files to internal memory (filesDir)
+        // so ElementFinderEngine and other components read from the exact same internal storage folder.
+        val targetDir  = filesDir
+        tempTreeFile   = File(targetDir, RawDumpWriter.TEMP_FILE_NAME)
+        cleanPageFile  = File(targetDir, CleanPageProcessor.CLEAN_FILE_NAME)
+        navGraphFile   = File(targetDir, GraphStateMachine.NAV_GRAPH_FILE_NAME)
+
+        instance = this
 
         // Initialise Phase 3 state machine (opens SQLite DB)
         GraphStateMachine.init(this, navGraphFile)
+
+        // [PERMANENT FIX] Stream continuous heartbeat to Live Dashboard
+        DebugTelemetryClient.startHeartbeat()
 
         Log.i(TAG, "Service connected [Phase 1 + 2 + 3]")
         Log.i(TAG, "Pull: adb pull /sdcard/Android/data/$packageName/files/")
@@ -94,6 +106,55 @@ class UiTreeAccessibilityService : AccessibilityService() {
                 captureEnabled = enabled
                 Log.i(TAG, "Capture ${if (enabled) "ON" else "OFF"}")
                 if (!enabled) debounceJob?.cancel()
+            }
+        }
+
+        // ── Fallback Poller for ColorOS/Aggressive OEMs ──────────────────────────
+        // Some OEMs eat TYPE_WINDOW_STATE_CHANGED events for their own launchers
+        // or other system apps. This ensures NavigationStateMachine always knows
+        // the true active package.
+        serviceScope.launch {
+            while (isActive) {
+                delay(500)
+                if (captureEnabled && NavigationStateMachine.isNavigating) {
+                    var activePkg: String? = null
+                    
+                    val root = rootInActiveWindow
+                    if (root != null) {
+                        activePkg = root.packageName?.toString()
+                        root.recycle()
+                    } else {
+                        // Fallback: check the windows list directly
+                        try {
+                            val wins = windows
+                            if (wins != null) {
+                                for (w in wins) {
+                                    if (w.isActive || w.isFocused) {
+                                        val wRoot = w.root
+                                        if (wRoot != null) {
+                                            activePkg = wRoot.packageName?.toString()
+                                            wRoot.recycle()
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Ignore security exceptions
+                        }
+                    }
+
+                    if (activePkg != null &&
+                        !activePkg.startsWith("com.android.systemui") &&
+                        activePkg != packageName &&
+                        activePkg != NavigationStateMachine.lastKnownActivePackage) {
+
+                        Log.w(TAG, "Poller detected silent app switch to: $activePkg")
+                        NavigationStateMachine.lastKnownActivePackage = activePkg
+                        // Run on main thread to match onScreenChanged thread requirements if needed
+                        NavigationStateMachine.onScreenChanged(activePkg, activePkg.substringAfterLast('.'), "")
+                    }
+                }
             }
         }
     }
@@ -107,9 +168,20 @@ class UiTreeAccessibilityService : AccessibilityService() {
             // ── Click: capture label for edge annotation ───────────────────────
             AccessibilityEvent.TYPE_VIEW_CLICKED -> {
                 val pkg   = event.packageName?.toString() ?: return
-                val label = event.contentDescription?.toString()?.trim()
-                    ?: event.text?.firstOrNull()?.toString()?.trim()
-                    ?: ""
+                // [PERMANENT FIX] Do not simplify this block. We must join all texts 
+                // and fallback to event.source to properly capture clicks on containers.
+                var label = event.contentDescription?.toString()?.trim()
+                if (label.isNullOrEmpty()) {
+                    label = event.text?.joinToString(" ")?.trim()
+                }
+                if (label.isNullOrEmpty()) {
+                    val source = event.source
+                    label = source?.text?.toString()?.trim() 
+                        ?: source?.contentDescription?.toString()?.trim() 
+                        ?: ""
+                    try { source?.recycle() } catch (_: Exception) {}
+                }
+                label = label ?: ""
                 if (label.isNotEmpty()) {
                     GraphStateMachine.setLastClickedLabel(pkg, label)
 
@@ -126,7 +198,12 @@ class UiTreeAccessibilityService : AccessibilityService() {
             // ── Navigation: immediate ──────────────────────────────────────────
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 if (!isRelevantEvent(event)) return
-                debounceJob?.cancel()
+                
+                val pkg = event.packageName?.toString() ?: ""
+                if (!pkg.startsWith("com.android.systemui") && pkg != this.packageName) {
+                    debounceJob?.cancel()
+                }
+                
                 handleNavigation(event)
             }
 
@@ -134,9 +211,24 @@ class UiTreeAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_VIEW_SCROLLED,
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                 if (!isRelevantEvent(event)) return
-                debounceJob?.cancel()
+                
                 val expectedPkg = event.packageName?.toString() ?: return
-                val isScroll    = event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED
+                if (expectedPkg.startsWith("com.android.systemui") || expectedPkg == this.packageName) {
+                    return // Ignore noise, preserve existing debounce
+                }
+                
+                // Fast tracking: instantly update the marker with minimal debounce (30ms)
+                // so it follows the user's scroll smoothly without waiting for the heavy disk dump.
+                if (NavigationStateMachine.isNavigating) {
+                    fastTrackJob?.cancel()
+                    fastTrackJob = serviceScope.launch {
+                        delay(30L)
+                        NavigationStateMachine.onContentScrolled()
+                    }
+                }
+                
+                debounceJob?.cancel()
+                val isScroll = event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED
                 debounceJob = serviceScope.launch {
                     delay(DEBOUNCE_MS)
                     handleScroll(expectedPkg, if (isScroll) "SCROLL" else "CONTENT_CHANGED")
@@ -148,7 +240,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
     override fun onInterrupt() { Log.w(TAG, "Service interrupted") }
 
     override fun onDestroy() {
+        DebugTelemetryClient.stopHeartbeat()
         debounceJob?.cancel()
+        fastTrackJob?.cancel()
         serviceScope.cancel()
         super.onDestroy()
         Log.i(TAG, "Service destroyed")
@@ -157,14 +251,17 @@ class UiTreeAccessibilityService : AccessibilityService() {
     // ── NAVIGATION handler ────────────────────────────────────────────────────
 
     private fun handleNavigation(event: AccessibilityEvent) {
-        // ── Fix 2: Use rootInActiveWindow as the authoritative package source ──
+        // ── Use rootInActiveWindow as the authoritative package source ──
         // event.packageName is unreliable — it captures Toast messages, SystemUI
         // swipes, input-method windows, and invisible overlays, all of which would
         // falsely trigger OFF-TRACK in the navigation state machine.
         val trustedRoot   = rootInActiveWindow
         val activePackage = trustedRoot?.packageName?.toString()
             ?: event.packageName?.toString()
-            ?: return   // can't determine package — skip entirely
+        if (activePackage == null) {
+            trustedRoot?.recycle()
+            return   // can't determine package — skip entirely
+        }
 
         // Ignore events from SystemUI (swipe gestures, notification shade, nav bar)
         // and from our own overlay (the floating bubble / HUD)
@@ -181,7 +278,16 @@ class UiTreeAccessibilityService : AccessibilityService() {
         // For Phase 1 we still need a rootNode — prefer the live rootInActiveWindow
         // (already fetched above) over event.source since event.source reflects the
         // *event origin* node, not necessarily the full window root.
-        val rootNode = trustedRoot ?: event.source ?: return
+        val rootNode = trustedRoot ?: event.source
+        if (rootNode == null) {
+            // Even if we can't extract elements, tell the state machine the user switched apps.
+            // This is critical for detecting when the user returns to the Home screen or switches
+            // to a different app (where rootInActiveWindow may briefly be null).
+            if (NavigationStateMachine.isNavigating) {
+                NavigationStateMachine.onScreenChanged(activePackage, activePackage.substringAfterLast('.'), "")
+            }
+            return
+        }
 
         val launcherPkg = NavigationStateMachine.getDefaultLauncherPackage()
 
@@ -194,6 +300,13 @@ class UiTreeAccessibilityService : AccessibilityService() {
             eventClassName = event.className?.toString()
         )
         if (filterResult !is MainFilter.FilterResult.Passed) {
+            // Even if we drop semantic extraction (e.g. for launchers or SystemUI),
+            // the state machine MUST know the user switched apps so it doesn't get stuck.
+            if (NavigationStateMachine.isNavigating) {
+                NavigationStateMachine.onScreenChanged(activePackage, activePackage.substringAfterLast('.'), "")
+            }
+            // [PERMANENT FIX] Do not remove this! Recycle rootNode when navigation filter fails to prevent native Binder leak
+            try { rootNode.recycle() } catch (_: Exception) {}
             return
         }
         val passed = filterResult
@@ -228,7 +341,19 @@ class UiTreeAccessibilityService : AccessibilityService() {
     // ── SCROLL / CONTENT handler ──────────────────────────────────────────────
 
     private fun handleScroll(expectedPackage: String, eventType: String) {
-        val rootNode = rootInActiveWindow ?: return
+        // Ignore events from SystemUI or our own overlay
+        if (expectedPackage.startsWith("com.android.systemui") || expectedPackage == this.packageName) {
+            return
+        }
+
+        val rootNode = rootInActiveWindow
+        if (rootNode == null) {
+            // Even if we can't extract elements, tell the state machine the user switched apps
+            if (NavigationStateMachine.isNavigating) {
+                NavigationStateMachine.onScreenChanged(expectedPackage, expectedPackage.substringAfterLast('.'), "")
+            }
+            return
+        }
 
         // Guard: active window may have changed during debounce
         val actualPackage = rootNode.packageName?.toString()
@@ -247,6 +372,11 @@ class UiTreeAccessibilityService : AccessibilityService() {
             eventClassName  = null
         )
         if (filterResult !is MainFilter.FilterResult.Passed) {
+            if (NavigationStateMachine.isNavigating) {
+                NavigationStateMachine.onScreenChanged(expectedPackage, expectedPackage.substringAfterLast('.'), "")
+            }
+            // [PERMANENT FIX] Do not remove this! Recycle rootNode when scroll filter fails to prevent native Binder leak
+            try { rootNode.recycle() } catch (_: Exception) {}
             return
         }
         val passed = filterResult
@@ -267,6 +397,12 @@ class UiTreeAccessibilityService : AccessibilityService() {
         if (hadNewNodes) {
             val snapshot = RawDumpWriter.getSnapshot(passed.packageName) ?: return
             triggerPipeline(passed.packageName, snapshot.rootName, eventType)
+        }
+
+        // Always tell the state machine that content shifted, so it can
+        // reposition the visual marker bounds if the target element moved.
+        if (NavigationStateMachine.isNavigating) {
+            NavigationStateMachine.onContentScrolled()
         }
     }
 
@@ -337,4 +473,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
             }
             else -> false   // TYPE_VIEW_CLICKED is handled separately without this check
         }
+        
+    override fun onUnbind(intent: android.content.Intent?): Boolean {
+        instance = null
+        return super.onUnbind(intent)
+    }
 }

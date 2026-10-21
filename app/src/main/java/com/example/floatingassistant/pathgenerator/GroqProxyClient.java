@@ -49,7 +49,8 @@ public class GroqProxyClient {
 
     /** Max characters of clean_page.json to include in the prompt.
      *  Keeps total request body well under Vercel's 4MB limit. */
-    public static final int MAX_SCREEN_CONTENT_CHARS = 3000;
+    // [PERMANENT FIX] Do not remove this! Raised from 3000 to 12000 to ensure the AI sees all screen elements.
+    public static final int MAX_SCREEN_CONTENT_CHARS = 12000;
 
     private final String proxyUrl;
     private final int connectTimeoutMs;
@@ -117,7 +118,8 @@ public class GroqProxyClient {
         JSONObject requestBody = new JSONObject();
         requestBody.put("model", model);
         requestBody.put("temperature", 0.0);
-        requestBody.put("max_tokens", 400);
+        // [PERMANENT FIX] Do not remove this! Raised max_tokens from 400 to 1000 to prevent mid-JSON cutoff on multi-step paths.
+        requestBody.put("max_tokens", 1000);
 
         JSONArray messages = new JSONArray();
         JSONObject sysMsg = new JSONObject();

@@ -61,9 +61,11 @@ object CloudPathDatabase {
     private const val TAG = "CloudPathDatabase"
     private const val COLLECTION = "device_paths"
 
+    // [PERMANENT FIX] Do not remove this! Model is included in signature to distinguish hardware capabilities (e.g. 120Hz vs 60Hz, O1 Vision Engine) across models of the same brand
     data class DeviceSignatureInfo(
         val manufacturer: String,
         val brand: String,
+        val model: String,
         val androidVersion: String
     )
 
@@ -85,42 +87,53 @@ object CloudPathDatabase {
         exactTask: String,
         deviceInfo: DeviceSignatureInfo = currentDeviceSignatureInfo()
     ): String {
-        val signature = buildSignature(deviceInfo)
-        val appKey    = sanitizeIntentKey(targetApp)
-        val taskKey   = sanitizeIntentKey(exactTask)
-        val docRef    = firestore.collection(COLLECTION).document(signature)
+        val taskKey = sanitizeIntentKey(exactTask)
 
-        Log.d(TAG, "Tier 2 Firestore lookup — signature=$signature, app=$appKey, task=$taskKey")
-
-        val snapshot = try {
-            docRef.get().await()
-        } catch (e: Exception) {
-            Log.e(TAG, "Firestore read failed for signature=$signature: ${e.message}", e)
-            return ""
+        // [PERMANENT FIX] Do not remove this! Check both human-readable app label and package alias
+        val candidateAppKeys = mutableListOf(sanitizeIntentKey(targetApp))
+        if (targetApp.contains('.')) {
+            candidateAppKeys.add(sanitizeIntentKey(targetApp.substringAfterLast('.')))
+        } else {
+            val knownPkg = GraphStateMachine.getPackageNameForApp(targetApp)
+            if (knownPkg != null) {
+                candidateAppKeys.add(sanitizeIntentKey(knownPkg))
+            }
         }
 
-        if (!snapshot.exists()) {
-            Log.w(TAG, "Tier 2 Firestore: Miss — no document for signature=$signature")
-            return ""
+        // [PERMANENT FIX] Hierarchical lookup: Exact Model (realme_rmx3870_16) -> Brand fallback (realme_16) -> Legacy (realme_realme_16)
+        val signatures = candidateSignatures(deviceInfo)
+        for (signature in signatures) {
+            val docRef = firestore.collection(COLLECTION).document(signature)
+            Log.d(TAG, "Tier 2 Firestore lookup — trying signature=$signature, candidateAppKeys=$candidateAppKeys, task=$taskKey")
+
+            val snapshot = try {
+                docRef.get().await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Firestore read failed for signature=$signature: ${e.message}", e)
+                continue
+            }
+
+            if (!snapshot.exists()) {
+                Log.d(TAG, "Tier 2 Firestore: Miss for signature=$signature — trying next fallback")
+                continue
+            }
+
+            // Try candidate app keys in order (e.g. "settings", "com_android_settings")
+            for (appKey in candidateAppKeys) {
+                @Suppress("UNCHECKED_CAST")
+                val appMap = snapshot.get("entries.$appKey") as? Map<String, Any>
+                if (appMap != null) {
+                    val path = appMap[taskKey] as? String
+                    if (!path.isNullOrEmpty()) {
+                        Log.i(TAG, "Tier 2 Firestore: Match Found under key '$appKey' — \"$targetApp / $exactTask\" → \"$path\" (signature=$signature)")
+                        return path
+                    }
+                }
+            }
         }
 
-        // Level 1: check app sub-map exists
-        @Suppress("UNCHECKED_CAST")
-        val appMap = snapshot.get("entries.$appKey") as? Map<String, Any>
-        if (appMap == null) {
-            Log.w(TAG, "Tier 2 Firestore: Miss — no app entry for appKey=$appKey (signature=$signature)")
-            return ""
-        }
-
-        // Level 2: check task key inside the app sub-map
-        val path = appMap[taskKey] as? String
-        if (path.isNullOrEmpty()) {
-            Log.w(TAG, "Tier 2 Firestore: Miss — no task entry for taskKey=$taskKey (app=$appKey, signature=$signature)")
-            return ""
-        }
-
-        Log.i(TAG, "Tier 2 Firestore: Match Found — \"$targetApp / $exactTask\" → \"$path\" (signature=$signature)")
-        return path
+        Log.w(TAG, "Tier 2 Firestore: Miss across all candidate signatures $signatures for taskKey=$taskKey")
+        return ""
     }
 
     /**
@@ -139,28 +152,44 @@ object CloudPathDatabase {
         targetApp: String,
         exactTask: String,
         path: String,
-        deviceInfo: DeviceSignatureInfo = currentDeviceSignatureInfo()
+        deviceInfo: DeviceSignatureInfo = currentDeviceSignatureInfo(),
+        targetPackage: String? = null
     ) {
         val signature = buildSignature(deviceInfo)
-        val appKey    = sanitizeIntentKey(targetApp)
+        val primaryAppKey = sanitizeIntentKey(targetApp)
         val taskKey   = sanitizeIntentKey(exactTask)
-        val fieldPath = "entries.$appKey.$taskKey"
         val docRef    = firestore.collection(COLLECTION).document(signature)
 
-        try {
-            // Try update() first (doc exists) — only touches this single leaf key.
-            docRef.update(fieldPath, path).await()
-            Log.i(TAG, "Entry updated — signature=$signature, $fieldPath → \"$path\"")
-        } catch (e: Exception) {
-            // update() fails if document doesn't exist yet → fall back to set(merge).
+        // [PERMANENT FIX] Do not remove this! Save under both app label and package alias
+        val appKeys = mutableListOf(primaryAppKey)
+        if (!targetPackage.isNullOrBlank()) {
+            val pkgKey = sanitizeIntentKey(targetPackage)
+            if (pkgKey != primaryAppKey) appKeys.add(pkgKey)
+        } else if (!targetApp.contains('.')) {
+            val knownPkg = GraphStateMachine.getPackageNameForApp(targetApp)
+            if (knownPkg != null) {
+                val pkgKey = sanitizeIntentKey(knownPkg)
+                if (pkgKey != primaryAppKey) appKeys.add(pkgKey)
+            }
+        }
+
+        for (appKey in appKeys) {
+            val fieldPath = "entries.$appKey.$taskKey"
             try {
-                val data = mapOf(
-                    "entries" to mapOf(appKey to mapOf(taskKey to path))
-                )
-                docRef.set(data, SetOptions.merge()).await()
-                Log.i(TAG, "Entry created (set/merge) — signature=$signature, $fieldPath → \"$path\"")
-            } catch (e2: Exception) {
-                Log.e(TAG, "Failed to add entry — signature=$signature, $fieldPath: ${e2.message}", e2)
+                // Try update() first (doc exists) — only touches this single leaf key.
+                docRef.update(fieldPath, path).await()
+                Log.i(TAG, "Entry updated — signature=$signature, $fieldPath → \"$path\"")
+            } catch (e: Exception) {
+                // update() fails if document doesn't exist yet → fall back to set(merge).
+                try {
+                    val data = mapOf(
+                        "entries" to mapOf(appKey to mapOf(taskKey to path))
+                    )
+                    docRef.set(data, SetOptions.merge()).await()
+                    Log.i(TAG, "Entry created (set/merge) — signature=$signature, $fieldPath → \"$path\"")
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Failed to add entry — signature=$signature, $fieldPath: ${e2.message}", e2)
+                }
             }
         }
     }
@@ -183,32 +212,56 @@ object CloudPathDatabase {
 
     // ── Device signature ────────────────────────────────────────────────────
 
-    /** Builds signature info from live Build.* sources. */
+    /** Builds signature info from live Build.* sources including exact model. */
     fun currentDeviceSignatureInfo(): DeviceSignatureInfo {
         val manufacturer = Build.MANUFACTURER ?: "unknown"
         val brand = Build.BRAND ?: "unknown"
+        val model = Build.MODEL ?: "unknown"
         val androidVersion = Build.VERSION.RELEASE?.takeIf { it.isNotBlank() }
             ?: Build.VERSION.SDK_INT.toString()
-        return DeviceSignatureInfo(manufacturer, brand, androidVersion)
+        return DeviceSignatureInfo(manufacturer, brand, model, androidVersion)
     }
 
     /**
-     * signature = "<manufacturer>_<brand>_<android_version>",
-     * lowercased and sanitized to Firestore-safe document-ID characters.
+     * Exact model signature = "<brand>_<model>_<android_version>" (e.g. "realme_rmx3870_16").
+     * Lowercased and sanitized to Firestore-safe document-ID characters.
      */
     fun buildSignature(info: DeviceSignatureInfo): String {
-        val raw = listOf(
-            info.manufacturer,
-            info.brand,
-            info.androidVersion
-        ).joinToString("_")
+        val parts = mutableListOf<String>()
+        val mfg = info.manufacturer.lowercase(Locale.US).trim()
+        val brand = info.brand.lowercase(Locale.US).trim()
+        val model = info.model.lowercase(Locale.US).trim()
+        val ver = info.androidVersion.lowercase(Locale.US).trim()
 
-        return raw.lowercase(Locale.US)
+        val primaryBrand = if (brand.isNotBlank() && brand != "unknown") brand else mfg
+        parts.add(primaryBrand)
+
+        if (model.isNotBlank() && model != "unknown" && model != primaryBrand) {
+            parts.add(model)
+        }
+
+        parts.add(ver)
+
+        val raw = parts.joinToString("_")
+        return raw
             .replace(Regex("[^a-z0-9_]+"), "_")
             .replace(Regex("_+"), "_")
             .trim('_')
             .ifBlank { "unknown_device" }
             .take(400)
+    }
+
+    /**
+     * Returns candidate signatures in priority order:
+     * 1. Exact model signature (e.g. "realme_rmx3870_16")
+     * 2. Brand-level fallback (e.g. "realme_16")
+     * 3. Legacy 3-part fallback (e.g. "realme_realme_16")
+     */
+    fun candidateSignatures(info: DeviceSignatureInfo): List<String> {
+        val exact = buildSignature(info)
+        val brandFallback = "${info.brand}_${info.androidVersion}".lowercase(Locale.US).replace(Regex("[^a-z0-9_]+"), "_").trim('_')
+        val legacy = "${info.manufacturer}_${info.brand}_${info.androidVersion}".lowercase(Locale.US).replace(Regex("[^a-z0-9_]+"), "_").trim('_')
+        return listOf(exact, brandFallback, legacy).distinct()
     }
 
     /**

@@ -137,6 +137,22 @@ object SearchPathEngine {
 
         val transitions = db.getTransitions(packageName)
 
+        // ── Heuristic Shortcuts for Generic Intents ──
+        // If the graph is sparse, Dijkstra might route through convoluted multi-step paths 
+        // just to find a common element like "Search" that was missed on the Home screen.
+        // We intercept generic intents here and return a direct 1-step path.
+        val destNorm = destinationScreen.trim().lowercase()
+        if (destNorm == "search_page" || destNorm == "search") {
+            return PathSearchResult.found(
+                pathString = "Search",
+                steps = listOf("Search"),
+                fromScreenId = "heuristic",
+                toScreenId = "heuristic",
+                targetElement = "Search",
+                message = "Heuristic shortcut for generic search intent"
+            )
+        }
+
         val result = findPathInGraph(
             screens = screens,
             transitions = transitions,
@@ -184,8 +200,13 @@ object SearchPathEngine {
             )
         }
 
-        // ── 2. Start Screen — always the app's root/home, never current screen ──
-        val startScreen = resolveRootScreen(screens, transitions, appDisplayName)
+        // ── 2. Start Screen Resolution ──────────────────────────────────────────
+        // [PERMANENT FIX] Do not remove this! Prioritize the user's actual current screen in the app.
+        // If a path from the current screen exists, Dijkstra uses it for instant 1-2 step guidance.
+        // If unreachable from current screen (dead-end or backward route), gracefully fall back to the app root screen.
+        val resolvedStart = resolveStartScreen(screens, transitions, currentScreenId, appDisplayName)
+        val rootScreen = resolveRootScreen(screens, transitions, appDisplayName)
+        val primaryStart = resolvedStart ?: rootScreen
             ?: return PathSearchResult.notFound(
                 toScreenId = targetCandidates.first().screen.id,
                 message = "Could not identify the app home screen for '${appDisplayName ?: packageName ?: "unknown"}'"
@@ -198,74 +219,83 @@ object SearchPathEngine {
         }
 
         // ── 4. Find Best Reachable Target ──────────────────
+        // Try starting from current screen first; if unreachable, fall back to root screen.
+        val searchStarts = if (resolvedStart != null && rootScreen != null && resolvedStart.id != rootScreen.id) {
+            listOf(resolvedStart to "current screen", rootScreen to "app root screen")
+        } else {
+            listOf(primaryStart to "app home screen")
+        }
+
         var bestMissMessage: String? = null
         var bestMissTargetId: String? = null
 
-        for (candidate in targetCandidates) {
-            val targetScreen = candidate.screen
-            val targetElement = candidate.elementName
+        for ((startScreen, startDescription) in searchStarts) {
+            for (candidate in targetCandidates) {
+                val targetScreen = candidate.screen
+                val targetElement = candidate.elementName
 
-            // If root IS the target screen, just return the element
-            if (startScreen.id == targetScreen.id) {
-                val steps = mutableListOf<String>()
-                if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
-                else steps.add(targetScreen.screenTitle)
-                return PathSearchResult.found(
-                    pathString = steps.joinToString(" -> "),
-                    steps = steps,
-                    fromScreenId = startScreen.id,
-                    toScreenId = targetScreen.id,
-                    targetElement = targetElement,
-                    message = "Target is on the app home screen"
+                // If start IS the target screen, just return the element
+                if (startScreen.id == targetScreen.id) {
+                    val steps = mutableListOf<String>()
+                    if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
+                    else steps.add(targetScreen.screenTitle)
+                    return PathSearchResult.found(
+                        pathString = steps.joinToString(" -> "),
+                        steps = steps,
+                        fromScreenId = startScreen.id,
+                        toScreenId = targetScreen.id,
+                        targetElement = targetElement,
+                        message = "Target is on the $startDescription"
+                    )
+                }
+
+                // Otherwise run Dijkstra
+                val shortestPathEdges = dijkstra(
+                    startId = startScreen.id,
+                    targetId = targetScreen.id,
+                    outgoing = outgoing
                 )
-            }
 
-            // Otherwise run Dijkstra
-            val shortestPathEdges = dijkstra(
-                startId = startScreen.id,
-                targetId = targetScreen.id,
-                outgoing = outgoing
-            )
-
-            if (shortestPathEdges != null) {
-                // Reconstruct Step Sequence
-                val steps = mutableListOf<String>()
-                for (edge in shortestPathEdges) {
-                    if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") {
-                        steps.add(edge.actionLabel)
-                    } else {
-                        val toTitle = edge.toScreenId.substringAfter("::")
-                        steps.add(toTitle)
+                if (shortestPathEdges != null) {
+                    // Reconstruct Step Sequence
+                    val steps = mutableListOf<String>()
+                    for (edge in shortestPathEdges) {
+                        if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") {
+                            steps.add(edge.actionLabel)
+                        } else {
+                            val toTitle = edge.toScreenId.substringAfter("::")
+                            steps.add(toTitle)
+                        }
                     }
-                }
-                
-                // If target element is present and not redundant, append as final action
-                if (!targetElement.isNullOrEmpty() && (steps.isEmpty() || !steps.last().equals(targetElement, ignoreCase = true))) {
-                    steps.add(targetElement)
-                }
+                    
+                    // If target element is present and not redundant, append as final action
+                    if (!targetElement.isNullOrEmpty() && (steps.isEmpty() || !steps.last().equals(targetElement, ignoreCase = true))) {
+                        steps.add(targetElement)
+                    }
 
-                val pathString = steps.joinToString(" -> ")
+                    val pathString = steps.joinToString(" -> ")
 
-                return PathSearchResult.found(
-                    pathString = pathString,
-                    steps = steps,
-                    fromScreenId = startScreen.id,
-                    toScreenId = targetScreen.id,
-                    targetElement = targetElement,
-                    message = "Path found in local graph (${steps.size} steps)"
-                )
-            } else {
-                // Track miss for the highest scoring candidate (first one)
-                if (bestMissMessage == null) {
-                    bestMissMessage = "No navigable path from '${startScreen.screenTitle}' to '${targetScreen.screenTitle}' in local graph"
-                    bestMissTargetId = targetScreen.id
+                    return PathSearchResult.found(
+                        pathString = pathString,
+                        steps = steps,
+                        fromScreenId = startScreen.id,
+                        toScreenId = targetScreen.id,
+                        targetElement = targetElement,
+                        message = "Path found in local graph (${steps.size} steps from $startDescription)"
+                    )
+                } else {
+                    // Track miss for the highest scoring candidate (first one)
+                    if (bestMissMessage == null) {
+                        bestMissMessage = "No navigable path from '${startScreen.screenTitle}' to '${targetScreen.screenTitle}' in local graph"
+                        bestMissTargetId = targetScreen.id
+                    }
                 }
             }
         }
 
         // If we reach here, NO target candidate was reachable
         return PathSearchResult.notFound(
-            fromScreenId = startScreen.id,
+            fromScreenId = primaryStart.id,
             toScreenId = bestMissTargetId,
             message = bestMissMessage ?: "No reachable target found"
         )
@@ -371,16 +401,32 @@ object SearchPathEngine {
         val candidateWordPattern = Regex("(^|\\s)${Regex.escape(queryNorm)}(\\s|$)")
         val queryWordPattern = Regex("(^|\\s)${Regex.escape(candidateNorm)}(\\s|$)")
         if (candidateWordPattern.containsMatchIn(candidateNorm) || queryWordPattern.containsMatchIn(queryNorm)) {
-            score = maxOf(score, 82)
+            if (candidateTokens.size == 1 && queryTokens.size > 1) {
+                score = maxOf(score, 60)
+            } else {
+                score = maxOf(score, 82)
+            }
         }
 
         // 4. Phrase containment
         if (candidateNorm.contains(queryNorm) || queryNorm.contains(candidateNorm)) {
-            val shorterTokens = minOf(candidateTokens.size, queryTokens.size)
-            val longerTokens = maxOf(candidateTokens.size, queryTokens.size)
-            if (shorterTokens > 0) {
-                val tokenRatio = shorterTokens.toDouble() / longerTokens
-                if (tokenRatio >= 0.5 || commonTokens.isNotEmpty()) {
+            if (candidateTokens.size == 1 && queryTokens.size > 1) {
+                score = maxOf(score, 60)
+            } else {
+                score = maxOf(score, 78)
+            }
+        }
+
+        // 4b. Token ratio matching
+        if (commonTokens.isNotEmpty()) {
+            val queryMatchRatio = commonTokens.size.toDouble() / queryTokens.size
+            val candidateMatchRatio = commonTokens.size.toDouble() / candidateTokens.size
+            
+            // If the majority of the query matches the candidate, it's a good match
+            if (queryMatchRatio >= 0.6) {
+                if (candidateTokens.size == 1 && queryTokens.size > 1) {
+                    score = maxOf(score, 60) // Too generic, keep score low
+                } else {
                     score = maxOf(score, 78)
                 }
             }
@@ -495,7 +541,12 @@ object SearchPathEngine {
 
         // Priority 1: Current active screen matches an existing record (if not overlay)
         if (!currentScreenId.isNullOrBlank()) {
-            validScreens.firstOrNull { it.id == currentScreenId }?.let { return it }
+            val currNorm = currentScreenId.trim().lowercase()
+            validScreens.firstOrNull { 
+                it.id.equals(currentScreenId, ignoreCase = true) ||
+                it.id.lowercase().endsWith("::" + currNorm.substringAfter("::")) ||
+                it.screenTitle.equals(currNorm.substringAfter("::"), ignoreCase = true)
+            }?.let { return it }
         }
 
         // Priority 2: Screen title matches the app display name (e.g. "WhatsApp", "Settings")

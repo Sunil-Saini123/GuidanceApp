@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -128,12 +129,15 @@ class FloatingOverlayService : Service() {
     private var pendingGroqApp:  String? = null
     private var pendingGroqTask: String? = null
     private var pendingGroqPath: String? = null
+    // [PERMANENT FIX] Do not remove this! Track whether the pending Groq path is a partial reroute to prevent uploading partial paths to Cloud Firestore per Rule 5.1
+    private var pendingGroqIsPartial: Boolean = false
 
     // ── Whether we are currently in typing mode ───────────────────────────────
     private var typingModeActive = false
 
     // ── Track 4 / Stage 1: Navigation HUD pill overlay ───────────────────────
     private lateinit var navigationHud: NavigationHudOverlay
+    private lateinit var elementMarker: ElementMarkerOverlay
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -145,9 +149,18 @@ class FloatingOverlayService : Service() {
         addBubble()
 
         // ── Track 4 / Stage 1+2+2.5: Init guidance HUD and wire to state machine ──
-        navigationHud = NavigationHudOverlay(this)
+        // We MUST use the AccessibilityService context to add TYPE_ACCESSIBILITY_OVERLAY.
+        // If not running, fallback to Service context (but it won't be able to draw over Settings).
+        val hudContext = UiTreeAccessibilityService.instance ?: this
+        navigationHud = NavigationHudOverlay(hudContext)
         NavigationStateMachine.attachHud(navigationHud, this)
+        NavigationStateMachine.onRerouteRequested = { app, task -> triggerGroqReroute(app, task) }
         Log.i("[NavigationEngine]", "NavigationHudOverlay created and attached to NavigationStateMachine")
+
+        // ── Element Marker Overlay: visual highlight on target elements ──
+        elementMarker = ElementMarkerOverlay(hudContext)
+        NavigationStateMachine.attachMarker(elementMarker)
+        Log.i("[NavigationEngine]", "ElementMarkerOverlay created and attached to NavigationStateMachine")
 
         serviceScope.launch {
             // Firestore security rules require an authenticated (anonymous) user —
@@ -155,10 +168,40 @@ class FloatingOverlayService : Service() {
             CloudPathDatabase.ensureSignedIn()
         }
 
+        // [PERMANENT FIX] Do not remove this! Stream heartbeat while overlay is active
+        DebugTelemetryClient.startHeartbeat()
         Log.i(TAG, "Overlay service started")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+
+    // [PERMANENT FIX] Do not remove this! Keep floating bubble and panel clamped inside visible screen bounds when phone rotates
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (!::bubbleView.isInitialized || !::bubbleParams.isInitialized) return
+
+        val metrics = resources.displayMetrics
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
+        val sizePx = dp(56)
+
+        // Clamp bubble to visible bounds
+        bubbleParams.x = bubbleParams.x.coerceIn(0, (screenWidth - sizePx).coerceAtLeast(0))
+        bubbleParams.y = bubbleParams.y.coerceIn(0, (screenHeight - sizePx).coerceAtLeast(0))
+
+        runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
+
+        // If panel is currently visible, reposition or safely clamp
+        panelView?.let { panel ->
+            val panelParams = panel.layoutParams as? WindowManager.LayoutParams
+            if (panelParams != null) {
+                val panelW = dp(280)
+                panelParams.x = bubbleParams.x.coerceIn(0, (screenWidth - panelW).coerceAtLeast(0))
+                panelParams.y = (bubbleParams.y + dp(64)).coerceIn(0, (screenHeight - dp(200)).coerceAtLeast(0))
+                runCatching { windowManager.updateViewLayout(panel, panelParams) }
+            }
+        }
+    }
 
     override fun onDestroy() {
         removePanel()
@@ -169,6 +212,10 @@ class FloatingOverlayService : Service() {
         if (::navigationHud.isInitialized) {
             navigationHud.destroy()
             Log.i("[NavigationEngine]", "NavigationHudOverlay.destroy() called from FloatingOverlayService.onDestroy()")
+        }
+        if (::elementMarker.isInitialized) {
+            elementMarker.destroy()
+            Log.i("[NavigationEngine]", "ElementMarkerOverlay.destroy() called from FloatingOverlayService.onDestroy()")
         }
         serviceScope.cancel()
         super.onDestroy()
@@ -262,7 +309,11 @@ class FloatingOverlayService : Service() {
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 40
-            y = 200
+            y = 400
+        }
+        // [PERMANENT FIX] Do not remove this! Handle display cutouts cleanly on Android P+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            bubbleParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
         attachDragAndTapListener()
@@ -480,7 +531,6 @@ class FloatingOverlayService : Service() {
             }
         }
 
-
         val devRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, 0, 0, 0)
@@ -522,6 +572,10 @@ class FloatingOverlayService : Service() {
             gravity = Gravity.TOP or Gravity.START
             x = bubbleParams.x
             y = bubbleParams.y + dp(64)
+        }
+        // [PERMANENT FIX] Do not remove this! Handle display cutouts cleanly on Android P+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            panelParams.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
         panelView = panel
@@ -567,6 +621,7 @@ class FloatingOverlayService : Service() {
         pendingGroqApp  = null
         pendingGroqTask = null
         pendingGroqPath = null
+        pendingGroqIsPartial = false
 
         serviceScope.launch {
             // ── PHASE 1 STEP A: Intent classification (Proxy Server -> Gemini -> Local Fallback) ──
@@ -576,6 +631,14 @@ class FloatingOverlayService : Service() {
                     withContext(Dispatchers.Main) { statusText.text = progressMsg }
                 }
             }
+
+            // [PERMANENT FIX] Stream parsed intent to Live Dashboard
+            DebugTelemetryClient.sendIntentParsed(
+                query = query,
+                targetApp = parsed.targetApp,
+                screen = parsed.destinationScreen,
+                task = parsed.exactTask
+            )
 
             // GeminiCommandParser already emits the [PathFinder] log:
             //   "Parsed Intent -> App: X, Screen: Y, Task: Z"
@@ -603,6 +666,15 @@ class FloatingOverlayService : Service() {
             if (searchResult.found) {
                 Log.i(TAG, "Local search matched: ${searchResult.pathString}")
 
+                // [PERMANENT FIX] Stream Tier 1 hit to Dashboard
+                DebugTelemetryClient.emit(
+                    type = "INTENT_PARSED",
+                    tag = "PathFinder",
+                    title = "Tier 1 Local DB: Hit",
+                    description = "Found path: ${searchResult.pathString}",
+                    payload = searchResult.pathString
+                )
+
                 // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
                 withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
 
@@ -610,7 +682,7 @@ class FloatingOverlayService : Service() {
                 val pathStr = searchResult.pathString.orEmpty()
                 val steps   = pathStr.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${steps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(steps, parsed.targetApp, parsed.exactTask)
+                NavigationStateMachine.startNavigation(steps, parsed.targetApp, parsed.exactTask, source = "local")
                 // HUD is now controlled by NavigationStateMachine; no direct hud calls here.
 
                 return@launch
@@ -630,124 +702,222 @@ class FloatingOverlayService : Service() {
             if (cloudPath.isNotEmpty()) {
                 Log.i("[PathFinder]", "Tier 2 Firestore: Match Found → \"$cloudPath\"")
 
+                // [PERMANENT FIX] Stream Tier 2 hit to Dashboard
+                DebugTelemetryClient.emit(
+                    type = "INTENT_PARSED",
+                    tag = "PathFinder",
+                    title = "Tier 2 Firestore: Hit",
+                    description = "Found cloud path: $cloudPath",
+                    payload = cloudPath
+                )
+
                 // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
                 withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
 
                 // ── BUG-3 / Stage 2: Hand path to central state machine ────────
                 val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
                 Log.i("[NavigationEngine]", "Tier 2 → startNavigation(${cloudSteps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp, parsed.exactTask)
+                NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp, parsed.exactTask, source = "db")
 
                 return@launch
             }
 
             Log.w("[PathFinder]", "Tier 2 Firestore: Miss — falling through to Tier 3 (Groq)")
+            executeTier3Groq(parsed.targetApp, parsed.exactTask, statusText)
+        }
+    }
 
-            // ── PHASE 4 (Tier 3 — Groq) ──────────────────────────────────────
-            Log.d("[PathFinder]", "Phase 4 — Tier 3 Groq fallback for app=${parsed.targetApp}, task=${parsed.exactTask}")
-            statusText.text = "Asking AI for path…"
+    private fun triggerGroqReroute(app: String, task: String) {
+        // [PERMANENT FIX] Stream Reroute trigger to Dashboard
+        DebugTelemetryClient.emit(
+            type = "REROUTE_TRIGGERED",
+            tag = "PathRecovery",
+            title = "Reroute Triggered",
+            description = "User pressed Reroute. Prompting AI with fresh live screen elements...",
+            packageName = app
+        )
 
-            // Capture the actual failure reason so it can be shown in the bubble
-            var groqErrorReason: String? = null
-
-            val groqPath = withContext(Dispatchers.IO) {
-                try {
-                    // 1. Read live screen state from clean_page.json
-                    val cleanPageFile = File(
-                        getExternalFilesDir(null) ?: cacheDir,
-                        CleanPageProcessor.CLEAN_FILE_NAME
-                    )
-                    val cleanPageContent = if (cleanPageFile.exists()) cleanPageFile.readText() else ""
-                    Log.d("[PathFinder]", "clean_page.json read: ${cleanPageContent.length} chars")
-
-                    // 2. Detect whether the user is already on the target app.
-                    //    clean_page.json has: { "meta": { "package_name": "com.whatsapp" }, ... }
-                    //    We compare the app's simple name (e.g. "whatsapp") against targetApp.
-                    val currentPackage = try {
-                        org.json.JSONObject(cleanPageContent)
-                            .optJSONObject("meta")
-                            ?.optString("package_name", "") ?: ""
-                    } catch (_: Exception) { "" }
-                    // Match: "com.whatsapp" contains "whatsapp", "com.android.settings" contains "settings"
-                    val isOnTargetApp = currentPackage.isNotEmpty() &&
-                            currentPackage.contains(parsed.targetApp.trim().lowercase(), ignoreCase = true)
-                    Log.d("[PathFinder]", "currentPackage=$currentPackage, targetApp=${parsed.targetApp}, isOnTargetApp=$isOnTargetApp")
-
-                    // 3. Gather device info
-                    val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
-
-                    // 4. Build prompt and call Groq
-                    val userPrompt = PromptBuilder.buildGeminiDrivenPrompt(
-                        parsed.targetApp,
-                        parsed.exactTask,
-                        cleanPageContent,
-                        deviceInfo,
-                        isOnTargetApp
-                    )
-                    Log.d("[PathFinder]", "Sending to Groq proxy… isOnTargetApp=$isOnTargetApp")
-                    val rawResponse = GroqProxyClient().sendDirectRequest(
-                        PromptBuilder.SYSTEM_PROMPT,
-                        userPrompt
-                    )
-                    Log.d("[PathFinder]", "Groq raw response: $rawResponse")
-
-                    // 5. Parse the JSON path response
-                    val navPath = GroqResponseParser.parse(rawResponse)
-                    if (navPath.isValid) {
-                        navPath.toPathString()
-                    } else {
-                        groqErrorReason = "AI returned no steps: ${navPath.errorMessage}"
-                        Log.w("[PathFinder]", "Groq parse invalid: ${navPath.errorMessage}")
-                        null
-                    }
-
-                } catch (e: java.net.SocketTimeoutException) {
-                    groqErrorReason = "Network timeout — check internet connection"
-                    Log.e("[PathFinder]", "Tier 3 Groq timeout: ${e.message}", e)
-                    null
-                } catch (e: java.net.UnknownHostException) {
-                    groqErrorReason = "No internet — could not reach AI server"
-                    Log.e("[PathFinder]", "Tier 3 Groq no host: ${e.message}", e)
-                    null
-                } catch (e: Exception) {
-                    groqErrorReason = e.message ?: "Unknown error"
-                    Log.e("[PathFinder]", "Tier 3 Groq failed: ${e.message}", e)
-                    null
-                }
-            }
-
-            if (!groqPath.isNullOrEmpty()) {
-                Log.i("[PathFinder]", "Tier 3 Groq: Generated path → \"$groqPath\"")
-
-                // Hold path for Firestore save when user confirms (Stop tap 1)
-                pendingGroqApp  = parsed.targetApp
-                pendingGroqTask = parsed.exactTask
-                pendingGroqPath = groqPath
-
-                // ── BUG-2: Collapse panel so HUD is the sole guide UI ─────────
-                withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
-
-                // ── BUG-3 / Stage 2: Hand path to central state machine ────────
-                val groqSteps = groqPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
-                Log.i("[NavigationEngine]", "Tier 3 → startNavigation(${groqSteps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(groqSteps, parsed.targetApp, parsed.exactTask)
-
-            } else {
-                Log.w("[PathFinder]", "Tier 3 Groq: Failed — reason: $groqErrorReason")
-                // Leave panel open so user can read the error
-                statusText.text = buildString {
-                    append("❌ AI path failed\n")
-                    append("App: ${parsed.targetApp}\n")
-                    append("Task: ${parsed.exactTask}\n\n")
-                    if (!groqErrorReason.isNullOrEmpty()) append("Reason: $groqErrorReason")
-                    else append("Unknown error — check Logcat ([PathFinder] tag)")
-                }
-                navigationHud.hide()
-                Log.i("[NavigationEngine]", "All tiers failed — HUD hidden")
+        // Run from UI thread
+        serviceScope.launch(Dispatchers.Main) {
+            val dummyStatus = TextView(this@FloatingOverlayService)
+            val error = executeTier3Groq(app, task, dummyStatus, pendingGroqPath)
+            if (error != null) {
+                // If it fails, log it. The user can try again.
+                Log.e("[PathFinder]", "Reroute failed: $error")
             }
         }
     }
 
+    private suspend fun executeTier3Groq(targetApp: String, exactTask: String, statusText: TextView, failedPath: String? = null): String? {
+        // ── PHASE 4 (Tier 3 — Groq) ──────────────────────────────────────
+        Log.d("[PathFinder]", "Phase 4 — Tier 3 Groq fallback for app=$targetApp, task=$exactTask")
+        withContext(Dispatchers.Main) { statusText.text = "Asking AI for path…" }
+
+        // Capture the actual failure reason so it can be shown in the bubble
+        var groqErrorReason: String? = null
+        var isPartialPath = false
+
+        val groqPath = withContext(Dispatchers.IO) {
+            try {
+                // 1. Force a live dump of the current screen to ensure we use fresh data
+                var cleanPageContent = ""
+                val uiTree = UiTreeAccessibilityService.instance
+                val rootNode = if (uiTree != null) AppWindowResolver.getUnderlyingAppRoot(uiTree, this@FloatingOverlayService.packageName) else null
+                
+                if (rootNode != null) {
+                    val pkg = rootNode.packageName?.toString() ?: targetApp
+                    // [PERMANENT FIX] Do not remove this! Use internal memory filesDir for all dump files
+                    val tempFile = File(filesDir, "temp_reroute.json")
+                    RawDumpWriter.onNavigation(this@FloatingOverlayService.serviceScope, tempFile, rootNode, pkg, "Reroute")
+                    val snapshot = RawDumpWriter.getSnapshot(pkg)
+                    if (snapshot != null) {
+                        val cleanElements = CleanPageProcessor.extractSync(snapshot.nodes, pkg)
+                        
+                        // Construct the live JSON string
+                        val output = org.json.JSONObject()
+                        val meta = org.json.JSONObject()
+                        meta.put("package_name", pkg)
+                        meta.put("root_name", "Reroute")
+                        meta.put("timestamp", System.currentTimeMillis())
+                        meta.put("element_count", cleanElements.size)
+                        output.put("meta", meta)
+                        val arr = org.json.JSONArray()
+                        cleanElements.forEach { arr.put(it) }
+                        output.put("elements", arr)
+                        
+                        cleanPageContent = output.toString(2)
+
+                        // Write to disk in background for debugging
+                        val cleanFile = File(filesDir, CleanPageProcessor.CLEAN_FILE_NAME)
+                        CleanPageProcessor.writeToFile(
+                            scope = this@FloatingOverlayService.serviceScope,
+                            outputFile = cleanFile,
+                            elements = cleanElements,
+                            packageName = pkg,
+                            rootName = "Reroute"
+                        )
+                    }
+                    rootNode.recycle()
+                    Log.i("[PathFinder]", "Forced live screen dump for Reroute!")
+                }
+
+                // Fallback to disk if live extraction failed
+                if (cleanPageContent.isEmpty()) {
+                    Log.w("[PathFinder]", "Live extraction failed, relying on old clean_page.json")
+                    val cleanPageFile = File(filesDir, CleanPageProcessor.CLEAN_FILE_NAME)
+                    cleanPageContent = if (cleanPageFile.exists()) cleanPageFile.readText() else ""
+                }
+                
+                Log.d("[PathFinder]", "clean_page.json read: ${cleanPageContent.length} chars")
+
+                // 2. Detect whether the user is already on the target app.
+                val currentPackage = try {
+                    org.json.JSONObject(cleanPageContent)
+                        .optJSONObject("meta")
+                        ?.optString("package_name", "") ?: ""
+                } catch (_: Exception) { "" }
+                val isOnTargetApp = currentPackage.isNotEmpty() &&
+                        currentPackage.contains(targetApp.trim().lowercase(), ignoreCase = true)
+                Log.d("[PathFinder]", "currentPackage=$currentPackage, targetApp=$targetApp, isOnTargetApp=$isOnTargetApp")
+                
+                isPartialPath = (failedPath != null || isOnTargetApp)
+
+                // 3. Gather device info
+                val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
+
+                // 4. Build prompt and call Groq
+                val userPrompt = PromptBuilder.buildGeminiDrivenPrompt(
+                    targetApp,
+                    exactTask,
+                    cleanPageContent,
+                    deviceInfo,
+                    isOnTargetApp,
+                    failedPath
+                )
+                Log.d("[PathFinder]", "Sending to Groq proxy… isOnTargetApp=$isOnTargetApp")
+                val rawResponse = GroqProxyClient().sendDirectRequest(
+                    PromptBuilder.SYSTEM_PROMPT,
+                    userPrompt
+                )
+                Log.d("[PathFinder]", "Groq raw response: $rawResponse")
+
+                // 5. Parse the JSON path response
+                val navPath = GroqResponseParser.parse(rawResponse)
+                if (navPath.isValid) {
+                    navPath.toPathString()
+                } else {
+                    groqErrorReason = "AI returned no steps: ${navPath.errorMessage}"
+                    Log.w("[PathFinder]", "Groq parse invalid: ${navPath.errorMessage}")
+                    null
+                }
+
+            } catch (e: java.net.SocketTimeoutException) {
+                groqErrorReason = "Network timeout — check internet connection"
+                Log.e("[PathFinder]", "Tier 3 Groq timeout: ${e.message}", e)
+                null
+            } catch (e: java.net.UnknownHostException) {
+                groqErrorReason = "No internet — could not reach AI server"
+                Log.e("[PathFinder]", "Tier 3 Groq no host: ${e.message}", e)
+                null
+            } catch (e: Exception) {
+                groqErrorReason = e.message ?: "Unknown error"
+                Log.e("[PathFinder]", "Tier 3 Groq failed: ${e.message}", e)
+                null
+            }
+        }
+
+        if (!groqPath.isNullOrEmpty()) {
+            Log.i("[PathFinder]", "Tier 3 Groq: Generated path → \"$groqPath\"")
+
+            val sanitisedGroqPath = groqPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                .filter { step ->
+                    val norm = step.trim().lowercase()
+                    norm != "back" && norm != "go back" && norm != "return" &&
+                    norm != "navigate back" && norm != "press back" && norm != "home"
+                }
+                .joinToString(" -> ")
+            pendingGroqApp  = targetApp
+            pendingGroqTask = exactTask
+            pendingGroqPath = sanitisedGroqPath
+            // [PERMANENT FIX] Do not remove this! Preserve isPartialPath flag so handleStop knows not to upload partial paths to Firestore
+            pendingGroqIsPartial = isPartialPath
+
+            withContext(Dispatchers.Main) { hidePanelAndRestoreIdle() }
+
+            val groqSteps = groqPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                .filter { step ->
+                    val norm = step.trim().lowercase()
+                    norm != "back" && norm != "go back" && norm != "return" &&
+                    norm != "navigate back" && norm != "press back" &&
+                    norm != "home"
+                }
+            if (groqSteps.isEmpty()) {
+                Log.w("[PathFinder]", "Groq path was empty after sanitization")
+                withContext(Dispatchers.Main) {
+                    statusText.text = "❌ AI returned no usable steps"
+                    navigationHud.hide()
+                }
+                return "Empty path after sanitization"
+            }
+            Log.i("[NavigationEngine]", "Tier 3 → startNavigation(${groqSteps.size} steps, pkg='$targetApp')")
+            NavigationStateMachine.startNavigation(groqSteps, targetApp, exactTask, isReroute = isPartialPath, source = "ai")
+            return null
+        } else {
+            Log.w("[PathFinder]", "Tier 3 Groq: Failed — reason: $groqErrorReason")
+            withContext(Dispatchers.Main) {
+                statusText.text = buildString {
+                    append("❌ AI path failed\n")
+                    append("App: $targetApp\n")
+                    append("Task: $exactTask\n\n")
+                    if (!groqErrorReason.isNullOrEmpty()) append("Reason: $groqErrorReason")
+                    else append("Unknown error — check Logcat ([PathFinder] tag)")
+                }
+                navigationHud.hide()
+            }
+            Log.i("[NavigationEngine]", "All tiers failed — HUD hidden")
+            return groqErrorReason ?: "Unknown error"
+        }
+    }
 
     // ── Stop button — multi-tap logic ──────────────────────────────────────────
 
@@ -773,10 +943,21 @@ class FloatingOverlayService : Service() {
                 val app  = pendingGroqApp
                 val task = pendingGroqTask
                 val path = pendingGroqPath
+                val isPartial = pendingGroqIsPartial
 
                 if (!app.isNullOrEmpty() && !task.isNullOrEmpty() && !path.isNullOrEmpty()) {
-                    // Groq path was shown — ask user if it worked before saving
-                    showSavePathDialog(statusText, app, task, path)
+                    if (isPartial) {
+                        // [PERMANENT FIX] Do not remove this! Never upload partial paths (e.g. from Reroutes or mid-app) to Cloud Firestore per Rule 5.1
+                        Log.i("[PathFinder]", "Path was partial/reroute ($app: $path) — skipping cloud save dialog per Rule 5.1")
+                        statusText.text = "Stopped (Reroute not saved to cloud)"
+                        pendingGroqApp  = null
+                        pendingGroqTask = null
+                        pendingGroqPath = null
+                        pendingGroqIsPartial = false
+                    } else {
+                        // Groq full path was shown — ask user if it worked before saving
+                        showSavePathDialog(statusText, app, task, path)
+                    }
                 } else {
                     statusText.text = "Stopped"
                 }
@@ -806,6 +987,7 @@ class FloatingOverlayService : Service() {
         pendingGroqApp  = null
         pendingGroqTask = null
         pendingGroqPath = null
+        pendingGroqIsPartial = false
 
         try {
             val dialogContext = ContextThemeWrapper(
@@ -823,10 +1005,13 @@ class FloatingOverlayService : Service() {
                         try {
                             kotlinx.coroutines.withTimeout(3000L) {
                                 withContext(Dispatchers.IO) {
+                                    val knownPkg = if (app.contains('.')) app else GraphStateMachine.getPackageNameForApp(app)
+                                    // [PERMANENT FIX] Do not remove this! Pass dual-key targetPackage so Firestore saves under both label and package name
                                     CloudPathDatabase.addEntry(
                                         targetApp = app,
                                         exactTask = task,
-                                        path      = path
+                                        path      = path,
+                                        targetPackage = knownPkg
                                     )
                                 }
                             }
