@@ -16,12 +16,13 @@ import android.view.accessibility.AccessibilityNodeInfo
  *   2. Back-Button Anchor Alignment (Visual spatial proximity to top-left back arrow)
  *   3. Dedicated Header / Page Title Resource IDs (top 20% of screen)
  *   4. True Navigation Tabs (ONLY on root screens with no back button, inside recognized tab bars)
- *   5. Clean App Label / Activity fallback
+ *   5. App Label (from PackageManager, e.g. "Settings", "Clock") or Clean Activity fallback
  *
  * Prevents:
  *   - Hijacking SIM cards ("No SIM cardNot set") or filter chips ("Unread") as screen titles.
  *   - Depth-first search stopping at sub-category headers or search placeholders.
  *   - Disagreements between MainFilter, NavigationStateMachine, and GraphStateMachine.
+ *   - Exposing internal OEM Java activity classes (e.g. "Oplus Settings Homepage") instead of "Settings".
  */
 object ScreenTitleResolver {
 
@@ -35,7 +36,7 @@ object ScreenTitleResolver {
         "back", "navigate up", "go back", "arrow_back", "close", "up",
         "cancel", "done", "ok", "yes", "no", "save", "edit", "search",
         "more options", "more", "menu", "overflow", "help", "share",
-        "delete", "clear", "settings", "search settings", "loading"
+        "delete", "clear", "search settings", "loading"
     )
 
     private val REGEX_SIM_CARD = Regex("""(?i)\b(sim\s*\d|no\s*sim|slot\s*\d|not\s*set|emergency\s*calls)\b""")
@@ -60,6 +61,7 @@ object ScreenTitleResolver {
         eventClassName: String? = null
     ): String {
         val allocatedNodes = mutableListOf<AccessibilityNodeInfo>()
+        val cleanApp = appLabel.trim()
         try {
             val rootBounds = Rect()
             rootNode.getBoundsInScreen(rootBounds)
@@ -69,36 +71,42 @@ object ScreenTitleResolver {
             val topThreshold = screenHeight * 0.25f
 
             // ── PASS 1: Toolbar / Header Container Supremacy ─────────────────────
-            val toolbarTitle = findTitleInToolbar(rootNode, topThreshold, allocatedNodes)
+            val toolbarTitle = findTitleInToolbar(rootNode, topThreshold, allocatedNodes, cleanApp)
             if (!toolbarTitle.isNullOrBlank()) {
                 return toolbarTitle
             }
 
             // ── PASS 2: Back-Button Anchor Alignment ─────────────────────────────
-            val backAnchorTitle = findTitleByBackAnchor(rootNode, screenHeight, topThreshold, allocatedNodes)
+            val backAnchorTitle = findTitleByBackAnchor(rootNode, screenHeight, topThreshold, allocatedNodes, cleanApp)
             if (!backAnchorTitle.isNullOrBlank()) {
                 return backAnchorTitle
             }
 
             // ── PASS 3: Dedicated Title Resource IDs in Top Zone ─────────────────
-            val resIdTitle = findTitleByResourceId(rootNode, topThreshold, allocatedNodes)
+            val resIdTitle = findTitleByResourceId(rootNode, topThreshold, allocatedNodes, cleanApp)
             if (!resIdTitle.isNullOrBlank()) {
                 return resIdTitle
             }
 
             // ── PASS 4: True Navigation Tab (Root Screens with NO Back Arrow) ────
-            val selectedTab = findTrueNavigationTab(rootNode, topThreshold, allocatedNodes)
-            if (!selectedTab.isNullOrBlank() && !selectedTab.equals(appLabel, ignoreCase = true)) {
+            val selectedTab = findTrueNavigationTab(rootNode, topThreshold, allocatedNodes, cleanApp)
+            if (!selectedTab.isNullOrBlank() && !selectedTab.equals(cleanApp, ignoreCase = true)) {
                 return selectedTab
             }
 
-            // ── PASS 5: Fallback to Activity Name or App Label ───────────────────
+            // ── PASS 5: Fallback to App Label ("Settings") or Clean Activity Name ─
+            // [PERMANENT FIX] Do not remove this! Prioritize user-facing app label ("Settings") over internal
+            // OEM Activity names (like "Oplus Settings Homepage") on root screens.
+            if (cleanApp.isNotBlank()) {
+                return cleanApp
+            }
+
             val cleanCls = eventClassName?.substringAfterLast('.')?.let { cleanActivityName(it) }
             return cleanCls?.takeIf { it.isNotBlank() && it.lowercase() != "main" }
-                ?: appLabel.trim().ifEmpty { packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() } }
+                ?: packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }
         } catch (e: Exception) {
             Log.e(TAG, "Error resolving screen title for $packageName: ${e.message}")
-            return appLabel.trim().ifEmpty { packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() } }
+            return cleanApp.ifEmpty { packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() } }
         } finally {
             // [PERMANENT FIX] Do not remove this! Recycle all allocated child nodes to prevent Binder exhaustion
             for (node in allocatedNodes) {
@@ -113,7 +121,8 @@ object ScreenTitleResolver {
     private fun findTitleInToolbar(
         root: AccessibilityNodeInfo,
         topThreshold: Float,
-        allocatedNodes: MutableList<AccessibilityNodeInfo>
+        allocatedNodes: MutableList<AccessibilityNodeInfo>,
+        appLabel: String
     ): String? {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -132,7 +141,7 @@ object ScreenTitleResolver {
 
                     if (isToolbarContainer(cls, resId)) {
                         // Found a Toolbar! Search its descendants for the title text
-                        val title = extractTitleFromToolbarDescendants(node, allocatedNodes)
+                        val title = extractTitleFromToolbarDescendants(node, allocatedNodes, appLabel)
                         if (!title.isNullOrBlank()) return title
                     }
                 }
@@ -153,7 +162,8 @@ object ScreenTitleResolver {
      */
     private fun extractTitleFromToolbarDescendants(
         toolbar: AccessibilityNodeInfo,
-        allocatedNodes: MutableList<AccessibilityNodeInfo>
+        allocatedNodes: MutableList<AccessibilityNodeInfo>,
+        appLabel: String
     ): String? {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         for (i in 0 until toolbar.childCount) {
@@ -174,7 +184,7 @@ object ScreenTitleResolver {
                 node.getBoundsInScreen(bounds)
                 val area = bounds.width() * bounds.height()
 
-                if (!text.isNullOrBlank() && isAcceptableTitle(text)) {
+                if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
                     val cls = node.className?.toString().orEmpty()
                     // Exclude buttons or action items
                     if (!cls.contains("Button", ignoreCase = true) && !node.isClickable) {
@@ -204,7 +214,8 @@ object ScreenTitleResolver {
         root: AccessibilityNodeInfo,
         screenHeight: Int,
         topThreshold: Float,
-        allocatedNodes: MutableList<AccessibilityNodeInfo>
+        allocatedNodes: MutableList<AccessibilityNodeInfo>,
+        appLabel: String
     ): String? {
         val backButton = findBackButton(root, screenHeight, allocatedNodes) ?: return null
         val backBounds = Rect()
@@ -226,7 +237,7 @@ object ScreenTitleResolver {
 
                 if (bounds.top <= topThreshold) {
                     val text = node.text?.toString()?.trim()
-                    if (!text.isNullOrBlank() && isAcceptableTitle(text)) {
+                    if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
                         // Check if in the same horizontal band and to the right of back button
                         val verticallyAligned = bounds.centerY() in (backBounds.top - 60)..(backBounds.bottom + 60)
                         val toTheRight = bounds.left >= backBounds.left
@@ -255,7 +266,8 @@ object ScreenTitleResolver {
     private fun findTitleByResourceId(
         root: AccessibilityNodeInfo,
         topThreshold: Float,
-        allocatedNodes: MutableList<AccessibilityNodeInfo>
+        allocatedNodes: MutableList<AccessibilityNodeInfo>,
+        appLabel: String
     ): String? {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -279,7 +291,7 @@ object ScreenTitleResolver {
                     val matchesId = TITLE_RES_KEYWORDS.any { resId.contains(it) }
                     if (matchesId) {
                         val text = node.text?.toString()?.trim()
-                        if (!text.isNullOrBlank() && isAcceptableTitle(text)) {
+                        if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
                             return text
                         }
                     }
@@ -303,7 +315,8 @@ object ScreenTitleResolver {
     private fun findTrueNavigationTab(
         root: AccessibilityNodeInfo,
         topThreshold: Float,
-        allocatedNodes: MutableList<AccessibilityNodeInfo>
+        allocatedNodes: MutableList<AccessibilityNodeInfo>,
+        appLabel: String
     ): String? {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -318,7 +331,7 @@ object ScreenTitleResolver {
 
                 if (isNavigationTabContainer(cls, resId)) {
                     // Traverse inside tab container to find selected tab
-                    val selectedTab = findSelectedChildInContainer(node, allocatedNodes)
+                    val selectedTab = findSelectedChildInContainer(node, allocatedNodes, appLabel)
                     if (!selectedTab.isNullOrBlank()) return selectedTab
                 }
 
@@ -335,7 +348,8 @@ object ScreenTitleResolver {
 
     private fun findSelectedChildInContainer(
         container: AccessibilityNodeInfo,
-        allocatedNodes: MutableList<AccessibilityNodeInfo>
+        allocatedNodes: MutableList<AccessibilityNodeInfo>,
+        appLabel: String
     ): String? {
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         for (i in 0 until container.childCount) {
@@ -348,7 +362,7 @@ object ScreenTitleResolver {
             val node = queue.removeFirst()
             if (node.isSelected || node.isChecked) {
                 val text = (node.text ?: node.contentDescription)?.toString()?.trim()
-                if (!text.isNullOrBlank() && isAcceptableTitle(text) && text.length <= 25) {
+                if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel) && text.length <= 25) {
                     return text
                 }
             }
@@ -432,11 +446,17 @@ object ScreenTitleResolver {
 
     /**
      * Checks if a text candidate is a valid, static, non-noise screen title.
+     *
+     * [PERMANENT FIX] Do not remove this! Never reject the app's own user-facing name (e.g. "Settings", "Clock")
+     * as noise.
      */
-    fun isAcceptableTitle(text: String): Boolean {
+    fun isAcceptableTitle(text: String, appLabel: String = ""): Boolean {
         val trimmed = text.trim()
         if (trimmed.length < 2 || trimmed.length > 50) return false
         val lower = trimmed.lowercase()
+
+        // If the text matches the app's own user-facing name (e.g. "Settings", "Clock"), it is always acceptable!
+        if (appLabel.isNotBlank() && lower == appLabel.trim().lowercase()) return true
 
         if (lower in NOISE_WORDS) return false
         if (REGEX_SIM_CARD.containsMatchIn(lower)) return false
@@ -455,14 +475,19 @@ object ScreenTitleResolver {
 
     /**
      * Converts Android Activity class name into human-readable words.
-     * e.g. "SubSettings" -> "Sub Settings", "ConversationListActivity" -> "Conversation List"
+     * [PERMANENT FIX] Do not remove this! Strips OEM prefixes (Oplus, Oppo, Vivo, Sec, Miui) and
+     * internal suffixes (Homepage, Host, Tab) so "OplusSettingsHomepageActivity" becomes "Settings".
      */
     fun cleanActivityName(className: String): String {
         val NOISE_WORDS = setOf(
             "activity", "fragment", "screen", "view", "tab", "host",
-            "main", "root", "container", "base", "impl"
+            "main", "root", "container", "base", "impl", "homepage", "home"
         )
-        val stripped = className
+        // Strip common OEM developer prefixes
+        val withoutOem = className
+            .replace(Regex("^(Oplus|Oppo|Vivo|Sec|Miui|Bbk|Huawei|Hw|ColorOS)", RegexOption.IGNORE_CASE), "")
+
+        val stripped = withoutOem
             .replace(Regex("Activity$", RegexOption.IGNORE_CASE), "")
             .replace(Regex("Fragment$", RegexOption.IGNORE_CASE), "")
             .replace(Regex("Screen$", RegexOption.IGNORE_CASE), "")
