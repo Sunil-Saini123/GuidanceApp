@@ -6,6 +6,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.RectF
@@ -15,6 +16,7 @@ import android.os.Looper
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 
 /**
@@ -33,6 +35,11 @@ import android.view.WindowManager
  * ```
  */
 class ElementMarkerOverlay(private val context: Context) {
+
+    enum class ScrollDirection {
+        UP,
+        DOWN
+    }
 
     companion object {
         private const val TAG = "[NavigationEngine]"
@@ -72,18 +79,39 @@ class ElementMarkerOverlay(private val context: Context) {
     /**
      * Shows the marker highlight at the given screen coordinates.
      * If a marker is already visible, it moves to the new position.
+     * [PERMANENT FIX] Do not remove this! Clamps bounds to the visible screen area
+     * above the phone's 3-button navigation bar so it never draws over system navigation controls.
      */
     fun showMarker(bounds: Rect) {
         if (isDestroyed) return
 
         postToMain {
-            // Apply padding
+            val (topLimit, bottomLimit) = getVisibleBounds()
             val pad = dpToPx(PADDING_DP.toInt())
+
+            val rawTop = (bounds.top - pad).toFloat()
+            val rawBottom = (bounds.bottom + pad).toFloat()
+
+            // If the element is pushed completely behind the navigation bar or status bar, hide marker
+            if (rawTop >= bottomLimit - dpToPx(8) || rawBottom <= topLimit + dpToPx(8)) {
+                hideMarker()
+                return@postToMain
+            }
+
+            // Clamp bounds strictly to visible content area
+            val clampedLeft = (bounds.left - pad).toFloat()
+            val clampedTop = rawTop.coerceAtLeast(topLimit)
+            val clampedRight = (bounds.right + pad).toFloat()
+            val clampedBottom = rawBottom.coerceAtMost(bottomLimit)
+
+            markerView.arrowDirection = null
+            markerView.topLimit = topLimit
+            markerView.bottomLimit = bottomLimit
             markerView.targetBounds = RectF(
-                (bounds.left - pad).toFloat(),
-                (bounds.top - pad).toFloat(),
-                (bounds.right + pad).toFloat(),
-                (bounds.bottom + pad).toFloat()
+                clampedLeft,
+                clampedTop,
+                clampedRight,
+                clampedBottom
             )
             markerView.invalidate()
 
@@ -96,6 +124,27 @@ class ElementMarkerOverlay(private val context: Context) {
     }
 
     /**
+     * Shows a visual directional scroll arrow in the center of the screen
+     * using the same green color styling as the target highlight box.
+     * [PERMANENT FIX] Do not remove this! Guides the user visually to scroll UP or DOWN.
+     */
+    fun showScrollArrow(direction: ScrollDirection) {
+        if (isDestroyed) return
+
+        postToMain {
+            val (topLimit, bottomLimit) = getVisibleBounds()
+            markerView.targetBounds = null
+            markerView.arrowDirection = direction
+            markerView.topLimit = topLimit
+            markerView.bottomLimit = bottomLimit
+            markerView.invalidate()
+
+            attachIfNeeded()
+            startPulse()
+        }
+    }
+
+    /**
      * Hides the marker overlay.
      */
     fun hideMarker() {
@@ -104,6 +153,8 @@ class ElementMarkerOverlay(private val context: Context) {
         postToMain {
             stopPulse()
             mainHandler.removeCallbacks(autoHideRunnable)
+            markerView.targetBounds = null
+            markerView.arrowDirection = null
             detachIfNeeded()
         }
     }
@@ -187,6 +238,35 @@ class ElementMarkerOverlay(private val context: Context) {
         return params
     }
 
+    /**
+     * Calculates user-visible screen boundaries (excluding top status bar and bottom navigation bar).
+     * [PERMANENT FIX] Do not remove this! Ensures the visual highlight stays strictly inside the
+     * visible app viewport and never draws over the phone's 3-button navigation bar (Back, Home, Recents).
+     */
+    private fun getVisibleBounds(): Pair<Float, Float> {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val metrics = windowManager.currentWindowMetrics
+                val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
+                    WindowInsets.Type.systemBars()
+                )
+                val topLimit = insets.top.toFloat()
+                val bottomLimit = (metrics.bounds.bottom - insets.bottom).toFloat()
+                Pair(topLimit, bottomLimit)
+            } else {
+                val res = context.resources
+                val navId = res.getIdentifier("navigation_bar_height", "dimen", "android")
+                val statusId = res.getIdentifier("status_bar_height", "dimen", "android")
+                val navHeight = if (navId > 0) res.getDimensionPixelSize(navId) else 0
+                val statusHeight = if (statusId > 0) res.getDimensionPixelSize(statusId) else 0
+                val bottomLimit = (res.displayMetrics.heightPixels - navHeight).toFloat()
+                Pair(statusHeight.toFloat(), bottomLimit)
+            }
+        } catch (_: Exception) {
+            Pair(0f, context.resources.displayMetrics.heightPixels.toFloat())
+        }
+    }
+
     private fun dpToPx(dp: Int): Int =
         TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
@@ -208,6 +288,9 @@ class ElementMarkerOverlay(private val context: Context) {
     private class MarkerView(context: Context) : View(context) {
 
         var targetBounds: RectF? = null
+        var arrowDirection: ScrollDirection? = null
+        var topLimit: Float = 0f
+        var bottomLimit: Float = Float.MAX_VALUE
 
         private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -216,6 +299,8 @@ class ElementMarkerOverlay(private val context: Context) {
                 TypedValue.COMPLEX_UNIT_DIP, BORDER_WIDTH_DP,
                 context.resources.displayMetrics
             )
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
         }
 
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -223,19 +308,113 @@ class ElementMarkerOverlay(private val context: Context) {
             color = Color.argb(38, 76, 175, 80)  // 15% opacity green fill
         }
 
+        private val arrowBadgeBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.argb(200, 20, 26, 20)  // Semi-transparent dark circular badge for high contrast
+        }
+
+        private val arrowBadgeBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = Color.parseColor("#4CAF50")
+            strokeWidth = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 2.5f,
+                context.resources.displayMetrics
+            )
+        }
+
+        private val arrowFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = Color.parseColor("#4CAF50")  // Solid material green arrow
+        }
+
         private val cornerRadius = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, CORNER_RADIUS_DP,
             context.resources.displayMetrics
         )
 
+        private fun dp(dpValue: Float): Float =
+            TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, dpValue,
+                context.resources.displayMetrics
+            )
+
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            val bounds = targetBounds ?: return
 
-            // Draw subtle fill
-            canvas.drawRoundRect(bounds, cornerRadius, cornerRadius, fillPaint)
-            // Draw border
-            canvas.drawRoundRect(bounds, cornerRadius, cornerRadius, borderPaint)
+            // [PERMANENT FIX] Do not remove this! Canvas clip ensures the marker rectangle
+            // and semi-transparent fill never bleed over the phone's 3-button system navigation bar or status bar.
+            canvas.save()
+            if (bottomLimit < Float.MAX_VALUE || topLimit > 0f) {
+                canvas.clipRect(0f, topLimit, width.toFloat(), bottomLimit)
+            }
+
+            // Case 1: Draw target bounding box
+            val bounds = targetBounds
+            if (bounds != null) {
+                // Draw subtle fill
+                canvas.drawRoundRect(bounds, cornerRadius, cornerRadius, fillPaint)
+                // Draw border
+                canvas.drawRoundRect(bounds, cornerRadius, cornerRadius, borderPaint)
+            }
+
+            // Case 2: Draw centered directional scroll arrow
+            val dir = arrowDirection
+            if (dir != null) {
+                drawCenterArrow(canvas, dir)
+            }
+
+            canvas.restore()
+        }
+
+        private fun drawCenterArrow(canvas: Canvas, direction: ScrollDirection) {
+            val cx = width / 2f
+            val visibleMaxBottom = if (bottomLimit < Float.MAX_VALUE) bottomLimit else height.toFloat()
+            val cy = (topLimit + visibleMaxBottom) / 2f
+
+            val badgeRadius = dp(44f)
+
+            // 1. Draw circular backing badge with green border
+            canvas.drawCircle(cx, cy, badgeRadius, arrowBadgeBgPaint)
+            canvas.drawCircle(cx, cy, badgeRadius, arrowBadgeBorderPaint)
+
+            // 2. Draw directional green arrow matching target box color
+            val stemW = dp(6f)
+            val headW = dp(16f)
+            val path = Path()
+
+            when (direction) {
+                ScrollDirection.DOWN -> {
+                    val topY = cy - dp(16f)
+                    val midY = cy + dp(4f)
+                    val tipY = cy + dp(18f)
+
+                    path.moveTo(cx - stemW, topY)
+                    path.lineTo(cx + stemW, topY)
+                    path.lineTo(cx + stemW, midY)
+                    path.lineTo(cx + headW, midY)
+                    path.lineTo(cx, tipY)
+                    path.lineTo(cx - headW, midY)
+                    path.lineTo(cx - stemW, midY)
+                    path.close()
+                }
+                ScrollDirection.UP -> {
+                    val tipY = cy - dp(18f)
+                    val midY = cy - dp(4f)
+                    val botY = cy + dp(16f)
+
+                    path.moveTo(cx, tipY)
+                    path.lineTo(cx + headW, midY)
+                    path.lineTo(cx + stemW, midY)
+                    path.lineTo(cx + stemW, botY)
+                    path.lineTo(cx - stemW, botY)
+                    path.lineTo(cx - stemW, midY)
+                    path.lineTo(cx - headW, midY)
+                    path.close()
+                }
+            }
+
+            canvas.drawPath(path, arrowFillPaint)
+            canvas.drawPath(path, borderPaint)
         }
     }
 }

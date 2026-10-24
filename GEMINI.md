@@ -82,6 +82,10 @@ These rules are strictly enforced across all code changes, architecture decision
    - Screen naming across `MainFilter`, `NavigationStateMachine`, and `GraphStateMachine` MUST use `ScreenTitleResolver`.
    - **Toolbar / Header Supremacy:** Sub-screens with a Toolbar/ActionBar or Back-Button anchor prioritize the header title above all else.
    - **True Navigation Tabs Only:** Selected tab matching is strictly restricted to recognized navigation containers (`TabLayout`, `BottomNavigationView`, `NavigationBarView`) on root screens without a back button. It MUST NEVER inspect arbitrary `isSelected == true` nodes like SIM card slots (`"No SIM cardNot set"`) or filter chips.
+9. **System Navigation Bar & Visible Viewport Clamping:**
+   - In `ElementMarkerOverlay`, visual highlight bounds must be clamped strictly above the phone's 3-button system navigation bar (Back, Home, Recents) and below the status bar (`WindowInsets.Type.systemBars()`).
+   - If a target element is pushed behind the navigation bar (e.g. at the bottom edge of a scroll view), the marker hides to prevent phantom boxes.
+   - `MarkerView.onDraw()` enforces canvas clipping (`canvas.clipRect`) to guarantee the green rectangle and fill never draw over the phone's system navigation buttons.
 
 ---
 
@@ -96,6 +100,10 @@ These rules are strictly enforced across all code changes, architecture decision
 3. **In-Memory Scroll Detection & Non-Blocking UI:**
    - Scrollability checks (`hasScrollableContainer`) must run on background coroutines (`Dispatchers.IO`) and prioritize Layer 0 in-memory inspection (`node.isScrollable`, Compose/OEM scrollables) over physical disk reads.
    - Never perform synchronous disk file reads or JSON tree parsing on the Android Main UI Thread.
+4. **Dedicated Marker Scout Worker (`MarkerScout`):**
+   - Visual element tracking is isolated into an independent worker (`MarkerScout`) supervised by `NavigationStateMachine`.
+   - `MarkerScout` is assigned the current target and tracks its coordinates reactively on screen motion (scrolls, page transitions).
+   - In-flight scout searches are cleanly cancelled upon step advancement (`scoutJob?.cancel()`) or stop (`shutdown()`), discarding stale step results and eliminating race conditions, ghost markers, and native memory leaks.
 
 ---
 
@@ -168,6 +176,10 @@ These rules are strictly enforced across all code changes, architecture decision
     - **Target In-Context Guard Against False Scrolling:** In `triggerSearchPipeline()`, if `isOffTrack` (`isUnrecognizedScreen || isCurrentScreenUnrecognized || lastWrongTapText != null`) is true, the HUD strictly displays `WRONG PATH` (`OFF_TRACK`) and is forbidden from falling through to `hasScrollable` (`Scroll to find...`).
     - **Connected Cluster Recognition in `isTargetApp`:** `isTargetApp()` queries `NavGraphDatabase.getConnectedScreens(targetPackage)` (cached in `connectedTargetPackages`) to recognize OEM satellite sub-packages (`com.oplus.sos`, `com.oplus.wallpapers`, `com.oplus.wirelesssettings`, `com.oplus.battery`) as valid components of the target app cluster.
     - **Compound Preference Container Text Extraction:** In `UiTreeAccessibilityService.TYPE_VIEW_CLICKED`, when a container view has empty text, child nodes are traversed up to depth 3 with strict native Binder recycling to reliably capture clicked labels from complex preference rows.
+    - **Back Button & Null Tap Protection:** In `UiTreeAccessibilityService.TYPE_VIEW_CLICKED`, clicks on icon buttons with empty/null text collections filter out literal `"null"` and `"nil"` strings. In `NavigationStateMachine.onElementTapped()`, navigation actions (`"back"`, `"navigate up"`, `"null"`, `"nil"`) return immediately and are never recorded as wrong taps, eliminating transient "You tapped 'null'" flashes when returning from an off-track screen.
+19. **Directional Scroll Guidance & Homepage Search Noise Suppression:**
+    - **Screen-Center Directional Green Arrow (`ElementMarkerOverlay.showScrollArrow`):** When the target element is off-screen and scrolling is required, a prominent visual arrow is rendered directly in the vertical/horizontal center of the screen matching the target highlight color (`#4CAF50`). If the target was last seen in the top half of the screen (< 45% height), the user scrolled past it -> the arrow points UP, and the HUD prompts `Scroll up to find '<target>'` (`"Passed it — scroll back up"`). Otherwise, the arrow points DOWN -> `Scroll down to find '<target>'`. The moment the target enters view, the center arrow instantly vanishes and the green bounding box appears around the target.
+    - **Homepage Search Noise Suppression:** On root screens without a back button (e.g. Settings homepage), an inline search bar that scrolls into view must never cause `ScreenTitleResolver` to rename the screen to `"Search"`. It preserves the canonical app title (`"Settings"`). In `NavigationStateMachine`, `isEffectiveRootScreen` treats transient search box noise on root as the root screen, preventing false `WRONG PATH` alerts during scrolling.
 
 ---
 

@@ -76,6 +76,15 @@ object ScreenTitleResolver {
             // ── PASS 1: Toolbar / Header Container Supremacy ─────────────────────
             val toolbarTitle = findTitleInToolbar(rootNode, topThreshold, allocatedNodes, cleanApp)
             if (!toolbarTitle.isNullOrBlank()) {
+                // [PERMANENT FIX] Do not remove this! Distinguish between a dedicated Search sub-page vs a root homepage search bar.
+                // On a root screen (e.g. Settings homepage), an inline search box scrolls into view when scrolling down.
+                // Without a Back Button, the screen remains the root screen (cleanApp = "Settings"), NEVER a separate "Search" screen.
+                if (toolbarTitle.equals("Search", ignoreCase = true)) {
+                    val hasBack = findBackButton(rootNode, screenHeight, allocatedNodes) != null
+                    if (!hasBack && cleanApp.isNotBlank()) {
+                        return canonicalizeTitle(cleanApp, packageName)
+                    }
+                }
                 return canonicalizeTitle(toolbarTitle, packageName)
             }
 

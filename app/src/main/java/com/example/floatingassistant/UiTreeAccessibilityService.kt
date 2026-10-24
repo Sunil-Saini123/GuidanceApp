@@ -171,16 +171,24 @@ class UiTreeAccessibilityService : AccessibilityService() {
                 val pkg   = event.packageName?.toString() ?: return
                 // [PERMANENT FIX] Do not simplify this block. We must join all texts 
                 // and fallback to event.source to properly capture clicks on containers.
+                // Filter out 'null' and 'nil' strings produced by empty collections or unlabelled icons.
                 var label = event.contentDescription?.toString()?.trim()
-                if (label.isNullOrEmpty()) {
-                    label = event.text?.joinToString(" ")?.trim()
+                if (label.isNullOrEmpty() || label.equals("null", ignoreCase = true) || label.equals("nil", ignoreCase = true)) {
+                    val validTexts = event.text
+                        ?.mapNotNull { it?.toString()?.trim() }
+                        ?.filter { it.isNotEmpty() && !it.equals("null", ignoreCase = true) && !it.equals("nil", ignoreCase = true) }
+                    label = if (!validTexts.isNullOrEmpty()) validTexts.joinToString(" ") else null
                 }
-                if (label.isNullOrEmpty()) {
+                if (label.isNullOrEmpty() || label.equals("null", ignoreCase = true) || label.equals("nil", ignoreCase = true)) {
                     val source = event.source
                     if (source != null) {
                         try {
-                            label = source.text?.toString()?.trim()
-                                ?: source.contentDescription?.toString()?.trim()
+                            val srcText = source.text?.toString()?.trim()
+                            val srcDesc = source.contentDescription?.toString()?.trim()
+                            label = if (!srcText.isNullOrEmpty() && !srcText.equals("null", ignoreCase = true) && !srcText.equals("nil", ignoreCase = true)) srcText
+                                    else if (!srcDesc.isNullOrEmpty() && !srcDesc.equals("null", ignoreCase = true) && !srcDesc.equals("nil", ignoreCase = true)) srcDesc
+                                    else null
+
                             if (label.isNullOrEmpty()) {
                                 // [PERMANENT FIX] Do not remove this! In compound list items (e.g. COUIPreference rows in Settings),
                                 // the container view itself has null text/desc. Extract first meaningful text from child nodes.
@@ -191,7 +199,12 @@ class UiTreeAccessibilityService : AccessibilityService() {
                         }
                     }
                 }
-                label = label ?: ""
+                label = label?.trim() ?: ""
+                // [PERMANENT FIX] Do not remove this! Filter literal 'null' and 'nil' strings produced by
+                // empty event.text collections to prevent false "You tapped 'null'" alerts on Back button presses.
+                if (label.equals("null", ignoreCase = true) || label.equals("nil", ignoreCase = true)) {
+                    label = ""
+                }
                 if (label.isNotEmpty()) {
                     GraphStateMachine.setLastClickedLabel(pkg, label)
 
@@ -503,9 +516,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
                 val (node, depth) = queue.removeFirst()
                 if (node !== root) {
                     val text = node.text?.toString()?.trim()
-                    if (!text.isNullOrEmpty()) return text
+                    if (!text.isNullOrEmpty() && !text.equals("null", ignoreCase = true) && !text.equals("nil", ignoreCase = true)) return text
                     val desc = node.contentDescription?.toString()?.trim()
-                    if (!desc.isNullOrEmpty()) return desc
+                    if (!desc.isNullOrEmpty() && !desc.equals("null", ignoreCase = true) && !desc.equals("nil", ignoreCase = true)) return desc
                 }
                 if (depth < maxDepth) {
                     for (i in 0 until node.childCount) {

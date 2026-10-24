@@ -3,12 +3,14 @@ package com.example.floatingassistant
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -273,6 +275,7 @@ object NavigationStateMachine {
     fun stopNavigation() {
         postToMain {
             // [PERMANENT FIX] Always execute cleanup to ensure HUD and marker hide, even if we already reached the destination (isNavigating=false)
+            MarkerScout.shutdown()
             isNavigating = false
             targetPackage = ""
             connectedTargetPackages = emptySet()
@@ -369,13 +372,24 @@ object NavigationStateMachine {
             val ignoredExactLabels = setOf(
                 "back", "home", "overview", "navigate up", "more options",
                 "close", "search", "submit", "cancel", "ok", "done", "yes", "no",
-                "on", "off", "switch", "checkbox", "radio"
+                "on", "off", "switch", "checkbox", "radio", "null", "nil"
             )
             val isNavigationTap = ignoredExactLabels.contains(tapNorm) ||
-                                  tapNorm == "expand" || tapNorm == "collapse"
+                                  tapNorm.startsWith("back") ||
+                                  tapNorm.endsWith("back") ||
+                                  tapNorm.contains("navigate up") ||
+                                  tapNorm == "expand" || tapNorm == "collapse" ||
+                                  tapNorm == "null" || tapNorm == "nil"
+
+            // [PERMANENT FIX] Do not remove this! If the user tapped a navigation button (Back, Navigate Up, Home)
+            // or if an empty icon produced 'null'/'nil', do NOT treat it as a wrong tap! Return immediately.
+            if (isNavigationTap || tappedLabel.isBlank() || tapNorm == "null" || tapNorm == "nil") {
+                Log.d(TAG, "onElementTapped: ignored navigation/system tap '$tappedLabel'")
+                return
+            }
 
             // If they tapped a different interactive label (not a system nav button), track it immediately
-            if (tappedLabel.length > 2 && !isNavigationTap) {
+            if (tappedLabel.length > 2) {
                 lastWrongTapText = tappedLabel
                 lastWrongTapTimeMs = System.currentTimeMillis()
                 Log.w(TAG, "onElementTapped: user tapped '$tappedLabel' (expected '$currStep')")
@@ -404,7 +418,7 @@ object NavigationStateMachine {
 
             // Target is NOT visible on screen and they tapped something else.
             // Immediately transition HUD to WRONG PATH.
-            if (tappedLabel.length > 2 && !isNavigationTap) {
+            if (tappedLabel.length > 2) {
                 // [PERMANENT FIX] Do not remove this! Set isCurrentScreenUnrecognized = true immediately so that
                 // subsequent scroll ticks / content change events don't overwrite WRONG PATH with false scroll directives.
                 isCurrentScreenUnrecognized = true
@@ -533,6 +547,16 @@ object NavigationStateMachine {
                                screenNorm == "settings-home" ||
                                screenNorm == "home" ||
                                screenNorm.endsWith("-home")
+
+            // [PERMANENT FIX] Do not remove this! In-page search box noise guard.
+            // When scrolling on root screens (like Settings), an inline search bar might transiently report "Search".
+            // If we are in the target app and no wrong tap has occurred, treat "Search" on root as root screen.
+            val isSearchNoiseOnRoot = activeScreenName.equals("Search", ignoreCase = true) &&
+                                      inTargetApp &&
+                                      lastWrongTapText == null &&
+                                      (targetAppLabel.equals("Settings", ignoreCase = true) || currentIndex == 0)
+
+            val isEffectiveRootScreen = isRootScreen || isSearchNoiseOnRoot
             val nearest = findNearestStep(screenNorm)
             val nearestIdx = nearest?.first ?: -1
             val nearestName = nearest?.second
@@ -541,7 +565,7 @@ object NavigationStateMachine {
                                 (appRootFuzzyMatch(currNorm, currentIndex) && inTargetApp) ||
                                 fuzzyMatch(screenNorm, currNorm) ||
                                 (nextNorm != null && fuzzyMatch(screenNorm, nextNorm)) ||
-                                (inTargetApp && isRootScreen)
+                                (inTargetApp && isEffectiveRootScreen)
 
             if (isOnKnownPath) {
                 lastWrongTapText = null
@@ -633,7 +657,7 @@ object NavigationStateMachine {
             if (inTargetApp) {
                 // Determine if this is likely a false positive backward navigation
                 // caused by an OEM like ColorOS always reporting the root name ("Settings")
-                val isLikelyColorOsQuirk = nearestIdx == 0 && isRootScreen
+                val isLikelyColorOsQuirk = nearestIdx == 0 && isEffectiveRootScreen
 
                 if (nearestIdx in 0 until (currentIndex - 1) && !isLikelyColorOsQuirk) {
                     // User is behind — they went back. Guide them forward.
@@ -657,7 +681,7 @@ object NavigationStateMachine {
                     // Screen unrecognized but we're in the right app — hunt for the element
                     val timeSinceAdvance = System.currentTimeMillis() - lastAdvanceTimeMs
                     val justAdvanced = timeSinceAdvance < 3000L
-                    val isUnrecognized = (nearestIdx == -1 && !isRootScreen && !justAdvanced)
+                    val isUnrecognized = (nearestIdx == -1 && !isEffectiveRootScreen && !justAdvanced)
                     isCurrentScreenUnrecognized = isUnrecognized
 
                     if (isUnrecognized) {
@@ -900,156 +924,250 @@ object NavigationStateMachine {
 
     fun onContentScrolled() {
         if (!isNavigating || currStep.isEmpty()) return
-        // Re-run the search immediately to update marker bounds and HUD state
-        // [PERMANENT FIX] Pass isCurrentScreenUnrecognized so content changes / scroll ticks on wrong screens
-        // don't overwrite WRONG PATH with false scroll directives.
-        triggerSearchPipeline(currStep, lastKnownActivePackage, activeScreenName, isUnrecognizedScreen = isCurrentScreenUnrecognized, delayMs = 0L)
+        MarkerScout.onScreenMotion()
+    }
+
+    // ── Dedicated Marker Scout Worker ──────────────────────────────────────────
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Dedicated Marker Scout Worker.
+     *
+     * An independent worker supervised by NavigationStateMachine.
+     * Responsibility:
+     *   - Assigned a specific target element to track.
+     *   - Reacts to screen motion (scrolls, page transitions) on a dedicated coroutine job.
+     *   - Inspects the live memory tree and updates visual marker bounds in real-time.
+     *   - Discards stale search results when the mission/step advances, preventing race conditions.
+     *   - Completely shuts down (cancels active coroutines, clears bounds, hides marker) on stop.
+     */
+    private object MarkerScout {
+        private var scoutJob: Job? = null
+        @Volatile var currentTarget: String = ""
+        private var lastKnownTargetBounds: Rect? = null
+        private var lastKnownTargetStep: String = ""
+        private var targetScrolledAbove: Boolean = false
+
+        fun assignMission(
+            targetStep: String,
+            activePkg: String,
+            activeScreen: String,
+            isUnrecognizedScreen: Boolean = false,
+            delayMs: Long = 400L
+        ) {
+            if (targetStep != lastKnownTargetStep) {
+                lastKnownTargetStep = targetStep
+                lastKnownTargetBounds = null
+                targetScrolledAbove = false
+            }
+            currentTarget = targetStep
+            // Cancel previous in-flight scout search to prevent race conditions
+            scoutJob?.cancel()
+            if (!::elementFinder.isInitialized) return
+
+            scoutJob = stateMachineScope.launch(Dispatchers.IO) {
+                if (delayMs > 0) {
+                    delay(delayMs)
+                }
+                if (!isNavigating || targetStep != currentTarget) return@launch
+
+                // [PERMANENT FIX] Do not remove this check!
+                // If the user left the app during the delay, abort search pipeline!
+                val inTargetApp = isTargetApp(lastKnownActivePackage)
+                val currStepIsHome = currStep.trim().equals("home", ignoreCase = true)
+                if (!inTargetApp && !currStepIsHome) {
+                    return@launch
+                }
+
+                val result = elementFinder.findElement(targetStep, activePkg, activeScreen, prevStep ?: "")
+                currentTargetBounds = result.bounds
+
+                if (result.found) {
+                    if (result.bounds != null) {
+                        lastKnownTargetBounds = Rect(result.bounds)
+                    }
+                    postToMain {
+                        if (!isNavigating || targetStep != currentTarget) return@postToMain
+                        hud.updateHud(
+                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                            actionInstruction = "Tap '$targetStep'",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "Found on screen",
+                            subTag            = "target-found",
+                            hudState          = NavigationHudOverlay.HudState.FOUND
+                        )
+                        // Show visual marker on the found element
+                        if (result.bounds != null) {
+                            marker?.showMarker(result.bounds)
+                            // [PERMANENT FIX] Stream target located coordinates to Dashboard
+                            DebugTelemetryClient.sendElementFound(targetStep, result.bounds)
+                        }
+                    }
+                    return@launch
+                }
+
+                // [PERMANENT FIX] Do not remove this! Directional scroll tracker.
+                // When an element goes out of view, determine if it moved above or below the screen.
+                // If last seen in the top half, user scrolled past it -> prompt "Scroll UP to find ... ⬆".
+                // Otherwise user needs to continue scrolling down -> prompt "Scroll DOWN to find ... ⬇".
+                val screenH = try {
+                    Resources.getSystem().displayMetrics.heightPixels
+                } catch (_: Exception) { 2400 }
+
+                val lastBounds = lastKnownTargetBounds
+                if (lastBounds != null) {
+                    if (lastBounds.centerY() < screenH * 0.45f) {
+                        targetScrolledAbove = true
+                    } else if (lastBounds.centerY() > screenH * 0.55f) {
+                        targetScrolledAbove = false
+                    }
+                }
+
+                // ── Safe auto-advance for generic root steps (e.g. "Settings") ──
+                var skipAdvanceToNext = false
+                val nStep = nextStep
+                if (currentIndex == 0 && nStep != null) {
+                    val genericRoots = setOf("home", "main", "start", "landing", "settings", "options", "menu")
+                    if (genericRoots.contains(targetStep.trim().lowercase())) {
+                        val nextResult = elementFinder.findElement(nStep, activePkg, activeScreen, prevStep ?: "")
+                        if (nextResult.found) {
+                            skipAdvanceToNext = true
+                        }
+                    }
+                }
+
+                val wrongTapOccurred = lastWrongTapText != null
+                val isOffTrack = isUnrecognizedScreen || isCurrentScreenUnrecognized || wrongTapOccurred
+
+                // [PERMANENT FIX] Do not remove this! Check scrollability on background IO thread
+                // to completely eliminate disk I/O and JSON parsing on Android's Main UI Thread.
+                val hasScrollable = elementFinder.hasScrollableContainer()
+
+                postToMain {
+                    if (!isNavigating || targetStep != currentTarget) return@postToMain
+
+                    val triggerReroute = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
+
+                    // [PERMANENT FIX] Do not remove this! Target in-context guard against false scroll directives.
+                    // Never instruct the user to scroll to find targetStep if they are on an unrecognized screen,
+                    // tapped a wrong option, or are currently off track.
+                    if (isOffTrack) {
+                        marker?.hideMarker()
+                        val action = if (wrongTapOccurred) "You tapped '${lastWrongTapText}'" else "Press Back to return"
+                        val contextTxt = if (wrongTapOccurred) "Go back and find '$targetStep'" else "You took a wrong turn"
+
+                        hud.updateHud(
+                            stepHeader        = "WRONG PATH",
+                            actionInstruction = action,
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = contextTxt,
+                            subTag            = "unrecognized-screen-back",
+                            onHelpRequested   = triggerReroute,
+                            hudState          = NavigationHudOverlay.HudState.OFF_TRACK
+                        )
+                        return@postToMain
+                    }
+
+                    if (skipAdvanceToNext) {
+                        marker?.hideMarker()
+                        Log.i(TAG, "Search pipeline: generic root '$targetStep' not found, but next step '${nStep}' IS on screen. Auto-advancing.")
+                        lastCorrectStep = targetStep
+                        advanceStep(currentIndex)
+                        return@postToMain
+                    }
+
+                    if (hasScrollable) {
+                        val scrollDir = if (targetScrolledAbove) {
+                            ElementMarkerOverlay.ScrollDirection.UP
+                        } else {
+                            ElementMarkerOverlay.ScrollDirection.DOWN
+                        }
+                        marker?.showScrollArrow(scrollDir)
+
+                        val scrollText = if (targetScrolledAbove) {
+                            "Scroll up to find '$targetStep'"
+                        } else {
+                            "Scroll down to find '$targetStep'"
+                        }
+                        val contextTxt = if (targetScrolledAbove) {
+                            "Passed it — scroll back up"
+                        } else {
+                            "Not visible yet"
+                        }
+                        hud.updateHud(
+                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                            actionInstruction = scrollText,
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = contextTxt,
+                            subTag            = "scroll-directive",
+                            onHelpRequested   = triggerReroute,
+                            hudState          = NavigationHudOverlay.HudState.SEARCHING
+                        )
+                    } else if (nStep != null) {
+                        marker?.hideMarker()
+                        // Combined 2-step hint: find the current element, then immediately tap next
+                        val combinedHint = buildCombinedHint(targetStep, nStep)
+                        hud.updateHud(
+                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                            actionInstruction = combinedHint,
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "Not found — try combined action",
+                            subTag            = "combined-hint",
+                            onHelpRequested   = triggerReroute,
+                            hudState          = NavigationHudOverlay.HudState.SEARCHING
+                        )
+                    } else {
+                        marker?.hideMarker()
+                        // Last step and not found — keep it simple
+                        hud.updateHud(
+                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                            actionInstruction = "Find and tap '$targetStep'",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "Last step",
+                            subTag            = "final-step-hint",
+                            onHelpRequested   = triggerReroute,
+                            hudState          = NavigationHudOverlay.HudState.SEARCHING
+                        )
+                    }
+                }
+            }
+        }
+
+        fun onScreenMotion() {
+            if (!isNavigating || currentTarget.isEmpty()) return
+            // React immediately to screen motion with 0ms delay to track the element smoothly
+            assignMission(
+                targetStep = currentTarget,
+                activePkg = lastKnownActivePackage,
+                activeScreen = activeScreenName,
+                isUnrecognizedScreen = isCurrentScreenUnrecognized,
+                delayMs = 0L
+            )
+        }
+
+        fun shutdown() {
+            scoutJob?.cancel()
+            scoutJob = null
+            currentTarget = ""
+            currentTargetBounds = null
+            lastKnownTargetBounds = null
+            lastKnownTargetStep = ""
+            targetScrolledAbove = false
+            postToMain {
+                marker?.hideMarker()
+            }
+        }
     }
 
     // ── Element search pipeline ────────────────────────────────────────────────
 
     private fun triggerSearchPipeline(
-        targetStep: String, 
-        activePkg: String, 
-        activeScreen: String, 
+        targetStep: String,
+        activePkg: String,
+        activeScreen: String,
         isUnrecognizedScreen: Boolean = false,
         delayMs: Long = 400L
     ) {
-        if (!::elementFinder.isInitialized) return
-
-        stateMachineScope.launch(Dispatchers.IO) {
-            if (delayMs > 0) {
-                delay(delayMs)
-            }
-            if (!isNavigating) return@launch
-
-            // [PERMANENT FIX] Do not remove this check!
-            // If the user left the app during the 400ms delay, this aborts the search pipeline!
-            // Without this, the delayed search overwrites the 'ON HOME' or 'WRONG APP' HUD with a false 'combined-hint'.
-            val inTargetApp = isTargetApp(lastKnownActivePackage)
-            val currStepIsHome = currStep.trim().equals("home", ignoreCase = true)
-            if (!inTargetApp && !currStepIsHome) {
-                return@launch
-            }
-
-            val result = elementFinder.findElement(targetStep, activePkg, activeScreen, prevStep ?: "")
-            currentTargetBounds = result.bounds
-
-            if (result.found) {
-                postToMain {
-                    if (!isNavigating) return@postToMain
-                    hud.updateHud(
-                        stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                        actionInstruction = "Tap '$targetStep'",
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Found on screen",
-                        subTag            = "target-found",
-                        hudState          = NavigationHudOverlay.HudState.FOUND
-                    )
-                    // Show visual marker on the found element
-                    if (result.bounds != null) {
-                        marker?.showMarker(result.bounds)
-                        // [PERMANENT FIX] Stream target located coordinates to Dashboard
-                        DebugTelemetryClient.sendElementFound(targetStep, result.bounds)
-                    }
-                }
-                return@launch
-            }
-
-
-            // ── Safe auto-advance for generic root steps (e.g. "Settings") ──
-            // If we are on step 0, looking for a generic root like "Settings", and it's not
-            // on screen, but the NEXT step IS on screen, we can safely assume the user is
-            // already past the root step.
-            var skipAdvanceToNext = false
-            val nStep = nextStep
-            if (currentIndex == 0 && nStep != null) {
-                val genericRoots = setOf("home", "main", "start", "landing", "settings", "options", "menu")
-                if (genericRoots.contains(targetStep.trim().lowercase())) {
-                    val nextResult = elementFinder.findElement(nStep, activePkg, activeScreen, prevStep ?: "")
-                    if (nextResult.found) {
-                        skipAdvanceToNext = true
-                    }
-                }
-            }
-
-            val wrongTapOccurred = lastWrongTapText != null
-            val isOffTrack = isUnrecognizedScreen || isCurrentScreenUnrecognized || wrongTapOccurred
-
-            // [PERMANENT FIX] Do not remove this! Check scrollability on background IO thread
-            // to completely eliminate disk I/O and JSON parsing on Android's Main UI Thread.
-            val hasScrollable = elementFinder.hasScrollableContainer()
-
-            postToMain {
-                if (!isNavigating) return@postToMain
-
-                // Element not found — hide any stale marker
-                marker?.hideMarker()
-                
-                val triggerReroute = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
-
-                // [PERMANENT FIX] Do not remove this! Target in-context guard against false scroll directives.
-                // Never instruct the user to scroll to find targetStep if they are on an unrecognized screen,
-                // tapped a wrong option, or are currently off track.
-                if (isOffTrack) {
-                    val action = if (wrongTapOccurred) "You tapped '${lastWrongTapText}'" else "Press Back to return"
-                    val contextTxt = if (wrongTapOccurred) "Go back and find '$targetStep'" else "You took a wrong turn"
-
-                    hud.updateHud(
-                        stepHeader        = "WRONG PATH",
-                        actionInstruction = action,
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = contextTxt,
-                        subTag            = "unrecognized-screen-back",
-                        onHelpRequested   = triggerReroute,
-                        hudState          = NavigationHudOverlay.HudState.OFF_TRACK
-                    )
-                    return@postToMain
-                }
-
-                if (skipAdvanceToNext) {
-                    Log.i(TAG, "Search pipeline: generic root '$targetStep' not found, but next step '${nStep}' IS on screen. Auto-advancing.")
-                    lastCorrectStep = targetStep
-                    advanceStep(currentIndex)
-                    return@postToMain
-                }
-
-                if (hasScrollable) {
-                    hud.updateHud(
-                        stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                        actionInstruction = "Scroll to find '$targetStep'",
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Not visible yet",
-                        subTag            = "scroll-directive",
-                        onHelpRequested   = triggerReroute,
-                        hudState          = NavigationHudOverlay.HudState.SEARCHING
-                    )
-                } else if (nStep != null) {
-                    // Combined 2-step hint: find the current element, then immediately tap next
-                    val combinedHint = buildCombinedHint(targetStep, nStep)
-                    hud.updateHud(
-                        stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                        actionInstruction = combinedHint,
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Not found — try combined action",
-                        subTag            = "combined-hint",
-                        onHelpRequested   = triggerReroute,
-                        hudState          = NavigationHudOverlay.HudState.SEARCHING
-                    )
-                } else {
-                    // Last step and not found — keep it simple
-                    hud.updateHud(
-                        stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                        actionInstruction = "Find and tap '$targetStep'",
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Last step",
-                        subTag            = "final-step-hint",
-                        onHelpRequested   = triggerReroute,
-                        hudState          = NavigationHudOverlay.HudState.SEARCHING
-                    )
-                }
-            }
-        }
+        MarkerScout.assignMission(targetStep, activePkg, activeScreen, isUnrecognizedScreen, delayMs)
     }
 
     /**
