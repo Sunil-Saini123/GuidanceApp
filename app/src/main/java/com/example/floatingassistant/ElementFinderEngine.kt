@@ -24,6 +24,22 @@ class ElementFinderEngine(private val context: Context) {
      * Searches for [nextStep] across 3 layers.
      * @return SearchResult with found status and optional bounds.
      */
+    /**
+     * Searches for [nextStep] on the current screen.
+     *
+     * [PERMANENT FIX] Do not remove this! Live Tree Supremacy:
+     * An element is ONLY reported as found (found = true) if it is physically visible in the
+     * phone's live accessibility tree right now (via findElementBoundsInLiveTree).
+     *
+     * Never return found = true with phantom coordinates from stale disk snapshots
+     * (clean_page.json or temp_tree.json) or historical graph databases without live verification.
+     * During screen transitions, files on disk lag behind by hundreds of milliseconds or seconds,
+     * retaining the PREVIOUS screen's elements (e.g. "Display & brightness" from Settings lingering
+     * after opening "Home screen, Lock screen & style"). Returning found=true from disk snapshots
+     * falsely turns the HUD green ("Found on screen") on wrong screens, masking wrong-path and scroll guidance.
+     *
+     * @return SearchResult with found status and verified live bounds.
+     */
     fun findElement(
         nextStep: String,
         activePackage: String,
@@ -34,90 +50,14 @@ class ElementFinderEngine(private val context: Context) {
         // This gives instant millisecond tracking without waiting for disk read.
         val liveBounds = findElementBoundsInLiveTree(nextStep)
         if (liveBounds != null) {
-            Log.i(TAG, "Layer 0 (Live Memory Tree): Found target '$nextStep' immediately on screen")
+            Log.i(TAG, "Live Memory Tree: Found target '$nextStep' immediately on screen with bounds $liveBounds")
             return SearchResult(true, liveBounds)
         }
 
-        // ── Layer 1: clean_page.json (Internal Storage) ──────────────────────────
-        // [PERMANENT FIX] Always read from context.filesDir (internal memory) matching UiTreeAccessibilityService
-        val cleanPageFile = File(context.filesDir, "clean_page.json")
-        if (cleanPageFile.exists()) {
-            try {
-                val jsonStr = cleanPageFile.readText()
-                val root = JSONObject(jsonStr)
-                val elements = root.optJSONArray("elements") ?: JSONArray()
-                for (i in 0 until elements.length()) {
-                    val el = elements.optJSONObject(i) ?: continue
-                    val name = el.optString("name", "")
-                    val resId = el.optString("resource_id", "")
-                    val cls = el.optString("class_name", "")
-                    
-                    if (fuzzyElementMatch(name, nextStep) ||
-                        fuzzyElementMatch(resId, nextStep) ||
-                        fuzzyElementMatch(cls, nextStep)) {
-                        Log.i(TAG, "Layer 1 (Clean Page): Found target '$nextStep' in element (name='$name', res='$resId')")
-                        return SearchResult(true, parseBounds(el.optJSONObject("bounds")))
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Layer 1 search failed: ${e.message}")
-            }
-        }
-
-        // ── Layer 2: Local Graph Scope (nav_graph.db) ─────────────────────────
-        // The graph records historical transitions (e.g. "from Settings, About device was clicked").
-        // However, OEM ROMs (ColorOS, MIUI) often report the SAME screen name for ALL sub-pages,
-        // so a graph match alone is unreliable. We MUST verify the element is actually visible
-        // on the current screen using the live accessibility tree.
-        try {
-            val db = NavGraphDatabase.getInstance(context)
-            val screenId = "$activePackage::$activeScreenName"
-            val allPkgTransitions = db.getTransitions(activePackage)
-            
-            for (t in allPkgTransitions) {
-                if (t.fromScreenId == screenId || t.fromScreenId.contains(currStep, ignoreCase = true)) {
-                    if (fuzzyElementMatch(t.actionLabel, nextStep)) {
-                        // Graph says this element exists on this screen.
-                        // Verify it's ACTUALLY visible in the live UI tree and get bounds.
-                        val liveBounds = findElementBoundsInLiveTree(nextStep)
-                        if (liveBounds != null) {
-                            Log.i(TAG, "Layer 2 (Local Graph): Found target '$nextStep' via action '${t.actionLabel}' — verified visible")
-                            return SearchResult(true, liveBounds)
-                        } else {
-                            Log.d(TAG, "Layer 2 (Local Graph): Graph says '$nextStep' exists via '${t.actionLabel}' but NOT visible on current screen — skipping")
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Layer 2 search failed: ${e.message}")
-        }
-
-        // ── Layer 3: temp_tree.json (Raw Fallback) ────────────────────────────
-        val tempTreeFile = File(context.filesDir, "temp_tree.json")
-        if (tempTreeFile.exists()) {
-            try {
-                val jsonStr = tempTreeFile.readText()
-                val root = JSONObject(jsonStr)
-                val nodes = root.optJSONArray("nodes") ?: JSONArray()
-                for (i in 0 until nodes.length()) {
-                    val node = nodes.optJSONObject(i) ?: continue
-                    val text = node.optString("text", "")
-                    val desc = node.optString("content_desc", "")
-                    val resId = node.optString("resource_id", "")
-                    
-                    if (fuzzyElementMatch(text, nextStep) ||
-                        fuzzyElementMatch(desc, nextStep) ||
-                        fuzzyElementMatch(resId, nextStep)) {
-                        Log.i(TAG, "Layer 3 (Raw Tree): Found target '$nextStep' in raw node (text='$text', desc='$desc', res='$resId')")
-                        return SearchResult(true, parseBounds(node.optJSONObject("bounds")))
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Layer 3 search failed: ${e.message}")
-            }
-        }
-
+        // Target is not visible in the live accessibility tree right now.
+        // It is either scrolled off-screen or the user is on a different screen.
+        // We MUST return found = false so the state machine can accurately decide between
+        // SCROLL guidance, WRONG PATH alerts, or step transitions.
         return SearchResult(false, null)
     }
 
@@ -323,31 +263,65 @@ class ElementFinderEngine(private val context: Context) {
         }
     }
 
+    /**
+     * [PERMANENT FIX] Do not remove this! Normalizes typographic characters, OEM non-breaking hyphens,
+     * non-breaking spaces, and dynamic state/badge suffixes.
+     */
+    private fun normalizeTypographicText(text: String): String {
+        return text
+            // Unicode non-breaking hyphens, figure dashes, en-dashes, em-dashes, minus signs -> standard hyphen
+            .replace(Regex("[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]"), "-")
+            // Unicode non-breaking spaces -> standard space
+            .replace(Regex("[\u00A0\u202F]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
+    private fun extractBaseLabel(raw: String): String {
+        val norm = normalizeTypographicText(raw)
+        // Strip subtitle suffixes (e.g. "Wi-Fi · Rohit" -> "Wi-Fi", "Chats · 3 unread" -> "Chats")
+        val withoutSubtitle = norm.substringBefore(" · ").substringBefore("\n").trim()
+        // Strip trailing unread numeric count badge (e.g. "Spam 15" -> "Spam", "Inbox 3" -> "Inbox")
+        return withoutSubtitle.replace(Regex("\\s+\\d+$"), "").trim()
+    }
+
     private fun fuzzyElementMatch(elementStr: String, target: String): Boolean {
         if (elementStr.isBlank() || target.isBlank()) return false
-        
-        val cleanTarget = target.lowercase().replace(Regex("[^a-z0-9]"), "")
+
+        val baseTarget = extractBaseLabel(target)
+        val baseEl = extractBaseLabel(elementStr)
+
+        val cleanTarget = baseTarget.lowercase().replace(Regex("[^a-z0-9]"), "")
         if (cleanTarget.isEmpty()) return false
-        
-        var cleanEl = elementStr.lowercase().replace(Regex("[^a-z0-9]"), "")
+
+        var cleanEl = baseEl.lowercase().replace(Regex("[^a-z0-9]"), "")
         if (cleanEl.isEmpty()) return false
-        
+
         val prefixes = listOf("originui", "bbk", "sec", "miui", "oppo", "vivo", "hw")
         for (prefix in prefixes) {
             if (cleanEl.startsWith(prefix)) {
                 cleanEl = cleanEl.removePrefix(prefix)
             }
         }
-        
+
+        // 1. Exact match after stripping dynamic suffixes & typographic normalization
         if (cleanEl == cleanTarget) return true
+
+        // 2. Prefix match (e.g. "screenrefreshratehigh".startsWith("screenrefreshrate") or "scheduledoff".startsWith("scheduled"))
+        if (cleanEl.startsWith(cleanTarget) || cleanTarget.startsWith(cleanEl)) return true
+
+        // 3. Substring containment with length safety guard
         if (cleanEl.contains(cleanTarget)) return true
-        
+
         // [PERMANENT FIX] Do not remove length check!
-        // Only allow reverse substring match if the element text is substantial (e.g. at least 5 chars)
-        // to prevent matching minified resource IDs like "a", "b", "is", etc. which happen to be
-        // substrings of the target text (e.g. "displaybrightness" contains "is").
-        if (cleanEl.length >= 5 && cleanTarget.contains(cleanEl)) return true
-        
+        // Allow reverse substring match if cleanEl is at least 3 characters (e.g. "wifi", "sync", "chat", "spam")
+        // while continuing to reject minified 1-2 char resource IDs like "a", "b", "is".
+        if (cleanEl.length >= 3 && cleanTarget.contains(cleanEl)) return true
+
+        // Also check if unstripped element contains target (for cases without standard separator)
+        val rawCleanEl = normalizeTypographicText(elementStr).lowercase().replace(Regex("[^a-z0-9]"), "")
+        if (rawCleanEl.contains(cleanTarget) || (cleanEl.length >= 3 && rawCleanEl.startsWith(cleanTarget))) return true
+
         return false
     }
     

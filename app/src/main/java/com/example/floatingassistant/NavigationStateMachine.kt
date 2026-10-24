@@ -38,10 +38,12 @@ object NavigationStateMachine {
     private var nextStep: String? = null
     private var lastCorrectStep: String? = null
     private var activeScreenName: String = ""
+    @Volatile var isCurrentScreenUnrecognized: Boolean = false
     @Volatile var currentTargetBounds: Rect? = null
     @Volatile var lastAdvanceTimeMs: Long = 0L
     private var wasRerouted = false
     private var pathSource: String = "local"
+    @Volatile private var connectedTargetPackages: Set<String> = emptySet()
 
     // [PERMANENT FIX] Do not remove this! Format HUD step header with short source keyword: (local), (db), or (ai)
     private fun formatStepHeader(header: String = "STEP ${currentIndex + 1} OF ${pathSteps.size}"): String {
@@ -77,6 +79,7 @@ object NavigationStateMachine {
             wasRerouted = isReroute
             pathSource = source.lowercase().trim()
             targetPackage = pkgTarget.trim().lowercase()
+            connectedTargetPackages = setOf(targetPackage)
             // Pre-resolve the human-readable label for this target package
             targetAppLabel = MainFilter.resolveAppLabel(context, pkgTarget).also {
                 Log.i(TAG, "Target resolved: pkg='$targetPackage' label='$it'")
@@ -85,6 +88,9 @@ object NavigationStateMachine {
             pathSteps = resolvedPath.toMutableList()
             lastCorrectStep = null
             isNavigating = true
+            isCurrentScreenUnrecognized = false
+            lastWrongTapText = null
+            lastWrongTapTimeMs = 0L
 
             // ── First-run home marking ─────────────────────────────────────────
             // On the very first launch ever, if the path starts with Home, prompt
@@ -112,26 +118,36 @@ object NavigationStateMachine {
 
             Log.i(TAG, "Navigation STARTED — ${pathSteps.size} steps toward '$targetAppLabel' ($targetPackage)")
 
-            var activePkg     = lastKnownActivePackage
-            val launcherPkg   = getDefaultLauncherPackage()
+            val launcherPkg = getDefaultLauncherPackage()
 
-            // Active detection: if lastKnownActivePackage is empty or our own overlay,
-            // scan the window list to find the actual foreground app.
-            if (activePkg.isBlank() || activePkg == context.packageName) {
-                val service = UiTreeAccessibilityService.instance
-                if (service != null) {
-                    val resolved = AppWindowResolver.getUnderlyingAppRoot(service, context.packageName)
-                    val resolvedPkg = resolved?.packageName?.toString()
-                    if (resolvedPkg != null) {
-                        activePkg = resolvedPkg
-                        lastKnownActivePackage = resolvedPkg
-                    }
-                    try { resolved?.recycle() } catch (_: Exception) {}
+            // [PERMANENT FIX] Do not remove this! Live Foreground Application & Page Title Resolution:
+            // Query the top-most focused or active TYPE_APPLICATION window directly from the OS.
+            // Full-screen application activities (MainActivity, Settings, WhatsApp) are TYPE_APPLICATION.
+            // Floating overlays (bubble, HUD, search dialog) are TYPE_APPLICATION_OVERLAY / TYPE_ACCESSIBILITY_OVERLAY.
+            // Never trust stale cached lastKnownActivePackage or activeScreenName when starting navigation.
+            var livePkg: String? = null
+            var liveTitle: String? = null
+
+            val service = UiTreeAccessibilityService.instance
+            if (service != null) {
+                val resolved = AppWindowResolver.getUnderlyingAppRoot(service)
+                if (resolved != null) {
+                    livePkg = resolved.packageName?.toString()
+                    liveTitle = findPageTitle(resolved, targetAppLabel, livePkg ?: "")
+                    try { resolved.recycle() } catch (_: Exception) {}
                 }
             }
 
-            val isOnLauncher  = launcherPkg != null && activePkg.startsWith(launcherPkg)
-            val alreadyInApp  = activePkg.isNotEmpty() && isTargetApp(activePkg, null)
+            val activePkg = livePkg ?: lastKnownActivePackage
+            if (activePkg.isNotBlank()) {
+                lastKnownActivePackage = activePkg
+            }
+            if (!liveTitle.isNullOrBlank()) {
+                activeScreenName = liveTitle
+            }
+
+            val isOnLauncher = launcherPkg != null && activePkg.startsWith(launcherPkg)
+            val alreadyInApp = activePkg.isNotEmpty() && isTargetApp(activePkg, null)
 
             // ── Determine start position ──────────────────────────────────────
             val startIdx: Int
@@ -259,6 +275,7 @@ object NavigationStateMachine {
             // [PERMANENT FIX] Always execute cleanup to ensure HUD and marker hide, even if we already reached the destination (isNavigating=false)
             isNavigating = false
             targetPackage = ""
+            connectedTargetPackages = emptySet()
             targetAppLabel = ""
             pathSteps = mutableListOf()
             currentIndex = 0
@@ -267,6 +284,9 @@ object NavigationStateMachine {
             nextStep = null
             lastCorrectStep = null
             activeScreenName = ""
+            isCurrentScreenUnrecognized = false
+            lastWrongTapText = null
+            lastWrongTapTimeMs = 0L
             marker?.hideMarker()
             hud.hide()
         }
@@ -343,18 +363,30 @@ object NavigationStateMachine {
                 }
                 return
             }
-            // Filter out navigation/system labels and non-navigational UI toggles that aren't meaningful wrong taps
-            val ignoredLabels = setOf(
+            // [PERMANENT FIX] Do not remove this! Exact and word-boundary matching for ignored system/navigation labels.
+            // Using loose substring `tapNorm.contains(it)` caused menu items like "Home screen, Lock screen & style"
+            // or "More settings" to match "home" / "more" / "settings", falsely treating real settings choices as system buttons!
+            val ignoredExactLabels = setOf(
                 "back", "home", "overview", "navigate up", "more options",
                 "close", "search", "submit", "cancel", "ok", "done", "yes", "no",
-                "on", "off", "switch", "checkbox", "radio", "tab", "expand", "collapse",
-                "more", "details", "info", "settings", "filter", "select", "clear", "view"
+                "on", "off", "switch", "checkbox", "radio"
             )
-            val isNavigationTap = ignoredLabels.any { tapNorm.contains(it) }
+            val isNavigationTap = ignoredExactLabels.contains(tapNorm) ||
+                                  tapNorm == "expand" || tapNorm == "collapse"
+
+            // If they tapped a different interactive label (not a system nav button), track it immediately
+            if (tappedLabel.length > 2 && !isNavigationTap) {
+                lastWrongTapText = tappedLabel
+                lastWrongTapTimeMs = System.currentTimeMillis()
+                Log.w(TAG, "onElementTapped: user tapped '$tappedLabel' (expected '$currStep')")
+                DebugTelemetryClient.sendWrongPath(tappedLabel, currStep)
+            }
 
             // [PERMANENT FIX] Do not remove this! Check if currStep is still visible in the live memory tree.
             // If the user tapped an intra-page element (e.g. switch, tab, expander) and currStep is still
-            // right in front of them, do NOT trigger false WRONG PATH or hide the guidance marker.
+            // right in front of them, do NOT trigger false WRONG PATH or hide the guidance marker immediately.
+            // Instead, preserve active guidance while the target is visible; if the tap subsequently causes
+            // a screen change away from target, onScreenChanged / triggerSearchPipeline will surface lastWrongTapText.
             val targetLiveBounds = if (::elementFinder.isInitialized) {
                 elementFinder.findElementBoundsInLiveTree(currStep)
             } else null
@@ -370,15 +402,12 @@ object NavigationStateMachine {
                 return
             }
 
-            // They tapped something else. If it's a meaningful label (not a nav button), track it.
+            // Target is NOT visible on screen and they tapped something else.
+            // Immediately transition HUD to WRONG PATH.
             if (tappedLabel.length > 2 && !isNavigationTap) {
-                lastWrongTapText = tappedLabel
-                lastWrongTapTimeMs = System.currentTimeMillis()
-                Log.w(TAG, "Wrong tap detected: tapped='$tappedLabel', expected='$currStep'")
-                
-                // [PERMANENT FIX] Stream wrong tap detection to Dashboard
-                DebugTelemetryClient.sendWrongPath(tappedLabel, currStep)
-
+                // [PERMANENT FIX] Do not remove this! Set isCurrentScreenUnrecognized = true immediately so that
+                // subsequent scroll ticks / content change events don't overwrite WRONG PATH with false scroll directives.
+                isCurrentScreenUnrecognized = true
                 postToMain {
                     if (!isNavigating) return@postToMain
                     marker?.hideMarker()
@@ -493,12 +522,17 @@ object NavigationStateMachine {
             val currNorm   = currStep.trim().lowercase()
             val nextNorm   = nextStep?.trim()?.lowercase()
 
-            // [PERMANENT FIX] Do not remove this! Prevents sub-screens (e.g. 'Wireless Settings-Wi-Fi') from being falsely identified as the root screen just because they contain the app name.
+            // [PERMANENT FIX] Do not remove this! Root screen must match exact targetAppLabel, 'Settings', or explicit home tokens.
+            // Loose substring `screenNorm.contains(targetAppLabel.lowercase())` previously caused sub-pages with 'settings'
+            // in their name (e.g. 'SOS Helper Setting', 'Privacy settings', 'More settings') to be falsely treated as the root homepage!
             val isRootScreen = activeScreenName.equals(targetAppLabel, ignoreCase = true) ||
                                activeScreenName.equals("Settings", ignoreCase = true) ||
-                               (screenNorm.contains(targetAppLabel.lowercase()) && !screenNorm.contains("-")) ||
-                               screenNorm.endsWith("-home") ||
-                               screenNorm == "home"
+                               screenNorm == "${targetAppLabel.lowercase()} home" ||
+                               screenNorm == "${targetAppLabel.lowercase()}-home" ||
+                               screenNorm == "settings home" ||
+                               screenNorm == "settings-home" ||
+                               screenNorm == "home" ||
+                               screenNorm.endsWith("-home")
             val nearest = findNearestStep(screenNorm)
             val nearestIdx = nearest?.first ?: -1
             val nearestName = nearest?.second
@@ -512,13 +546,15 @@ object NavigationStateMachine {
             if (isOnKnownPath) {
                 lastWrongTapText = null
                 lastWrongTapTimeMs = 0L
+                isCurrentScreenUnrecognized = false
             }
 
-            // ── Off-app states ─────────────────────────────────────────────────
-            val timeSinceWrongTap = System.currentTimeMillis() - lastWrongTapTimeMs
-            val tappedWrongRecently = timeSinceWrongTap < 5000L && lastWrongTapText != null
-
-            if (tappedWrongRecently) {
+            // ── Off-app / Wrong-path states ────────────────────────────────────
+            // [PERMANENT FIX] Do not remove this! Persistent wrong-tap tracking across screen transitions.
+            // Wrong tap guidance must persist until the user returns to a known path screen (isOnKnownPath).
+            // Expiring after 5 seconds previously caused the HUD to forget the wrong tap and falsely instruct scrolling.
+            if (lastWrongTapText != null && !isOnKnownPath) {
+                isCurrentScreenUnrecognized = true
                 val triggerReroute = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
                 hud.updateHud(
                     stepHeader        = "WRONG PATH",
@@ -545,6 +581,7 @@ object NavigationStateMachine {
             }
 
             if (!currStepIsHome && !inTargetApp && !isLauncherEvent) {
+                isCurrentScreenUnrecognized = true
                 val actualName = activeAppLabel.ifBlank { activeScreenName }
                 hud.updateHud(
                     stepHeader        = "WRONG APP",
@@ -621,6 +658,7 @@ object NavigationStateMachine {
                     val timeSinceAdvance = System.currentTimeMillis() - lastAdvanceTimeMs
                     val justAdvanced = timeSinceAdvance < 3000L
                     val isUnrecognized = (nearestIdx == -1 && !isRootScreen && !justAdvanced)
+                    isCurrentScreenUnrecognized = isUnrecognized
 
                     if (isUnrecognized) {
                         hud.updateHud(
@@ -836,6 +874,9 @@ object NavigationStateMachine {
 
         prevStep = currStep
         currentIndex++
+        isCurrentScreenUnrecognized = false
+        lastWrongTapText = null
+        lastWrongTapTimeMs = 0L
 
         // Hide old marker — the previous element's position is stale
         marker?.hideMarker()
@@ -860,7 +901,9 @@ object NavigationStateMachine {
     fun onContentScrolled() {
         if (!isNavigating || currStep.isEmpty()) return
         // Re-run the search immediately to update marker bounds and HUD state
-        triggerSearchPipeline(currStep, lastKnownActivePackage, activeScreenName, delayMs = 0L)
+        // [PERMANENT FIX] Pass isCurrentScreenUnrecognized so content changes / scroll ticks on wrong screens
+        // don't overwrite WRONG PATH with false scroll directives.
+        triggerSearchPipeline(currStep, lastKnownActivePackage, activeScreenName, isUnrecognizedScreen = isCurrentScreenUnrecognized, delayMs = 0L)
     }
 
     // ── Element search pipeline ────────────────────────────────────────────────
@@ -930,8 +973,8 @@ object NavigationStateMachine {
                 }
             }
 
-            val timeSinceWrongTap = System.currentTimeMillis() - lastWrongTapTimeMs
-            val tappedWrongRecently = timeSinceWrongTap < 5000L && lastWrongTapText != null
+            val wrongTapOccurred = lastWrongTapText != null
+            val isOffTrack = isUnrecognizedScreen || isCurrentScreenUnrecognized || wrongTapOccurred
 
             // [PERMANENT FIX] Do not remove this! Check scrollability on background IO thread
             // to completely eliminate disk I/O and JSON parsing on Android's Main UI Thread.
@@ -945,9 +988,12 @@ object NavigationStateMachine {
                 
                 val triggerReroute = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
 
-                if (isUnrecognizedScreen || tappedWrongRecently) {
-                    val action = if (tappedWrongRecently) "You tapped '${lastWrongTapText}'" else "Press Back to return"
-                    val contextTxt = if (tappedWrongRecently) "Go back and find '$targetStep'" else "You took a wrong turn"
+                // [PERMANENT FIX] Do not remove this! Target in-context guard against false scroll directives.
+                // Never instruct the user to scroll to find targetStep if they are on an unrecognized screen,
+                // tapped a wrong option, or are currently off track.
+                if (isOffTrack) {
+                    val action = if (wrongTapOccurred) "You tapped '${lastWrongTapText}'" else "Press Back to return"
+                    val contextTxt = if (wrongTapOccurred) "Go back and find '$targetStep'" else "You took a wrong turn"
 
                     hud.updateHud(
                         stepHeader        = "WRONG PATH",
@@ -1079,11 +1125,31 @@ object NavigationStateMachine {
         }
 
         // Layer 3: resolve label fresh from PM and compare
-        return try {
+        val pmMatches = try {
             val resolvedLabel = MainFilter.resolveAppLabel(context, activePackage).lowercase()
             resolvedLabel == label ||
                 resolvedLabel.contains(label) ||
                 label.contains(resolvedLabel)
+        } catch (e: Exception) {
+            false
+        }
+        if (pmMatches) return true
+
+        // [PERMANENT FIX] Do not remove this! Layer 4: Connected cluster check via NavGraphDatabase.
+        // OEM ROMs (ColorOS, OneUI, MIUI) delegate Settings sub-pages to satellite packages
+        // (e.g. com.oplus.sos, com.oplus.wallpapers, com.oplus.wirelesssettings, com.oplus.battery).
+        // Checks whether activePackage belongs to targetPackage's connected graph cluster.
+        if (connectedTargetPackages.contains(pkg)) return true
+
+        return try {
+            if (::context.isInitialized && target.isNotBlank()) {
+                val db = NavGraphDatabase.getInstance(context)
+                val connected = db.getConnectedScreens(targetPackage).map { it.packageName.lowercase() }.toSet()
+                if (connected.isNotEmpty()) {
+                    connectedTargetPackages = connected + target
+                    connectedTargetPackages.contains(pkg)
+                } else false
+            } else false
         } catch (e: Exception) {
             false
         }

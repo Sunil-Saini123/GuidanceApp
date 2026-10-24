@@ -36,7 +36,10 @@ object ScreenTitleResolver {
         "back", "navigate up", "go back", "arrow_back", "close", "up",
         "cancel", "done", "ok", "yes", "no", "save", "edit", "search",
         "more options", "more", "menu", "overflow", "help", "share",
-        "delete", "clear", "search settings", "loading"
+        "delete", "clear", "search settings", "loading",
+        "touch outside", "touch_outside", "touch outside to dismiss",
+        "scrim", "backdrop", "overlay", "dialog_scrim", "content_scrim",
+        "tap to paste", "search box", "floa", "adanimationview"
     )
 
     private val REGEX_SIM_CARD = Regex("""(?i)\b(sim\s*\d|no\s*sim|slot\s*\d|not\s*set|emergency\s*calls)\b""")
@@ -73,40 +76,41 @@ object ScreenTitleResolver {
             // ── PASS 1: Toolbar / Header Container Supremacy ─────────────────────
             val toolbarTitle = findTitleInToolbar(rootNode, topThreshold, allocatedNodes, cleanApp)
             if (!toolbarTitle.isNullOrBlank()) {
-                return toolbarTitle
+                return canonicalizeTitle(toolbarTitle, packageName)
             }
 
             // ── PASS 2: Back-Button Anchor Alignment ─────────────────────────────
             val backAnchorTitle = findTitleByBackAnchor(rootNode, screenHeight, topThreshold, allocatedNodes, cleanApp)
             if (!backAnchorTitle.isNullOrBlank()) {
-                return backAnchorTitle
+                return canonicalizeTitle(backAnchorTitle, packageName)
             }
 
             // ── PASS 3: Dedicated Title Resource IDs in Top Zone ─────────────────
             val resIdTitle = findTitleByResourceId(rootNode, topThreshold, allocatedNodes, cleanApp)
             if (!resIdTitle.isNullOrBlank()) {
-                return resIdTitle
+                return canonicalizeTitle(resIdTitle, packageName)
             }
 
             // ── PASS 4: True Navigation Tab (Root Screens with NO Back Arrow) ────
             val selectedTab = findTrueNavigationTab(rootNode, topThreshold, allocatedNodes, cleanApp)
             if (!selectedTab.isNullOrBlank() && !selectedTab.equals(cleanApp, ignoreCase = true)) {
-                return selectedTab
+                return canonicalizeTitle(selectedTab, packageName)
             }
 
             // ── PASS 5: Fallback to App Label ("Settings") or Clean Activity Name ─
             // [PERMANENT FIX] Do not remove this! Prioritize user-facing app label ("Settings") over internal
             // OEM Activity names (like "Oplus Settings Homepage") on root screens.
             if (cleanApp.isNotBlank()) {
-                return cleanApp
+                return canonicalizeTitle(cleanApp, packageName)
             }
 
             val cleanCls = eventClassName?.substringAfterLast('.')?.let { cleanActivityName(it) }
-            return cleanCls?.takeIf { it.isNotBlank() && it.lowercase() != "main" }
+            val rawFallback = cleanCls?.takeIf { it.isNotBlank() && it.lowercase() != "main" }
                 ?: packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }
+            return canonicalizeTitle(rawFallback, packageName)
         } catch (e: Exception) {
             Log.e(TAG, "Error resolving screen title for $packageName: ${e.message}")
-            return cleanApp.ifEmpty { packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() } }
+            return canonicalizeTitle(cleanApp.ifEmpty { packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() } }, packageName)
         } finally {
             // [PERMANENT FIX] Do not remove this! Recycle all allocated child nodes to prevent Binder exhaustion
             for (node in allocatedNodes) {
@@ -173,6 +177,7 @@ object ScreenTitleResolver {
         }
 
         val candidates = mutableListOf<Pair<String, Int>>() // text to bounds area
+        var hasSearchField = false
 
         var depth = 0
         while (queue.isNotEmpty() && depth < 6) {
@@ -183,9 +188,14 @@ object ScreenTitleResolver {
                 val bounds = Rect()
                 node.getBoundsInScreen(bounds)
                 val area = bounds.width() * bounds.height()
+                val cls = node.className?.toString().orEmpty()
+                val isEditable = node.isEditable || cls.contains("EditText", ignoreCase = true)
 
-                if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
-                    val cls = node.className?.toString().orEmpty()
+                if (isEditable) {
+                    // [PERMANENT FIX] Do not remove this! Editable text in a toolbar is user input (e.g. search query),
+                    // never a static screen title. If no static header exists, name the screen "Search".
+                    hasSearchField = true
+                } else if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
                     // Exclude buttons or action items
                     if (!cls.contains("Button", ignoreCase = true) && !node.isClickable) {
                         candidates.add(text to area)
@@ -203,8 +213,8 @@ object ScreenTitleResolver {
             depth++
         }
 
-        // Return candidate with the largest visual area (prominence)
-        return candidates.maxByOrNull { it.second }?.first
+        // Return candidate with the largest visual area (prominence), or fallback to "Search" if only an edit field was present
+        return candidates.maxByOrNull { it.second }?.first ?: if (hasSearchField) "Search" else null
     }
 
     /**
@@ -236,8 +246,10 @@ object ScreenTitleResolver {
                 node.getBoundsInScreen(bounds)
 
                 if (bounds.top <= topThreshold) {
+                    val cls = node.className?.toString().orEmpty()
+                    val isEditable = node.isEditable || cls.contains("EditText", ignoreCase = true)
                     val text = node.text?.toString()?.trim()
-                    if (!text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
+                    if (!isEditable && !text.isNullOrBlank() && isAcceptableTitle(text, appLabel)) {
                         // Check if in the same horizontal band and to the right of back button
                         val verticallyAligned = bounds.centerY() in (backBounds.top - 60)..(backBounds.bottom + 60)
                         val toTheRight = bounds.left >= backBounds.left
@@ -459,6 +471,7 @@ object ScreenTitleResolver {
         if (appLabel.isNotBlank() && lower == appLabel.trim().lowercase()) return true
 
         if (lower in NOISE_WORDS) return false
+        if (lower.contains("touch outside") || lower.contains("touch_outside")) return false
         if (REGEX_SIM_CARD.containsMatchIn(lower)) return false
         if (REGEX_DYNAMIC_STATUS.containsMatchIn(lower)) return false
         if (REGEX_PURELY_NUMERIC.matches(lower)) return false
@@ -497,6 +510,26 @@ object ScreenTitleResolver {
             .map { it.trim() }
             .filter { it.isNotEmpty() && it.lowercase() !in NOISE_WORDS }
 
-        return words.joinToString(" ").trim()
+        val raw = words.joinToString(" ").trim()
+        return canonicalizeTitle(raw)
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Canonicalize split-brain OEM screen titles.
+     * Maps OEM variants like "Oplus Settings Homepage", "Settings Homepage", "Oplus Settings"
+     * directly to the canonical "Settings" title.
+     */
+    fun canonicalizeTitle(title: String, packageName: String? = null): String {
+        val trimmed = title.trim()
+        val lower = trimmed.lowercase()
+        if (lower == "oplus settings homepage" ||
+            lower == "settings homepage" ||
+            lower == "oplus settings" ||
+            lower == "coloros settings" ||
+            lower == "sec settings" ||
+            lower == "miui settings") {
+            return "Settings"
+        }
+        return trimmed
     }
 }

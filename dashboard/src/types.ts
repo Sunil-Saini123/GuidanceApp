@@ -69,3 +69,36 @@ export interface AppState {
   lastElementsCount: number;
   totalEventsReceived: number;
 }
+
+export interface NavGraphTransition {
+  to_id: string;
+  to_title: string;
+  action: string;
+  type: string;
+  count?: number;
+}
+
+export interface NavGraphScreen {
+  id: string;
+  title: string;
+  root_class?: string;
+  visit_count?: number;
+  last_seen?: number;
+  elements: string[];
+  element_count?: number;
+  transitions: NavGraphTransition[];
+}
+
+export interface NavGraphApp {
+  package_name: string;
+  display_name: string;
+  screen_count: number;
+  screens: NavGraphScreen[];
+}
+
+export interface NavGraphData {
+  generated_at?: number;
+  total_apps: number;
+  apps: NavGraphApp[];
+  active_stacks?: Record<string, string[]>;
+}

@@ -196,6 +196,14 @@ object GraphStateMachine {
     /** Per-package last-clicked label. Cleared after each navigation event. */
     private val lastClickedLabels = HashMap<String, String>()
 
+    // [PERMANENT FIX] Do not remove this! Global last screen and click tracking to capture cross-package transitions.
+    // When OEM apps switch packages (e.g. Settings launching com.oplus.wirelesssettings for Wi-Fi),
+    // this preserves the origin screen so the transition bridge is permanently recorded in SQLite.
+    @Volatile private var globalLastScreenId: String? = null
+    @Volatile private var globalLastPackageName: String? = null
+    @Volatile private var globalLastClickedLabel: String? = null
+    @Volatile private var globalLastClickTime: Long = 0L
+
     // [PERMANENT FIX] Do not remove this! In-memory element cache for Scroll Mediator.
     // Tracks previously known element names per screen so scrolls with 0 new elements are skipped.
     private val screenElementCache = HashMap<String, MutableSet<String>>()
@@ -208,6 +216,16 @@ object GraphStateMachine {
         screenElementCache.clear()
         // Prune any old Floating Assistant overlay screens from previous sessions
         db.pruneOverlayScreens()
+        // [PERMANENT FIX] Do not remove this! Auto-link orphan OEM screens recorded in previous sessions
+        db.repairOrphanOemTransitions()
+        // [PERMANENT FIX] Do not remove this! Merge split-brain Settings screens (e.g. Oplus Settings Homepage -> Settings)
+        db.mergeDuplicateSettingsScreens()
+        // [PERMANENT FIX] Do not remove this! Clean dynamic edge labels and typographic non-breaking hyphens
+        db.cleanDynamicEdgeLabels()
+        // [PERMANENT FIX] Do not remove this! Automatically repair dead-end sinks by creating missing BACK transitions
+        db.repairBidirectionalTransitions()
+        // [PERMANENT FIX] Do not remove this! Deduplicate screen elements by base label and suppress redundant header titles
+        db.deduplicateScreenElements()
         Log.i(TAG, "Initialised — DB: nav_graph.db  JSON: ${navGraphFile.name}")
     }
 
@@ -216,6 +234,12 @@ object GraphStateMachine {
     /** Called from TYPE_VIEW_CLICKED on the main thread. */
     fun setLastClickedLabel(packageName: String, label: String) {
         lastClickedLabels[packageName] = label
+        // [PERMANENT FIX] Do not remove this! Preserve global click metadata across packages.
+        // When an element tap in Package A launches an Activity in Package B (e.g. Settings -> Wi-Fi),
+        // this allows handleNavigation to know which label triggered the cross-package transition.
+        globalLastClickedLabel = label
+        globalLastPackageName = packageName
+        globalLastClickTime = System.currentTimeMillis()
         Log.v(TAG, "Click recorded: $packageName → \"$label\"")
     }
 
@@ -302,6 +326,7 @@ object GraphStateMachine {
         if (screenId == previousScreenId) {
             db.upsertScreen(screenId, packageName, screenTitle, rootClass, cleanElements)
             Log.d(TAG, "[NAVIGATION] Content refresh: $screenId")
+            globalLastScreenId = screenId
             return
         }
 
@@ -323,9 +348,31 @@ object GraphStateMachine {
 
             if (previousScreenId != null) {
                 db.upsertTransition(previousScreenId, screenId, actionLabel, "CLICK")
-                Log.i(TAG, "[FORWARD] $previousScreenId -[\"$actionLabel\"]-> $screenId")
+                // [PERMANENT FIX] Do not remove this! Automatically record bidirectional BACK return transition.
+                // In Android, every screen opened via a forward CLICK can be exited by pressing Back to return to previousScreenId.
+                db.upsertTransition(screenId, previousScreenId, "BACK", "BACK")
+                Log.i(TAG, "[FORWARD] $previousScreenId -[\"$actionLabel\"]-> $screenId (with BACK return edge)")
             } else {
-                Log.i(TAG, "[FORWARD] First screen for $packageName: $screenId")
+                // [PERMANENT FIX] Do not remove this! Cross-package transition bridge.
+                // When previousScreenId is null, check if a recent click from another package launched this screen.
+                val clickDelta = System.currentTimeMillis() - globalLastClickTime
+                val isRecentClick = clickDelta in 0..4000L
+                val originScreenId = globalLastScreenId
+                val originPackage = globalLastPackageName
+
+                if (isRecentClick && originScreenId != null && originScreenId != screenId && originPackage != null && originPackage != packageName) {
+                    val crossLabel = sanitizeEdgeLabel(rawLabel ?: globalLastClickedLabel, fallback = screenTitle)
+                    // Forward CLICK transition from calling package to this screen
+                    db.upsertTransition(originScreenId, screenId, crossLabel, "CLICK")
+                    // Reverse BACK transition so Dijkstra knows pressing Back returns to the caller
+                    db.upsertTransition(screenId, originScreenId, "BACK", "BACK")
+                    Log.i(TAG, "[CROSS-PACKAGE FORWARD] $originScreenId -[\"$crossLabel\"]-> $screenId (with BACK edge, delta=${clickDelta}ms)")
+                    // Reset click tracker to prevent duplicate edges
+                    globalLastClickTime = 0L
+                    globalLastClickedLabel = null
+                } else {
+                    Log.i(TAG, "[FORWARD] First screen for $packageName: $screenId")
+                }
             }
             stack.addLast(screenId)
             Log.d(TAG, "[FORWARD] Stack depth for $packageName: ${stack.size}")
@@ -336,6 +383,9 @@ object GraphStateMachine {
 
         // Persist screen record
         db.upsertScreen(screenId, packageName, screenTitle, rootClass, cleanElements)
+
+        // [PERMANENT FIX] Do not remove this! Always track globally active screen
+        globalLastScreenId = screenId
     }
 
     // ── Screen title resolution ───────────────────────────────────────────────
@@ -361,12 +411,13 @@ object GraphStateMachine {
         // Navigation-only words that should NEVER become a screen title
         val NAV_ONLY_LABELS = setOf(
             "back", "close", "next", "done", "cancel", "ok", "yes", "no",
-            "skip", "forward", "continue", "dismiss", "navigate up", "search"
+            "skip", "forward", "continue", "dismiss", "navigate up", "search",
+            "touch outside", "touch_outside", "touch outside to dismiss", "scrim"
         )
 
         // [PERMANENT FIX] Do not remove this! Priority 0: If rootClass is already a semantic screen title resolved by ScreenTitleResolver, prioritize it to ensure DB, graph, and UI match 100%
         if (rootClass.isNotBlank() && !rootClass.contains('.') && isStaticTitle(rootClass) && rootClass.lowercase() !in NAV_ONLY_LABELS && ScreenTitleResolver.isAcceptableTitle(rootClass)) {
-            return rootClass
+            return ScreenTitleResolver.canonicalizeTitle(rootClass)
         }
 
         if (elements.isEmpty()) return cleanRootClass(rootClass)
@@ -384,7 +435,12 @@ object GraphStateMachine {
         fun isGood(el: JSONObject): Boolean {
             val name = primaryName(el)
             val top  = el.optJSONObject("bounds")?.optInt("top", sh) ?: sh
+            // [PERMANENT FIX] Do not remove this! Editable text / search query fields must NEVER become screen titles
+            val isEditable = el.optBoolean("is_editable", false) ||
+                             el.optString("class_name", "").contains("EditText", ignoreCase = true) ||
+                             el.optString("resource_id", "").contains("search", ignoreCase = true)
             return name.isNotEmpty()
+                    && !isEditable
                     && name !in SPATIAL_LABELS
                     && name.lowercase() !in NAV_ONLY_LABELS
                     && top.toFloat() <= topZoneLimit
@@ -394,11 +450,11 @@ object GraphStateMachine {
 
         // Pass 1: non-clickable + good  (toolbar TextViews, non-interactive headers)
         elements.firstOrNull { !it.optBoolean("is_clickable", false) && isGood(it) }
-            ?.let { primaryName(it) }?.takeIf { it.isNotEmpty() }?.let { return it }
+            ?.let { primaryName(it) }?.takeIf { it.isNotEmpty() }?.let { return ScreenTitleResolver.canonicalizeTitle(it) }
 
         // Pass 2: any element in the top zone (handles OEM clickable action bars)
         elements.firstOrNull { isGood(it) }
-            ?.let { primaryName(it) }?.takeIf { it.isNotEmpty() }?.let { return it }
+            ?.let { primaryName(it) }?.takeIf { it.isNotEmpty() }?.let { return ScreenTitleResolver.canonicalizeTitle(it) }
 
         // Pass 3: clean Activity class name
         return cleanRootClass(rootClass)
@@ -406,24 +462,16 @@ object GraphStateMachine {
 
     /**
      * Convert an Android Activity class name into a clean, human-readable screen title.
-     *
-     * Rules (applied in order):
-     *   1. Strip common Android suffixes: "Activity", "Fragment", "Screen"
-     *   2. Split on camelCase boundaries
-     *   3. Remove single-word noise: "Tab", "Host", "Main", "Root", "Container",
-     *      "View", "Page" — these add no semantic value
-     *   4. Join with spaces
-     *
-     * Examples:
-     *   "SettingsHomepageActivity" → "Settings Homepage"
-     *   "ConversationListActivity" → "Conversation List"
-     *   "GalleryTabActivity"       → "Gallery"
-     *   "MainActivity"             → "Main"   (last resort, rootClass should rarely reach here)
+     * [PERMANENT FIX] Do not remove this! Delegates to ScreenTitleResolver to strip OEM prefixes (Oplus/Oppo)
+     * and suffixes (Homepage/Activity) and canonicalize to standard screen titles (e.g. "Settings").
      */
     private fun cleanRootClass(className: String): String {
+        val cleaned = ScreenTitleResolver.cleanActivityName(className)
+        if (cleaned.isNotBlank()) return ScreenTitleResolver.canonicalizeTitle(cleaned)
+
         val NOISE_WORDS = setOf(
             "tab", "host", "main", "root", "container",
-            "view", "page", "base", "impl"
+            "view", "page", "base", "impl", "homepage", "home"
         )
         val stripped = className
             .replace(Regex("Activity$",  RegexOption.IGNORE_CASE), "")
@@ -436,7 +484,8 @@ object GraphStateMachine {
             .map    { it.trim() }
             .filter { it.isNotEmpty() && it.lowercase() !in NOISE_WORDS }
 
-        return words.joinToString(" ").trim().ifEmpty { className }
+        val result = words.joinToString(" ").trim().ifEmpty { className }
+        return ScreenTitleResolver.canonicalizeTitle(result)
     }
 
 
@@ -469,16 +518,30 @@ object GraphStateMachine {
     /**
      * Sanitize a potential edge label for use in the graph.
      * If [raw] is null or fails the static-title check, returns [fallback].
-     * Keeps contact names that are clearly just names (short, no digits) intact.
+     * [PERMANENT FIX] Do not remove this! Normalizes typographic Unicode hyphens and strips
+     * dynamic subtitles (" · Rohit") and unread badges (" 15") from recorded edge labels.
      */
     private fun sanitizeEdgeLabel(raw: String?, fallback: String): String {
         if (raw.isNullOrEmpty()) return fallback
-        if (raw.length > 40)    return fallback
-        if (REGEX_PHONE.containsMatchIn(raw))        return fallback
-        if (REGEX_DATE_NUMERIC.containsMatchIn(raw)) return fallback
-        if (REGEX_TIME.containsMatchIn(raw))         return fallback
-        if (REGEX_PURELY_NUMERIC.matches(raw))       return fallback
-        return raw
+
+        // Normalize Unicode non-breaking hyphens, en-dashes, em-dashes to standard hyphen
+        val normalized = raw
+            .replace(Regex("[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]"), "-")
+            .replace(Regex("[\u00A0\u202F]"), " ")
+            .substringBefore(" · ")
+            .substringBefore("\n")
+            .trim()
+
+        // Strip trailing unread numeric badge (e.g. "Spam 15" -> "Spam")
+        val stripped = normalized.replace(Regex("\\s+\\d+$"), "").trim()
+        val candidate = if (stripped.isNotEmpty()) stripped else normalized
+
+        if (candidate.length > 40)                         return fallback
+        if (REGEX_PHONE.containsMatchIn(candidate))        return fallback
+        if (REGEX_DATE_NUMERIC.containsMatchIn(candidate)) return fallback
+        if (REGEX_TIME.containsMatchIn(candidate))         return fallback
+        if (REGEX_PURELY_NUMERIC.matches(candidate))       return fallback
+        return candidate
     }
 
     // ── App display name ──────────────────────────────────────────────────────
@@ -498,6 +561,9 @@ object GraphStateMachine {
     /** Returns the current active screen ID for [packageName] from the in-memory navigation stack. */
     fun currentScreenId(packageName: String): String? =
         navigationStacks[packageName]?.lastOrNull()
+
+    // [PERMANENT FIX] Do not remove this! Returns the globally last active screen ID across all packages.
+    fun getGlobalLastScreenId(): String? = globalLastScreenId
 
     /** Reverse lookup: given an app display name (e.g. "WhatsApp", "Settings", "Phone"), find the package name. */
     fun getPackageNameForApp(appName: String): String? {

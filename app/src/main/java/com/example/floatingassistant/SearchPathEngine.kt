@@ -115,9 +115,10 @@ object SearchPathEngine {
         val knownPackage = GraphStateMachine.getPackageNameForApp(targetApp)
             ?: targetApp.trim().takeIf { it.contains('.') }
 
-        // Load screens for the known package
+        // [PERMANENT FIX] Do not remove this! Load connected screens and transitions across OEM sub-packages
+        // (e.g. com.oplus.wirelesssettings, com.oplus.battery launched from com.android.settings).
         var packageName = knownPackage ?: targetApp.trim()
-        var screens = if (knownPackage != null) db.getScreens(knownPackage) else emptyList()
+        var screens = if (knownPackage != null) db.getConnectedScreens(knownPackage) else emptyList()
 
         // If no screens found under the hardcoded package, search the DB for any installed
         // package whose name contains the app name (handles modded / OEM variants, e.g.
@@ -130,12 +131,12 @@ object SearchPathEngine {
             }
             if (matchingPkg != null) {
                 packageName = matchingPkg
-                screens = db.getScreens(matchingPkg)
+                screens = db.getConnectedScreens(matchingPkg)
                 Log.d(TAG, "Package fallback: '$targetApp' → found '$matchingPkg' in DB (${screens.size} screens)")
             }
         }
 
-        val transitions = db.getTransitions(packageName)
+        val transitions = db.getConnectedTransitions(packageName)
 
         // ── Heuristic Shortcuts for Generic Intents ──
         // If the graph is sparse, Dijkstra might route through convoluted multi-step paths 
@@ -153,10 +154,14 @@ object SearchPathEngine {
             )
         }
 
+        val activeScreenId = currentScreenId
+            ?: GraphStateMachine.currentScreenId(packageName)
+            ?: GraphStateMachine.getGlobalLastScreenId()
+
         val result = findPathInGraph(
             screens = screens,
             transitions = transitions,
-            currentScreenId = currentScreenId ?: GraphStateMachine.currentScreenId(packageName),
+            currentScreenId = activeScreenId,
             destinationScreen = destinationScreen,
             exactTask = exactTask,
             appDisplayName = targetApp,
@@ -193,10 +198,12 @@ object SearchPathEngine {
         }
 
         // ── 1. Target Screen Candidates ─────────────────────────────
-        val targetCandidates = resolveTarget(screens, destinationScreen)
+        // [PERMANENT FIX] Do not remove this! Resolve targets across both destinationScreen and exactTask.
+        // Strips generic suffixes and action prefixes, prioritizing specific exactTask element targets.
+        val targetCandidates = resolveTarget(screens, destinationScreen, exactTask)
         if (targetCandidates.isEmpty()) {
             return PathSearchResult.notFound(
-                message = "Destination '$destinationScreen' could not be mapped to any recorded screen or element"
+                message = "Destination '$destinationScreen' (task='${exactTask ?: ""}') could not be mapped to any recorded screen or element"
             )
         }
 
@@ -317,7 +324,11 @@ object SearchPathEngine {
         // Generic unnamed container — root_class FrameLayout with no real title
         "frame layout",
         // Any AD dialog captured as a screen
-        "ad"
+        "ad", "adanimationview",
+        // Dialog backdrop dismissals
+        "touch outside", "touch_outside", "touch outside to dismiss", "scrim",
+        // Transient tooltips & focus inputs
+        "tap to paste", "search box", "floa", "no sim cardnot set", "no sim card‎not set", "📌"
     )
 
     private data class MatchResult(
@@ -328,6 +339,9 @@ object SearchPathEngine {
     private fun normalizeText(text: String): String {
         return text
             .lowercase()
+            // [PERMANENT FIX] Do not remove this! Normalizes typographic Unicode hyphens and dashes to spaces
+            .replace(Regex("[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]"), " ")
+            .replace(Regex("[\u00A0\u202F]"), " ")
             .replace("&", " and ")
             .replace("-", " ")
             .replace("_", " ")
@@ -461,46 +475,106 @@ object SearchPathEngine {
         return MatchResult(matched = score >= 70, score = score)
     }
 
+    /**
+     * [PERMANENT FIX] Do not remove this! Normalizes intent labels into natural search queries.
+     * Strips snake_case underscores, generic UI suffixes ("_settings", "_page", "_screen", "_tab", "_menu"),
+     * and imperative action prefixes ("set_", "change_", "toggle_", "update_", "open_", "view_").
+     * e.g. "display_settings" -> "display", "set_refresh_rate" -> "refresh rate".
+     */
+    fun cleanIntentQuery(raw: String): String {
+        if (raw.isBlank()) return ""
+        val unUnderscore = raw.replace('_', ' ').trim()
+        val strippedSuffix = unUnderscore.replace(
+            Regex("(?i)\\s+(settings|page|screen|tab|menu|section)$"), ""
+        ).trim()
+        val strippedPrefix = strippedSuffix.replace(
+            Regex("(?i)^(set|change|toggle|update|open|view|enable|disable|check)\\s+"), ""
+        ).trim()
+        return strippedPrefix.ifEmpty { unUnderscore }
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this!
+     * Resolves target screens and elements from user intent.
+     * Searches across both destinationScreen (end_page) and exactTask (task).
+     * Normalizes queries by stripping snake_case underscores, generic suffixes (_settings, _page),
+     * and imperative prefixes (set_, change_).
+     * Prioritizes exactTask element matches (the deep specific action) over generic screen matches.
+     */
     private fun resolveTarget(
         screens: List<NavGraphDatabase.ScreenRecord>,
-        destinationScreen: String
+        destinationScreen: String,
+        exactTask: String? = null
     ): List<TargetCandidate> {
-        val candidates = mutableListOf<TargetCandidate>()
-        val destClean = destinationScreen.trim()
         val validScreens = screens.filter { it.screenTitle.lowercase().trim() !in OVERLAY_SCREEN_TITLES }
 
-        for (screen in validScreens) {
-            // 1. Screen title matching
-            val screenMatch = calculateMatchScore(screen.screenTitle, destClean)
-            if (screenMatch.matched) {
-                candidates.add(TargetCandidate(screen, null, screenMatch.score))
-            }
+        fun collectCandidatesForQueries(queries: List<String>): List<TargetCandidate> {
+            val list = mutableListOf<TargetCandidate>()
+            for (q in queries) {
+                for (screen in validScreens) {
+                    // Match elements on this screen
+                    val matchedElement = findBestMatchingElement(screen.elementsJson, q)
+                    if (matchedElement != null) {
+                        list.add(TargetCandidate(screen, matchedElement.name, matchedElement.score))
+                    }
 
-            // 2. Element matching
-            val matchedElement = findBestMatchingElement(screen.elementsJson, destClean)
-            if (matchedElement != null) {
-                candidates.add(TargetCandidate(screen, matchedElement.name, matchedElement.score))
-            }
+                    // Match screen title
+                    val screenMatch = calculateMatchScore(screen.screenTitle, q)
+                    if (screenMatch.matched) {
+                        list.add(TargetCandidate(screen, null, screenMatch.score))
+                    }
 
-            // 3. WhatsApp Settings Heuristic
-            if (destClean.equals("Settings", ignoreCase = true) &&
-                screen.rootClass.contains("Settings", ignoreCase = true) &&
-                screen.elementsJson.contains("\"Chats\"", ignoreCase = true) &&
-                screen.elementsJson.contains("\"Privacy\"", ignoreCase = true)
-            ) {
-                candidates.add(TargetCandidate(screen, null, 95))
+                    // WhatsApp Settings Heuristic
+                    if (q.equals("Settings", ignoreCase = true) &&
+                        screen.rootClass.contains("Settings", ignoreCase = true) &&
+                        screen.elementsJson.contains("\"Chats\"", ignoreCase = true) &&
+                        screen.elementsJson.contains("\"Privacy\"", ignoreCase = true)
+                    ) {
+                        list.add(TargetCandidate(screen, null, 95))
+                    }
+                }
             }
+            return list
         }
 
-        val sorted = candidates.filter { it.score >= 70 }.sortedByDescending { it.score }
-        
-        if (sorted.isNotEmpty()) {
-            Log.d(TAG, "resolveTarget('$destClean'): ${sorted.size} trustworthy candidate(s) — " +
-                sorted.joinToString { "'${it.elementName ?: it.screen.screenTitle}'(score=${it.score})" })
+        // 1. Task queries (specific element targets, e.g. "set_refresh_rate", "refresh rate")
+        val taskCandidates = if (!exactTask.isNullOrBlank()) {
+            val taskRaw = exactTask.trim()
+            val taskClean = cleanIntentQuery(taskRaw)
+            val tQueries = linkedSetOf(taskRaw, taskClean).filter { it.isNotBlank() }
+            collectCandidatesForQueries(tQueries)
         } else {
-            Log.d(TAG, "resolveTarget('$destClean'): 0 trustworthy candidates")
+            emptyList()
         }
-        return sorted
+
+        // 2. Destination screen queries (category pages, e.g. "display_settings", "display")
+        val destRaw = destinationScreen.trim()
+        val destClean = cleanIntentQuery(destRaw)
+        val dQueries = linkedSetOf(destRaw, destClean).filter { it.isNotBlank() }
+        val destCandidates = collectCandidatesForQueries(dQueries)
+
+        // Prioritize: Task element matches first (user's specific action), then destination screen matches
+        val combined = mutableListOf<TargetCandidate>()
+        combined.addAll(taskCandidates.filter { it.score >= 70 }.sortedByDescending { it.score })
+        combined.addAll(destCandidates.filter { it.score >= 70 }.sortedByDescending { it.score })
+
+        // Deduplicate candidates by (screen.id, elementName)
+        val seen = HashSet<String>()
+        val unique = mutableListOf<TargetCandidate>()
+        for (c in combined) {
+            val key = "${c.screen.id}::${c.elementName ?: ""}"
+            if (seen.add(key)) {
+                unique.add(c)
+            }
+        }
+
+        if (unique.isNotEmpty()) {
+            Log.d(TAG, "resolveTarget('$destRaw', task='$exactTask'): ${unique.size} trustworthy candidate(s) — " +
+                unique.joinToString { "'${it.elementName ?: it.screen.screenTitle}'(score=${it.score})" })
+        } else {
+            Log.d(TAG, "resolveTarget('$destRaw', task='$exactTask'): 0 trustworthy candidates")
+        }
+        return unique
     }
 
     private data class ElementMatch(val name: String, val score: Int)

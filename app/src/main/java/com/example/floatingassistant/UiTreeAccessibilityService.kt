@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -144,9 +145,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
                         }
                     }
 
+                    // [PERMANENT FIX] Do not remove this! Detect silent app switch to any TYPE_APPLICATION activity (including MainActivity)
                     if (activePkg != null &&
                         !activePkg.startsWith("com.android.systemui") &&
-                        activePkg != packageName &&
                         activePkg != NavigationStateMachine.lastKnownActivePackage) {
 
                         Log.w(TAG, "Poller detected silent app switch to: $activePkg")
@@ -176,10 +177,19 @@ class UiTreeAccessibilityService : AccessibilityService() {
                 }
                 if (label.isNullOrEmpty()) {
                     val source = event.source
-                    label = source?.text?.toString()?.trim() 
-                        ?: source?.contentDescription?.toString()?.trim() 
-                        ?: ""
-                    try { source?.recycle() } catch (_: Exception) {}
+                    if (source != null) {
+                        try {
+                            label = source.text?.toString()?.trim()
+                                ?: source.contentDescription?.toString()?.trim()
+                            if (label.isNullOrEmpty()) {
+                                // [PERMANENT FIX] Do not remove this! In compound list items (e.g. COUIPreference rows in Settings),
+                                // the container view itself has null text/desc. Extract first meaningful text from child nodes.
+                                label = findFirstTextInSubtree(source)
+                            }
+                        } finally {
+                            try { source.recycle() } catch (_: Exception) {}
+                        }
+                    }
                 }
                 label = label ?: ""
                 if (label.isNotEmpty()) {
@@ -263,10 +273,18 @@ class UiTreeAccessibilityService : AccessibilityService() {
             return   // can't determine package — skip entirely
         }
 
+        // [PERMANENT FIX] Do not remove this! Handle app switch to GuidanceApp MainActivity during navigation
+        if (activePackage == this.packageName) {
+            trustedRoot?.recycle()
+            if (NavigationStateMachine.isNavigating) {
+                NavigationStateMachine.lastKnownActivePackage = activePackage
+                NavigationStateMachine.onScreenChanged(activePackage, "Floating Assistant", "")
+            }
+            return
+        }
+
         // Ignore events from SystemUI (swipe gestures, notification shade, nav bar)
-        // and from our own overlay (the floating bubble / HUD)
-        if (activePackage.startsWith("com.android.systemui") ||
-            activePackage == this.packageName) {
+        if (activePackage.startsWith("com.android.systemui")) {
             trustedRoot?.recycle()
             Log.v(TAG, "handleNavigation: skipping noise from $activePackage")
             return
@@ -474,6 +492,35 @@ class UiTreeAccessibilityService : AccessibilityService() {
             else -> false   // TYPE_VIEW_CLICKED is handled separately without this check
         }
         
+    // [PERMANENT FIX] Do not remove this! Traverses child nodes of compound container rows
+    // to extract the clicked label with strict Binder recycling of all allocated children.
+    private fun findFirstTextInSubtree(root: AccessibilityNodeInfo, maxDepth: Int = 3): String? {
+        val queue = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
+        queue.add(root to 0)
+        val allocated = mutableListOf<AccessibilityNodeInfo>()
+        try {
+            while (queue.isNotEmpty()) {
+                val (node, depth) = queue.removeFirst()
+                if (node !== root) {
+                    val text = node.text?.toString()?.trim()
+                    if (!text.isNullOrEmpty()) return text
+                    val desc = node.contentDescription?.toString()?.trim()
+                    if (!desc.isNullOrEmpty()) return desc
+                }
+                if (depth < maxDepth) {
+                    for (i in 0 until node.childCount) {
+                        val child = node.getChild(i) ?: continue
+                        allocated.add(child)
+                        queue.add(child to depth + 1)
+                    }
+                }
+            }
+        } finally {
+            allocated.forEach { try { it.recycle() } catch (_: Exception) {} }
+        }
+        return null
+    }
+
     override fun onUnbind(intent: android.content.Intent?): Boolean {
         instance = null
         return super.onUnbind(intent)

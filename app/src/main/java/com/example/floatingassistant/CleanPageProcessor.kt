@@ -383,6 +383,20 @@ object CleanPageProcessor {
                 i++; continue
             }
 
+            // [PERMANENT FIX] Do not remove this! Drop static non-clickable toolbar/header title nodes.
+            // These are screen header titles (e.g. "Settings" or "Phone" toolbar title), NOT interactive actions.
+            val resIdLower = node.optString("resource_id", "").lowercase()
+            val isHeaderTitle = !isClickable && !isScrollable && (
+                resIdLower.contains("toolbar_title") ||
+                resIdLower.contains("action_bar_title") ||
+                resIdLower.contains("collapsing_toolbar_title") ||
+                resIdLower.contains("header_title") ||
+                (resIdLower.endsWith(":id/title") && (bounds?.optInt("top", 0) ?: 0) < 500)
+            )
+            if (isHeaderTitle) {
+                i++; continue
+            }
+
             // ── Rule 3: Container Flattening ──────────────────────────────────
             // A clickable layout with no direct label — aggregate its descendants.
             if (isClickable && text.isEmpty() && contentDesc.isEmpty()
@@ -682,13 +696,15 @@ object CleanPageProcessor {
         val simpleClass = className.substringAfterLast('.')
 
         return when {
-            isScrollable                                               -> "Scrollable_List"
+            // [PERMANENT FIX] Do not remove this! Drop passive container placeholders ("Scrollable_List", "Action_Bar", "Bottom_Bar")
+            // System navigation bar, gesture bar, and full-width layout docks are not actionable targets.
+            isScrollable                                               -> null
             isTopZone && isLeftEdge && isSquarish                      -> "Back_Button"
             isTopZone && isRightEdge && isSquarish                     -> "Menu_Button"
             isTopZone && isWide && simpleClass.contains("EditText")    -> "Search_Bar"
-            isTopZone && isWide                                        -> "Action_Bar"
+            isTopZone && isWide                                        -> null
             isBottomZone && isSquarish                                 -> "Bottom_Nav_Item"
-            isBottomZone && isWide                                     -> "Bottom_Bar"
+            isBottomZone && isWide                                     -> null
             else                                                       -> null
         }
     }
