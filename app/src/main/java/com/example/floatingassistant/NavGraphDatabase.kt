@@ -334,6 +334,51 @@ class NavGraphDatabase private constructor(context: Context)
         }
     }
 
+    /**
+     * [PERMANENT FIX] Do not remove this! Seed an active execution path into SQLite.
+     * Guarantees that even with 0 DB entries (cold start), the graph immediately contains
+     * the screens, elements, and bidirectional CLICK / BACK edges for the planned route.
+     */
+    fun seedRoute(
+        packageName: String,
+        appLabel: String,
+        steps: List<String>
+    ) {
+        if (steps.isEmpty()) return
+        try {
+            val cleanSteps = steps.map { it.trim() }.filter { it.isNotBlank() }
+            if (cleanSteps.isEmpty()) return
+
+            for (i in cleanSteps.indices) {
+                val currentScreenName = cleanSteps[i]
+                val isHome = currentScreenName.equals("Home", ignoreCase = true)
+                val currentScreenId = if (isHome) "Home::Home" else "$packageName::$currentScreenName"
+
+                val nextStepName = cleanSteps.getOrNull(i + 1)
+                val elements = if (!nextStepName.isNullOrBlank()) {
+                    listOf(JSONObject().put("name", nextStepName).put("type", "clickable"))
+                } else emptyList()
+
+                upsertScreen(
+                    screenId = currentScreenId,
+                    packageName = if (isHome) "Home" else packageName,
+                    screenTitle = currentScreenName,
+                    rootClass = "android.widget.FrameLayout",
+                    elements = elements
+                )
+
+                if (!nextStepName.isNullOrBlank()) {
+                    val nextScreenId = "$packageName::$nextStepName"
+                    upsertTransition(currentScreenId, nextScreenId, nextStepName, "CLICK")
+                    upsertTransition(nextScreenId, currentScreenId, "BACK", "BACK")
+                }
+            }
+            Log.i(TAG, "seedRoute: Successfully seeded ${cleanSteps.size} screens and transitions into $packageName graph in SQLite")
+        } catch (e: Exception) {
+            Log.w(TAG, "seedRoute failed: ${e.message}")
+        }
+    }
+
     // ── Graph dump (for nav_graph.json export) ────────────────────────────────
 
     /**

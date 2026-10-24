@@ -47,6 +47,90 @@ object NavigationStateMachine {
     private var pathSource: String = "local"
     @Volatile private var connectedTargetPackages: Set<String> = emptySet()
 
+    // ── Stateful Navigation Execution Models ──────────────────────────────────
+    data class NavExecutionNode(
+        val stepIndex: Int,
+        val screenTitle: String,
+        val targetElement: String,
+        val nextScreenTitle: String?,
+        val parentIndex: Int?
+    )
+
+    sealed class TrackerState {
+        data class OnRoute(val node: NavExecutionNode) : TrackerState()
+        data class Diverged(
+            val originNode: NavExecutionNode,
+            val currentScreenTitle: String,
+            val divergedStack: List<String> = listOf(currentScreenTitle),
+            val backStepsRequired: Int = divergedStack.size,
+            val nextPlannedTarget: String
+        ) : TrackerState()
+        data class OffApp(val expectedApp: String, val currentApp: String) : TrackerState()
+        data class DestinationReached(val finalNode: NavExecutionNode) : TrackerState()
+    }
+
+    @Volatile var currentTrackerState: TrackerState? = null
+    private val executionTree: MutableList<NavExecutionNode> = mutableListOf()
+
+    // [PERMANENT FIX] Do not remove this! Format recovery guidance when user diverges from route
+    private fun formatRecoveryGuidance(originTitle: String, targetElement: String, backSteps: Int): Pair<String, String> {
+        val action = if (backSteps <= 1) {
+            "Press Back to return to $originTitle"
+        } else {
+            "Press Back ($backSteps steps) to return to $originTitle"
+        }
+        val context = "Then look for '$targetElement'"
+        return Pair(action, context)
+    }
+
+    // [PERMANENT FIX] Do not remove this! Dynamically query Dijkstra in SQLite to calculate required back steps when diverged
+    private fun updateDivergedRecovery(originTitle: String, currentScreen: String, targetElement: String, fallbackSteps: Int) {
+        stateMachineScope.launch(Dispatchers.IO) {
+            var backSteps = fallbackSteps
+            try {
+                if (::context.isInitialized && targetPackage.isNotBlank()) {
+                    val currentScreenId = "$targetPackage::$currentScreen"
+                    val result = SearchPathEngine.findPath(
+                        context = context,
+                        targetApp = targetPackage,
+                        destinationScreen = originTitle,
+                        currentScreenId = currentScreenId
+                    )
+                    if (result.found && result.steps.isNotEmpty()) {
+                        val backCount = result.steps.count { it.equals("BACK", ignoreCase = true) }
+                        if (backCount > 0) {
+                            backSteps = backCount
+                            val state = currentTrackerState
+                            if (state is TrackerState.Diverged) {
+                                currentTrackerState = state.copy(backStepsRequired = backSteps)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "updateDivergedRecovery Dijkstra check failed: ${e.message}")
+            }
+
+            postToMain {
+                if (!isNavigating) return@postToMain
+                val (action, ctx) = formatRecoveryGuidance(originTitle, targetElement, backSteps)
+                val currentTap = lastWrongTapText?.trim()
+                val hasTap = !currentTap.isNullOrEmpty() && !currentTap.equals("null", ignoreCase = true) && !currentTap.equals("nil", ignoreCase = true)
+                val instruction = if (hasTap) "You tapped '$currentTap'" else action
+                val contextTxt = if (hasTap) action else ctx
+                hud.updateHud(
+                    stepHeader        = "WRONG PATH",
+                    actionInstruction = instruction,
+                    breadcrumb        = null, // [PERMANENT FIX] Hide future breadcrumb in wrong-path state to eliminate visual clutter
+                    contextText       = contextTxt,
+                    subTag            = "unrecognized-screen-back",
+                    hudState          = NavigationHudOverlay.HudState.OFF_TRACK,
+                    onHelpRequested   = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
+                )
+            }
+        }
+    }
+
     // [PERMANENT FIX] Do not remove this! Format HUD step header with short source keyword: (local), (db), or (ai)
     private fun formatStepHeader(header: String = "STEP ${currentIndex + 1} OF ${pathSteps.size}"): String {
         return if (pathSource.isNotBlank()) "$header ($pathSource)" else header
@@ -240,7 +324,40 @@ object NavigationStateMachine {
             currStep     = pathSteps[currentIndex]
             nextStep     = pathSteps.getOrNull(currentIndex + 1)
 
+            // [PERMANENT FIX] Do not remove this! Build the Stateful Execution Tree from pathSteps.
+            // Converts linear path into a bidirectional chain of NavExecutionNode objects.
+            executionTree.clear()
+            for (i in pathSteps.indices) {
+                val screen = if (i == 0) (if (pathSteps[0].equals("Home", ignoreCase = true)) "Home" else targetAppLabel) else pathSteps[i - 1]
+                val target = pathSteps[i]
+                val nextScreen = pathSteps.getOrNull(i)
+                val parent = if (i > 0) i - 1 else null
+                executionTree.add(
+                    NavExecutionNode(
+                        stepIndex = i,
+                        screenTitle = screen,
+                        targetElement = target,
+                        nextScreenTitle = nextScreen,
+                        parentIndex = parent
+                    )
+                )
+            }
+
+            // [PERMANENT FIX] Do not remove this! Seed active execution path into SQLite for 0-DB cold start learning
+            stateMachineScope.launch(Dispatchers.IO) {
+                if (::context.isInitialized && targetPackage.isNotBlank()) {
+                    NavGraphDatabase.getInstance(context).seedRoute(targetPackage, targetAppLabel, pathSteps)
+                }
+            }
+
+            currentTrackerState = when {
+                alreadyInApp && startIdx < executionTree.size -> TrackerState.OnRoute(executionTree[startIdx])
+                isOnLauncher -> TrackerState.OffApp(targetAppLabel, "Home")
+                else -> TrackerState.OffApp(targetAppLabel, activePkg.substringAfterLast('.'))
+            }
+
             Log.i(TAG, "Navigation READY: startIdx=$startIdx currStep='$currStep' nextStep='$nextStep'")
+            FlightRecorder.record("NAV_READY", "Navigation started at step $startIdx: '$currStep'", "TargetApp: '$targetAppLabel' ($targetPackage), Source: $pathSource, TotalSteps: ${pathSteps.size}")
 
             hud.updateHud(
                 stepHeader        = startHeader,
@@ -275,8 +392,10 @@ object NavigationStateMachine {
     fun stopNavigation() {
         postToMain {
             // [PERMANENT FIX] Always execute cleanup to ensure HUD and marker hide, even if we already reached the destination (isNavigating=false)
-            MarkerScout.shutdown()
+            MarkerScout.shutdown(isPermanentStop = true)
             isNavigating = false
+            currentTrackerState = null
+            executionTree.clear()
             targetPackage = ""
             connectedTargetPackages = emptySet()
             targetAppLabel = ""
@@ -323,9 +442,10 @@ object NavigationStateMachine {
         val currNorm = currStep.trim().lowercase()
         val nextNorm = nextStep?.trim()?.lowercase()
 
-        // Ignore taps from our own overlay or system UI
+        // Ignore taps from our own overlay or system UI (except navigation Back button)
         if (fromPackage == context.packageName) return
-        if (fromPackage.startsWith("com.android.systemui")) return
+        val isSystemNavBack = fromPackage.startsWith("com.android.systemui") && (tapNorm == "back" || tapNorm.contains("back"))
+        if (fromPackage.startsWith("com.android.systemui") && !isSystemNavBack) return
 
         if (fuzzyMatch(tapNorm, currNorm)) {
             // Tap matches current step!
@@ -383,58 +503,106 @@ object NavigationStateMachine {
 
             // [PERMANENT FIX] Do not remove this! If the user tapped a navigation button (Back, Navigate Up, Home)
             // or if an empty icon produced 'null'/'nil', do NOT treat it as a wrong tap! Return immediately.
+            val isBackTap = tapNorm == "back" || tapNorm.contains("navigate up")
+            if (isBackTap) {
+                val state = currentTrackerState
+                if (state is TrackerState.Diverged) {
+                    val newStack = state.divergedStack.dropLast(1)
+                    if (newStack.isEmpty()) {
+                        Log.i(TAG, "onElementTapped: user pressed Back while diverged. Unwound fully to node '${state.originNode.screenTitle}'")
+                        FlightRecorder.record("BRANCH_UNWOUND", "User pressed Back while diverged. Fully unwound to '${state.originNode.screenTitle}'", "Target: '${state.originNode.targetElement}'")
+                        currentTrackerState = TrackerState.OnRoute(state.originNode)
+                        lastWrongTapText = null
+                        lastWrongTapTimeMs = 0L
+                        isCurrentScreenUnrecognized = false
+                        MarkerScout.shutdown(isPermanentStop = false)
+                        postToMain {
+                            hud.updateHud(
+                                stepHeader        = formatStepHeader("STEP ${state.originNode.stepIndex + 1} OF ${pathSteps.size}"),
+                                actionInstruction = "Look for '${state.originNode.targetElement}'",
+                                breadcrumb        = buildBreadcrumb(),
+                                contextText       = "Returned to ${state.originNode.screenTitle}",
+                                subTag            = "unwind-back",
+                                hudState          = NavigationHudOverlay.HudState.ON_TRACK
+                            )
+                            triggerSearchPipeline(state.originNode.targetElement, lastKnownActivePackage, state.originNode.screenTitle)
+                        }
+                    } else {
+                        Log.i(TAG, "onElementTapped: user pressed Back while diverged. Remaining stack size: ${newStack.size}")
+                        FlightRecorder.record("BRANCH_UNWOUND", "User pressed Back while diverged. Remaining depth: ${newStack.size} ('${newStack.last()}')", "Origin: '${state.originNode.screenTitle}'")
+                        val prevScreen = newStack.last().trim()
+                        val sanitizedPrevScreen = if (prevScreen.isEmpty() || prevScreen.equals("null", ignoreCase = true) || prevScreen.equals("nil", ignoreCase = true)) null else prevScreen
+                        // [PERMANENT FIX] Update lastWrongTapText to current level so HUD title reflects current screen
+                        lastWrongTapText = sanitizedPrevScreen
+                        currentTrackerState = state.copy(
+                            currentScreenTitle = newStack.last(),
+                            divergedStack = newStack,
+                            backStepsRequired = newStack.size
+                        )
+                        updateDivergedRecovery(state.originNode.screenTitle, newStack.last(), state.originNode.targetElement, newStack.size)
+                    }
+                    return
+                }
+                return
+            }
+
             if (isNavigationTap || tappedLabel.isBlank() || tapNorm == "null" || tapNorm == "nil") {
                 Log.d(TAG, "onElementTapped: ignored navigation/system tap '$tappedLabel'")
                 return
             }
 
             // If they tapped a different interactive label (not a system nav button), track it immediately
-            if (tappedLabel.length > 2) {
-                lastWrongTapText = tappedLabel
+            val tapTrimmed = tappedLabel.trim()
+            val isInvalidTap = tapTrimmed.isEmpty() ||
+                               tapTrimmed.equals("null", ignoreCase = true) ||
+                               tapTrimmed.equals("nil", ignoreCase = true) ||
+                               tapTrimmed.length <= 2
+            if (!isInvalidTap) {
+                lastWrongTapText = tapTrimmed
                 lastWrongTapTimeMs = System.currentTimeMillis()
-                Log.w(TAG, "onElementTapped: user tapped '$tappedLabel' (expected '$currStep')")
-                DebugTelemetryClient.sendWrongPath(tappedLabel, currStep)
+                Log.w(TAG, "onElementTapped: user tapped '$tapTrimmed' (expected '$currStep')")
+                DebugTelemetryClient.sendWrongPath(tapTrimmed, currStep)
             }
 
-            // [PERMANENT FIX] Do not remove this! Check if currStep is still visible in the live memory tree.
-            // If the user tapped an intra-page element (e.g. switch, tab, expander) and currStep is still
-            // right in front of them, do NOT trigger false WRONG PATH or hide the guidance marker immediately.
-            // Instead, preserve active guidance while the target is visible; if the tap subsequently causes
-            // a screen change away from target, onScreenChanged / triggerSearchPipeline will surface lastWrongTapText.
-            val targetLiveBounds = if (::elementFinder.isInitialized) {
-                elementFinder.findElementBoundsInLiveTree(currStep)
-            } else null
-
-            if (targetLiveBounds != null) {
-                Log.d(TAG, "onElementTapped: tapped='$tappedLabel', but target '$currStep' is still visible on screen — keeping guidance active")
-                currentTargetBounds = targetLiveBounds
-                postToMain {
-                    if (isNavigating) {
-                        marker?.showMarker(targetLiveBounds)
-                    }
+            // [PERMANENT FIX] Do not remove this! Cancel in-flight scout search and hide marker immediately on wrong tap.
+            // Previously, checking if currStep was still visible in the tree caused the green marker to linger
+            // and freeze on screen across activity transitions, drawing green boxes on unrelated elements (e.g. "Review settings").
+            // When the user taps a different menu item, guidance marker MUST be hidden immediately.
+            MarkerScout.shutdown(isPermanentStop = false)
+            postToMain {
+                if (isNavigating) {
+                    marker?.hideMarker()
                 }
-                return
             }
 
-            // Target is NOT visible on screen and they tapped something else.
-            // Immediately transition HUD to WRONG PATH.
             if (tappedLabel.length > 2) {
                 // [PERMANENT FIX] Do not remove this! Set isCurrentScreenUnrecognized = true immediately so that
                 // subsequent scroll ticks / content change events don't overwrite WRONG PATH with false scroll directives.
                 isCurrentScreenUnrecognized = true
+                val state = currentTrackerState
+                val (originNode, newStack) = if (state is TrackerState.Diverged) {
+                    Pair(state.originNode, state.divergedStack + tappedLabel)
+                } else {
+                    val origin = (state as? TrackerState.OnRoute)?.node
+                        ?: executionTree.getOrNull(currentIndex)
+                        ?: NavExecutionNode(currentIndex, activeScreenName, currStep, nextStep, if (currentIndex > 0) currentIndex - 1 else null)
+                    Pair(origin, listOf(tappedLabel))
+                }
+
+                FlightRecorder.record("BRANCH_DIVERGED", "Tapped '$tappedLabel' away from expected '${originNode.targetElement}'", "Diverged depth: ${newStack.size}, Stack: $newStack, Origin: '${originNode.screenTitle}'")
+                currentTrackerState = TrackerState.Diverged(
+                    originNode = originNode,
+                    currentScreenTitle = tappedLabel,
+                    divergedStack = newStack,
+                    backStepsRequired = newStack.size,
+                    nextPlannedTarget = originNode.targetElement
+                )
+
                 postToMain {
                     if (!isNavigating) return@postToMain
                     marker?.hideMarker()
-                    hud.updateHud(
-                        stepHeader        = "WRONG PATH",
-                        actionInstruction = "You tapped '$tappedLabel'",
-                        breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Go back and find '$currStep'",
-                        subTag            = "unrecognized-screen-back",
-                        hudState          = NavigationHudOverlay.HudState.OFF_TRACK,
-                        onHelpRequested   = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
-                    )
                 }
+                updateDivergedRecovery(originNode.screenTitle, tappedLabel, originNode.targetElement, newStack.size)
             }
             return
         }
@@ -458,7 +626,9 @@ object NavigationStateMachine {
             if (!isNavigating) return@postToMain
 
             val launcherPkg = getDefaultLauncherPackage()
-            val isLauncherEvent = launcherPkg != null && activePackage.startsWith(launcherPkg)
+            val isLauncherEvent = (launcherPkg != null && (activePackage.startsWith(launcherPkg) || activePackage == launcherPkg)) ||
+                                  activePackage.contains("launcher", ignoreCase = true) ||
+                                  activePackage == "com.android.launcher"
 
             var livePageTitle: String? = null
             if (!isLauncherEvent) {
@@ -561,16 +731,52 @@ object NavigationStateMachine {
             val nearestIdx = nearest?.first ?: -1
             val nearestName = nearest?.second
 
+            val originTitle = (currentTrackerState as? TrackerState.Diverged)?.originNode?.screenTitle?.trim()?.lowercase()
+            val isOriginRoot = originTitle == "settings" || (originTitle != null && originTitle == targetAppLabel.trim().lowercase())
+            // [PERMANENT FIX] Do not remove this! For root settings screens, returnedToOrigin requires true root screen
+            // verification (isEffectiveRootScreen) or exact match. Loose fuzzyMatch(screenNorm, "settings") caused
+            // sub-pages with "settings" in their title (e.g. "Notifications & Quick Settings", "Privacy settings")
+            // to falsely claim returnedToOrigin = true and wipe out diverged wrong-path recovery!
+            val returnedToOrigin = originTitle != null && if (isOriginRoot) {
+                isEffectiveRootScreen || screenNorm == originTitle
+            } else {
+                screenNorm == originTitle || (fuzzyMatch(screenNorm, originTitle) && !screenNorm.contains("settings"))
+            }
+
             val isOnKnownPath = (isLauncherEvent && currStepIsHome) ||
                                 (appRootFuzzyMatch(currNorm, currentIndex) && inTargetApp) ||
                                 fuzzyMatch(screenNorm, currNorm) ||
                                 (nextNorm != null && fuzzyMatch(screenNorm, nextNorm)) ||
-                                (inTargetApp && isEffectiveRootScreen)
+                                (inTargetApp && isEffectiveRootScreen) ||
+                                returnedToOrigin
 
             if (isOnKnownPath) {
                 lastWrongTapText = null
                 lastWrongTapTimeMs = 0L
                 isCurrentScreenUnrecognized = false
+                if (currentTrackerState is TrackerState.Diverged) {
+                    val origin = (currentTrackerState as TrackerState.Diverged).originNode
+                    currentTrackerState = TrackerState.OnRoute(origin)
+                    Log.i(TAG, "onScreenChanged: returned to origin node '${origin.screenTitle}', restored OnRoute state")
+                    FlightRecorder.record("RESTORE_ROUTE", "Returned to origin node '${origin.screenTitle}' — restored OnRoute", "Target: '${origin.targetElement}'")
+                }
+            }
+
+            val divState = currentTrackerState as? TrackerState.Diverged
+            if (divState != null && divState.divergedStack.size > 1) {
+                val parentScreen = divState.divergedStack[divState.divergedStack.size - 2]
+                if (fuzzyMatch(screenNorm, parentScreen.trim().lowercase())) {
+                    val newStack = divState.divergedStack.dropLast(1)
+                    // [PERMANENT FIX] Update lastWrongTapText to current level so HUD title reflects current screen
+                    lastWrongTapText = newStack.last()
+                    currentTrackerState = divState.copy(
+                        currentScreenTitle = newStack.last(),
+                        divergedStack = newStack,
+                        backStepsRequired = newStack.size
+                    )
+                    Log.i(TAG, "onScreenChanged: gesture back unwound 1 level to '${newStack.last()}' (${newStack.size} remaining)")
+                    FlightRecorder.record("BRANCH_UNWOUND_GESTURE", "Gesture back unwound 1 level to '${newStack.last()}' (${newStack.size} remaining)", "Origin: '${divState.originNode.screenTitle}'")
+                }
             }
 
             // ── Off-app / Wrong-path states ────────────────────────────────────
@@ -578,21 +784,35 @@ object NavigationStateMachine {
             // Wrong tap guidance must persist until the user returns to a known path screen (isOnKnownPath).
             // Expiring after 5 seconds previously caused the HUD to forget the wrong tap and falsely instruct scrolling.
             if (lastWrongTapText != null && !isOnKnownPath) {
-                isCurrentScreenUnrecognized = true
-                val triggerReroute = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
-                hud.updateHud(
-                    stepHeader        = "WRONG PATH",
-                    actionInstruction = "You tapped '${lastWrongTapText}'",
-                    breadcrumb        = buildBreadcrumb(),
-                    contextText       = "Go back and find '$currStep'",
-                    subTag            = "unrecognized-screen-back",
-                    onHelpRequested   = triggerReroute,
-                    hudState          = NavigationHudOverlay.HudState.OFF_TRACK
-                )
-                return@postToMain
+                val wrongTap = lastWrongTapText?.trim()
+                val hasTap = !wrongTap.isNullOrEmpty() && !wrongTap.equals("null", ignoreCase = true) && !wrongTap.equals("nil", ignoreCase = true)
+                if (!hasTap) {
+                    lastWrongTapText = null
+                } else {
+                    isCurrentScreenUnrecognized = true
+                    val triggerReroute = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
+                    val currentDiv = currentTrackerState as? TrackerState.Diverged
+                    val originNodeTitle = currentDiv?.originNode?.screenTitle ?: targetAppLabel
+                    val targetName = currentDiv?.originNode?.targetElement ?: currStep
+                    val steps = currentDiv?.backStepsRequired ?: 1
+                    val (backAction, ctx) = formatRecoveryGuidance(originNodeTitle, targetName, steps)
+                    hud.updateHud(
+                        stepHeader        = "WRONG PATH",
+                        actionInstruction = "You tapped '$wrongTap'",
+                        breadcrumb        = null, // [PERMANENT FIX] Hide future breadcrumb in wrong-path state to eliminate visual clutter
+                        contextText       = backAction,
+                        subTag            = "unrecognized-screen-back",
+                        onHelpRequested   = triggerReroute,
+                        hudState          = NavigationHudOverlay.HudState.OFF_TRACK
+                    )
+                    return@postToMain
+                }
             }
 
             if (isLauncherEvent && !currStepIsHome) {
+                marker?.hideMarker()
+                MarkerScout.shutdown(isPermanentStop = false)
+                currentTrackerState = TrackerState.OffApp(expectedApp = targetAppLabel, currentApp = activePackage)
                 hud.updateHud(
                     stepHeader        = "ON HOME",
                     actionInstruction = "Open $targetAppLabel",
@@ -605,6 +825,9 @@ object NavigationStateMachine {
             }
 
             if (!currStepIsHome && !inTargetApp && !isLauncherEvent) {
+                marker?.hideMarker()
+                MarkerScout.shutdown(isPermanentStop = false)
+                currentTrackerState = TrackerState.OffApp(expectedApp = targetAppLabel, currentApp = activePackage)
                 isCurrentScreenUnrecognized = true
                 val actualName = activeAppLabel.ifBlank { activeScreenName }
                 hud.updateHud(
@@ -681,15 +904,25 @@ object NavigationStateMachine {
                     // Screen unrecognized but we're in the right app — hunt for the element
                     val timeSinceAdvance = System.currentTimeMillis() - lastAdvanceTimeMs
                     val justAdvanced = timeSinceAdvance < 3000L
-                    val isUnrecognized = (nearestIdx == -1 && !isEffectiveRootScreen && !justAdvanced)
+                    // [PERMANENT FIX] Do not remove this! Active Node Lock:
+                    // While on a valid route node with no wrong taps, scrolling or dynamic UI updates
+                    // must never trigger false wrong path alarms.
+                    val isLockedOnRoute = currentTrackerState is TrackerState.OnRoute && lastWrongTapText == null
+                    val isUnrecognized = (nearestIdx == -1 && !isEffectiveRootScreen && !justAdvanced && !isLockedOnRoute)
+                    FlightRecorder.record("NODE_LOCK_EVAL", "Screen '$activeScreenName' (pkg='$activePackage')", "isLockedOnRoute=$isLockedOnRoute, isUnrecognized=$isUnrecognized, state=$currentTrackerState")
                     isCurrentScreenUnrecognized = isUnrecognized
 
                     if (isUnrecognized) {
+                        val currentDiv = currentTrackerState as? TrackerState.Diverged
+                        val originNodeTitle = currentDiv?.originNode?.screenTitle ?: targetAppLabel
+                        val targetName = currentDiv?.originNode?.targetElement ?: currStep
+                        val steps = currentDiv?.backStepsRequired ?: 1
+                        val (backAction, ctx) = formatRecoveryGuidance(originNodeTitle, targetName, steps)
                         hud.updateHud(
                             stepHeader        = "WRONG PATH",
-                            actionInstruction = "Press Back to return",
+                            actionInstruction = backAction,
                             breadcrumb        = buildBreadcrumb(),
-                            contextText       = "You took a wrong turn",
+                            contextText       = ctx,
                             subTag            = "unrecognized-screen-back",
                             hudState          = NavigationHudOverlay.HudState.OFF_TRACK
                         )
@@ -868,6 +1101,9 @@ object NavigationStateMachine {
         if (nextStep == null) {
             Log.i(TAG, "COMPLETE — step $stepNum/'$currStep' was the last step")
             isNavigating = false
+            val lastNode = executionTree.getOrNull(confirmedIndex)
+                ?: NavExecutionNode(confirmedIndex, currStep, currStep, null, if (confirmedIndex > 0) confirmedIndex - 1 else null)
+            currentTrackerState = TrackerState.DestinationReached(lastNode)
             // [PERMANENT FIX] Stream destination reached event to Dashboard
             DebugTelemetryClient.emit(
                 type = "DESTINATION_REACHED",
@@ -896,8 +1132,12 @@ object NavigationStateMachine {
             return
         }
 
+        FlightRecorder.record("NAV_ADVANCE", "Advanced step from '$currStep' to '${pathSteps.getOrNull(currentIndex + 1)}'", "Confirmed index: $confirmedIndex")
         prevStep = currStep
         currentIndex++
+        if (currentIndex < executionTree.size) {
+            currentTrackerState = TrackerState.OnRoute(executionTree[currentIndex])
+        }
         isCurrentScreenUnrecognized = false
         lastWrongTapText = null
         lastWrongTapTimeMs = 0L
@@ -971,10 +1211,11 @@ object NavigationStateMachine {
                 if (!isNavigating || targetStep != currentTarget) return@launch
 
                 // [PERMANENT FIX] Do not remove this check!
-                // If the user left the app during the delay, abort search pipeline!
+                // If the user left the app during the delay, abort search pipeline and hide marker!
                 val inTargetApp = isTargetApp(lastKnownActivePackage)
                 val currStepIsHome = currStep.trim().equals("home", ignoreCase = true)
                 if (!inTargetApp && !currStepIsHome) {
+                    marker?.hideMarker()
                     return@launch
                 }
 
@@ -995,6 +1236,7 @@ object NavigationStateMachine {
                             subTag            = "target-found",
                             hudState          = NavigationHudOverlay.HudState.FOUND
                         )
+                        FlightRecorder.record("SCOUT_FOUND", "Target '$targetStep' located on screen at ${result.bounds}", "Screen: '$activeScreen'")
                         // Show visual marker on the found element
                         if (result.bounds != null) {
                             marker?.showMarker(result.bounds)
@@ -1005,20 +1247,28 @@ object NavigationStateMachine {
                     return@launch
                 }
 
-                // [PERMANENT FIX] Do not remove this! Directional scroll tracker.
-                // When an element goes out of view, determine if it moved above or below the screen.
-                // If last seen in the top half, user scrolled past it -> prompt "Scroll UP to find ... ⬆".
-                // Otherwise user needs to continue scrolling down -> prompt "Scroll DOWN to find ... ⬇".
-                val screenH = try {
-                    Resources.getSystem().displayMetrics.heightPixels
-                } catch (_: Exception) { 2400 }
+                // [PERMANENT FIX] Do not remove this! Multi-Source Directional Scroll Tracker:
+                // 1. Element Order & Container Boundary Intelligence:
+                //    Inspects native scroll container boundaries (cannot scroll down -> UP) and relative
+                //    element order (target index vs visible elements average index).
+                // 2. Historical Motion Fallback:
+                //    If element order is indeterminate, falls back to lastKnownTargetBounds screen position.
+                val resolvedDir = elementFinder.determineScrollDirection(targetStep, activePkg, activeScreen)
+                if (resolvedDir != null) {
+                    targetScrolledAbove = (resolvedDir == ElementMarkerOverlay.ScrollDirection.UP)
+                    FlightRecorder.record("SCROLL_DIRECTION", "Resolved scroll direction for '$targetStep': $resolvedDir (targetScrolledAbove=$targetScrolledAbove)", "Screen: '$activeScreen'")
+                } else {
+                    val screenH = try {
+                        Resources.getSystem().displayMetrics.heightPixels
+                    } catch (_: Exception) { 2400 }
 
-                val lastBounds = lastKnownTargetBounds
-                if (lastBounds != null) {
-                    if (lastBounds.centerY() < screenH * 0.45f) {
-                        targetScrolledAbove = true
-                    } else if (lastBounds.centerY() > screenH * 0.55f) {
-                        targetScrolledAbove = false
+                    val lastBounds = lastKnownTargetBounds
+                    if (lastBounds != null) {
+                        if (lastBounds.centerY() < screenH * 0.45f) {
+                            targetScrolledAbove = true
+                        } else if (lastBounds.centerY() > screenH * 0.55f) {
+                            targetScrolledAbove = false
+                        }
                     }
                 }
 
@@ -1035,8 +1285,10 @@ object NavigationStateMachine {
                     }
                 }
 
-                val wrongTapOccurred = lastWrongTapText != null
-                val isOffTrack = isUnrecognizedScreen || isCurrentScreenUnrecognized || wrongTapOccurred
+                val isLockedOnRoute = currentTrackerState is TrackerState.OnRoute && lastWrongTapText == null
+                val wrongTap = lastWrongTapText?.trim()
+                val wrongTapOccurred = !wrongTap.isNullOrEmpty() && !wrongTap.equals("null", ignoreCase = true) && !wrongTap.equals("nil", ignoreCase = true)
+                val isOffTrack = !isLockedOnRoute && (isUnrecognizedScreen || isCurrentScreenUnrecognized || wrongTapOccurred)
 
                 // [PERMANENT FIX] Do not remove this! Check scrollability on background IO thread
                 // to completely eliminate disk I/O and JSON parsing on Android's Main UI Thread.
@@ -1052,13 +1304,18 @@ object NavigationStateMachine {
                     // tapped a wrong option, or are currently off track.
                     if (isOffTrack) {
                         marker?.hideMarker()
-                        val action = if (wrongTapOccurred) "You tapped '${lastWrongTapText}'" else "Press Back to return"
-                        val contextTxt = if (wrongTapOccurred) "Go back and find '$targetStep'" else "You took a wrong turn"
+                        val currentDiv = currentTrackerState as? TrackerState.Diverged
+                        val originNodeTitle = currentDiv?.originNode?.screenTitle ?: targetAppLabel
+                        val targetName = currentDiv?.originNode?.targetElement ?: targetStep
+                        val steps = currentDiv?.backStepsRequired ?: 1
+                        val (backAction, ctx) = formatRecoveryGuidance(originNodeTitle, targetName, steps)
+                        val action = if (wrongTapOccurred) "You tapped '$wrongTap'" else backAction
+                        val contextTxt = if (wrongTapOccurred) backAction else ctx
 
                         hud.updateHud(
                             stepHeader        = "WRONG PATH",
                             actionInstruction = action,
-                            breadcrumb        = buildBreadcrumb(),
+                            breadcrumb        = null, // [PERMANENT FIX] Hide future breadcrumb in wrong-path state to eliminate visual clutter
                             contextText       = contextTxt,
                             subTag            = "unrecognized-screen-back",
                             onHelpRequested   = triggerReroute,
@@ -1144,14 +1401,16 @@ object NavigationStateMachine {
             )
         }
 
-        fun shutdown() {
+        fun shutdown(isPermanentStop: Boolean = false) {
             scoutJob?.cancel()
             scoutJob = null
             currentTarget = ""
             currentTargetBounds = null
-            lastKnownTargetBounds = null
-            lastKnownTargetStep = ""
-            targetScrolledAbove = false
+            if (isPermanentStop) {
+                lastKnownTargetBounds = null
+                lastKnownTargetStep = ""
+                targetScrolledAbove = false
+            }
             postToMain {
                 marker?.hideMarker()
             }
@@ -1252,6 +1511,10 @@ object NavigationStateMachine {
             false
         }
         if (pmMatches) return true
+
+        // Standard Android Settings satellite packages (Security & Privacy, Permission Controller)
+        val standardSettingsSatellites = setOf("com.google.android.permissioncontroller", "com.android.permissioncontroller")
+        if (target.contains("settings") && standardSettingsSatellites.contains(pkg)) return true
 
         // [PERMANENT FIX] Do not remove this! Layer 4: Connected cluster check via NavGraphDatabase.
         // OEM ROMs (ColorOS, OneUI, MIUI) delegate Settings sub-pages to satellite packages

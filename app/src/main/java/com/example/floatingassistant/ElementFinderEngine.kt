@@ -141,6 +141,200 @@ class ElementFinderEngine(private val context: Context) {
         return false
     }
 
+    data class ScrollInspectionResult(
+        val hasScrollable: Boolean,
+        val canScrollForward: Boolean = false,
+        val canScrollBackward: Boolean = false
+    )
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Layer 0 Scroll Container Action Inspector.
+     * Inspects the live accessibility tree in RAM for scrollable containers and checks available scroll actions.
+     * ACTION_SCROLL_FORWARD indicates the user can scroll down.
+     * ACTION_SCROLL_BACKWARD indicates the user can scroll up.
+     */
+    fun inspectScrollContainer(): ScrollInspectionResult {
+        val service = UiTreeAccessibilityService.instance
+        if (service != null) {
+            val root = AppWindowResolver.getUnderlyingAppRoot(service, "com.example.floatingassistant")
+            if (root != null) {
+                val allocatedNodes = mutableListOf<AccessibilityNodeInfo>()
+                allocatedNodes.add(root)
+                val queue = ArrayDeque<AccessibilityNodeInfo>()
+                queue.add(root)
+                try {
+                    while (queue.isNotEmpty()) {
+                        val node = queue.removeFirst()
+                        val cls = node.className?.toString().orEmpty()
+                        val isScroll = node.isScrollable || 
+                            cls.contains("RecyclerView", ignoreCase = true) || 
+                            cls.contains("ScrollView", ignoreCase = true) || 
+                            cls.contains("ListView", ignoreCase = true) ||
+                            cls.contains("ViewPager", ignoreCase = true) ||
+                            cls.contains("NestedScrollView", ignoreCase = true)
+                        
+                        if (isScroll) {
+                            val acts = node.actions
+                            val actList = try { node.actionList } catch (_: Exception) { null }
+                            val canFwd = (acts and AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) != 0 ||
+                                         actList?.any { it.id == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD } == true
+                            val canBwd = (acts and AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD) != 0 ||
+                                         actList?.any { it.id == AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD } == true
+                            return ScrollInspectionResult(
+                                hasScrollable = true,
+                                canScrollForward = canFwd,
+                                canScrollBackward = canBwd
+                            )
+                        }
+                        for (i in 0 until node.childCount) {
+                            val child = node.getChild(i)
+                            if (child != null) {
+                                allocatedNodes.add(child)
+                                queue.add(child)
+                            }
+                        }
+                    }
+                } finally {
+                    for (n in allocatedNodes) {
+                        try { n.recycle() } catch (_: Exception) {}
+                    }
+                }
+            }
+        }
+
+        // Fallback to hasScrollableContainer disk checks
+        return ScrollInspectionResult(hasScrollable = hasScrollableContainer())
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Live Tree Visible Text Extraction with Binder Recycling.
+     * Extracts user-visible text items from the current screen in the live accessibility tree.
+     * All allocated nodes are strictly recycled with try/finally to prevent native Binder exhaustion.
+     */
+    fun getVisibleTextElementsInLiveTree(): List<String> {
+        val service = UiTreeAccessibilityService.instance ?: return emptyList()
+        val root = AppWindowResolver.getUnderlyingAppRoot(service, "com.example.floatingassistant") ?: return emptyList()
+
+        val allocatedNodes = mutableListOf<AccessibilityNodeInfo>()
+        allocatedNodes.add(root)
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+
+        val results = mutableListOf<String>()
+        try {
+            while (queue.isNotEmpty()) {
+                val node = queue.removeFirst()
+                if (node.isVisibleToUser) {
+                    val text = node.text?.toString()?.trim()
+                    val desc = node.contentDescription?.toString()?.trim()
+                    val label = when {
+                        !text.isNullOrEmpty() && text.length > 1 -> text
+                        !desc.isNullOrEmpty() && desc.length > 1 -> desc
+                        else -> null
+                    }
+                    if (label != null) {
+                        val base = extractBaseLabel(label)
+                        if (base.isNotEmpty() && base.length > 1 && !results.contains(base)) {
+                            results.add(base)
+                        }
+                    }
+                }
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i)
+                    if (child != null) {
+                        allocatedNodes.add(child)
+                        queue.add(child)
+                    }
+                }
+            }
+        } finally {
+            for (node in allocatedNodes) {
+                try { node.recycle() } catch (_: Exception) {}
+            }
+        }
+        return results
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Relative Element Order & Scroll Boundary Intelligence.
+     * Determines whether the user needs to scroll UP or DOWN to reach [targetStep]:
+     * 1. Checks native scroll container boundaries: if the container is at the bottom (cannot scroll forward),
+     *    it forces UP; if at the top (cannot scroll backward), it forces DOWN.
+     * 2. Checks relative element order in the screen layout (from NavGraphDatabase):
+     *    Compares the index of [targetStep] with the average index of currently visible elements.
+     *    If target index < visible average -> target is ABOVE the viewport -> returns UP.
+     *    If target index > visible average -> target is BELOW the viewport -> returns DOWN.
+     */
+    fun determineScrollDirection(
+        targetStep: String,
+        activePkg: String,
+        activeScreen: String
+    ): ElementMarkerOverlay.ScrollDirection? {
+        // 1. Native container boundary check
+        val scrollInfo = inspectScrollContainer()
+        if (scrollInfo.hasScrollable) {
+            if (!scrollInfo.canScrollForward && scrollInfo.canScrollBackward) {
+                Log.i(TAG, "determineScrollDirection: container reached bottom (cannot scroll forward) -> SCROLL UP")
+                return ElementMarkerOverlay.ScrollDirection.UP
+            }
+            if (!scrollInfo.canScrollBackward && scrollInfo.canScrollForward) {
+                Log.i(TAG, "determineScrollDirection: container reached top (cannot scroll backward) -> SCROLL DOWN")
+                return ElementMarkerOverlay.ScrollDirection.DOWN
+            }
+        }
+
+        // 2. Relative element order comparison via NavGraphDatabase
+        val canonicalScreen = ScreenTitleResolver.canonicalizeTitle(activeScreen, activePkg)
+        val db = NavGraphDatabase.getInstance(context)
+        val screenRecord = db.getScreenById("$activePkg::$canonicalScreen")
+            ?: db.getScreenById("$activePkg::$activeScreen")
+
+        val elementsJson = screenRecord?.elementsJson
+        if (!elementsJson.isNullOrEmpty()) {
+            try {
+                val jsonArray = JSONArray(elementsJson)
+                var targetIndex = -1
+                for (i in 0 until jsonArray.length()) {
+                    val el = jsonArray.optJSONObject(i) ?: continue
+                    val name = el.optString("name", "")
+                    if (fuzzyElementMatch(name, targetStep) || fuzzyElementMatch(targetStep, name)) {
+                        targetIndex = i
+                        break
+                    }
+                }
+
+                if (targetIndex != -1) {
+                    val visibleElements = getVisibleTextElementsInLiveTree()
+                    val visibleIndices = mutableListOf<Int>()
+                    for (vis in visibleElements) {
+                        for (i in 0 until jsonArray.length()) {
+                            val el = jsonArray.optJSONObject(i) ?: continue
+                            val name = el.optString("name", "")
+                            if (fuzzyElementMatch(name, vis) || fuzzyElementMatch(vis, name)) {
+                                visibleIndices.add(i)
+                                break
+                            }
+                        }
+                    }
+
+                    if (visibleIndices.isNotEmpty()) {
+                        val avgVisibleIndex = visibleIndices.average()
+                        Log.i(TAG, "determineScrollDirection: target '$targetStep' idx=$targetIndex, visible avg=${avgVisibleIndex} (visible count=${visibleIndices.size})")
+                        return if (targetIndex < avgVisibleIndex) {
+                            ElementMarkerOverlay.ScrollDirection.UP
+                        } else {
+                            ElementMarkerOverlay.ScrollDirection.DOWN
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "determineScrollDirection: error checking element order: ${e.message}")
+            }
+        }
+
+        return null
+    }
+
     /**
      * Searches the live accessibility tree for an element matching [target].
      * Returns the element's screen bounds if found, null otherwise.
@@ -308,7 +502,15 @@ class ElementFinderEngine(private val context: Context) {
         if (cleanEl == cleanTarget) return true
 
         // 2. Prefix match (e.g. "screenrefreshratehigh".startsWith("screenrefreshrate") or "scheduledoff".startsWith("scheduled"))
-        if (cleanEl.startsWith(cleanTarget) || cleanTarget.startsWith(cleanEl)) return true
+        // [PERMANENT FIX] Do not remove cleanEl.length >= 4 check!
+        // Allow cleanTarget.startsWith(cleanEl) only if cleanEl is at least 4 characters (e.g. "display", "screen", "battery")
+        // or a recognized tech acronym ("sim", "vpn", "sos", "nfc"), preventing 1-letter alphabet index items like "D" or "S"
+        // in app drawers from matching targets like "Display & brightness".
+        val allowedShortTechAcronyms = setOf("sim", "vpn", "sos", "nfc")
+        if (cleanEl.startsWith(cleanTarget) ||
+            ((cleanEl.length >= 4 || allowedShortTechAcronyms.contains(cleanEl)) && cleanTarget.startsWith(cleanEl))) {
+            return true
+        }
 
         // 3. Substring containment with length safety guard
         if (cleanEl.contains(cleanTarget)) return true

@@ -96,6 +96,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
         // Initialise Phase 3 state machine (opens SQLite DB)
         GraphStateMachine.init(this, navGraphFile)
 
+        // [PERMANENT FIX] Initialize local FlightRecorder (15 MB black box log in filesDir)
+        FlightRecorder.init(this)
+
         // [PERMANENT FIX] Stream continuous heartbeat to Live Dashboard
         DebugTelemetryClient.startHeartbeat()
 
@@ -120,40 +123,27 @@ class UiTreeAccessibilityService : AccessibilityService() {
                 if (captureEnabled && NavigationStateMachine.isNavigating) {
                     var activePkg: String? = null
                     
-                    val root = rootInActiveWindow
+                    // [PERMANENT FIX] Do not use raw rootInActiveWindow which returns GuidanceApp overlay.
+                    // Use AppWindowResolver to find the true underlying application window.
+                    val root = AppWindowResolver.getUnderlyingAppRoot(this@UiTreeAccessibilityService, packageName)
                     if (root != null) {
                         activePkg = root.packageName?.toString()
                         root.recycle()
-                    } else {
-                        // Fallback: check the windows list directly
-                        try {
-                            val wins = windows
-                            if (wins != null) {
-                                for (w in wins) {
-                                    if (w.isActive || w.isFocused) {
-                                        val wRoot = w.root
-                                        if (wRoot != null) {
-                                            activePkg = wRoot.packageName?.toString()
-                                            wRoot.recycle()
-                                            break
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            // Ignore security exceptions
-                        }
                     }
 
-                    // [PERMANENT FIX] Do not remove this! Detect silent app switch to any TYPE_APPLICATION activity (including MainActivity)
+                    // [PERMANENT FIX] Do not remove this! Detect silent app switch to any TYPE_APPLICATION activity (including MainActivity & Launchers)
                     if (activePkg != null &&
                         !activePkg.startsWith("com.android.systemui") &&
                         activePkg != NavigationStateMachine.lastKnownActivePackage) {
 
                         Log.w(TAG, "Poller detected silent app switch to: $activePkg")
                         NavigationStateMachine.lastKnownActivePackage = activePkg
-                        // Run on main thread to match onScreenChanged thread requirements if needed
-                        NavigationStateMachine.onScreenChanged(activePkg, activePkg.substringAfterLast('.'), "")
+                        val launcherPkg = NavigationStateMachine.getDefaultLauncherPackage()
+                        val isLauncher = (launcherPkg != null && (activePkg.startsWith(launcherPkg) || activePkg == launcherPkg)) ||
+                                         activePkg.contains("launcher", ignoreCase = true) ||
+                                         activePkg == "com.android.launcher"
+                        val screenTitle = if (isLauncher) "Home" else activePkg.substringAfterLast('.')
+                        NavigationStateMachine.onScreenChanged(activePkg, screenTitle, "")
                     }
                 }
             }
@@ -206,6 +196,7 @@ class UiTreeAccessibilityService : AccessibilityService() {
                     label = ""
                 }
                 if (label.isNotEmpty()) {
+                    FlightRecorder.record("VIEW_CLICKED", "User clicked view with label '$label'", "pkg='$pkg'")
                     GraphStateMachine.setLastClickedLabel(pkg, label)
 
                     // Notify the navigation engine so it can advance when the
@@ -334,7 +325,11 @@ class UiTreeAccessibilityService : AccessibilityService() {
             // Even if we drop semantic extraction (e.g. for launchers or SystemUI),
             // the state machine MUST know the user switched apps so it doesn't get stuck.
             if (NavigationStateMachine.isNavigating) {
-                NavigationStateMachine.onScreenChanged(activePackage, activePackage.substringAfterLast('.'), "")
+                val isLauncher = (launcherPkg != null && (activePackage.startsWith(launcherPkg) || activePackage == launcherPkg)) ||
+                                 activePackage.contains("launcher", ignoreCase = true) ||
+                                 activePackage == "com.android.launcher"
+                val screenTitle = if (isLauncher) "Home" else activePackage.substringAfterLast('.')
+                NavigationStateMachine.onScreenChanged(activePackage, screenTitle, "")
             }
             // [PERMANENT FIX] Do not remove this! Recycle rootNode when navigation filter fails to prevent native Binder leak
             try { rootNode.recycle() } catch (_: Exception) {}
@@ -386,10 +381,27 @@ class UiTreeAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Guard: active window may have changed during debounce
+        // [PERMANENT FIX] Do not remove this! Handle cross-package transitions occurring during debounce.
+        // When launching sub-activities/APEX modules (e.g. Settings -> com.google.android.permissioncontroller),
+        // TYPE_WINDOW_STATE_CHANGED may be eaten by OEMs. Instead of silently dropping the event, dispatch
+        // onScreenChanged immediately so the state machine updates out of stale/frozen guidance.
         val actualPackage = rootNode.packageName?.toString()
-        if (actualPackage == null || actualPackage != expectedPackage) {
-            Log.v(TAG, "[$eventType] Debounce skip: expected=$expectedPackage actual=$actualPackage")
+        if (actualPackage == null) {
+            rootNode.recycle()
+            return
+        }
+        if (actualPackage != expectedPackage) {
+            Log.i(TAG, "[$eventType] Cross-package transition during debounce: expected=$expectedPackage actual=$actualPackage")
+            if (NavigationStateMachine.isNavigating && !actualPackage.startsWith("com.android.systemui") && actualPackage != this.packageName) {
+                NavigationStateMachine.lastKnownActivePackage = actualPackage
+                val launcherPkg = NavigationStateMachine.getDefaultLauncherPackage()
+                val isLauncher = (launcherPkg != null && (actualPackage.startsWith(launcherPkg) || actualPackage == launcherPkg)) ||
+                                 actualPackage.contains("launcher", ignoreCase = true) ||
+                                 actualPackage == "com.android.launcher"
+                val appLabel = MainFilter.resolveAppLabel(applicationContext, actualPackage)
+                val screenTitle = if (isLauncher) "Home" else ScreenTitleResolver.resolveTitle(rootNode, appLabel, actualPackage)
+                NavigationStateMachine.onScreenChanged(actualPackage, screenTitle, appLabel)
+            }
             rootNode.recycle()
             return
         }

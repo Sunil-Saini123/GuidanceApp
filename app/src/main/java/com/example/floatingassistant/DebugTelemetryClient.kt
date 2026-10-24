@@ -73,6 +73,21 @@ object DebugTelemetryClient {
     ) {
         if (!isEnabled) return
 
+        // [PERMANENT FIX] Do not remove this! Mirror all telemetry events (except heartbeat spam) into local FlightRecorder
+        if (type != "HEARTBEAT") {
+            val details = StringBuilder()
+            if (screenTitle != null) details.append("screen='$screenTitle' ")
+            if (currentStep != null) details.append("step='$currentStep' ")
+            if (stepIndex != null && totalSteps != null) details.append("[$stepIndex/$totalSteps] ")
+            if (packageName != null) details.append("pkg='$packageName' ")
+            if (targetBounds != null) details.append("bounds=[${targetBounds.left},${targetBounds.top},${targetBounds.right},${targetBounds.bottom}]")
+            FlightRecorder.record(
+                tag = "$type/$tag",
+                message = "$title: $description",
+                details = details.toString().trim().ifEmpty { null }
+            )
+        }
+
         scope.launch {
             try {
                 val json = JSONObject()
