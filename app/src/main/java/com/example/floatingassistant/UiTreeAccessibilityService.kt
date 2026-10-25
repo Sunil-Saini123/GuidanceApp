@@ -102,6 +102,9 @@ class UiTreeAccessibilityService : AccessibilityService() {
         // [PERMANENT FIX] Stream continuous heartbeat to Live Dashboard
         DebugTelemetryClient.startHeartbeat()
 
+        // [PERMANENT FIX] Rebind Floating Overlay bubble to TYPE_ACCESSIBILITY_OVERLAY so it stays visible on Settings sub-pages
+        FloatingOverlayService.instance?.rebindBubbleToAccessibilityOverlay()
+
         Log.i(TAG, "Service connected [Phase 1 + 2 + 3]")
         Log.i(TAG, "Pull: adb pull /sdcard/Android/data/$packageName/files/")
 

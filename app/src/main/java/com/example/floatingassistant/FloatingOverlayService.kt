@@ -80,6 +80,9 @@ class FloatingOverlayService : Service() {
         private const val CHANNEL_ID = "floating_assistant_overlay"
         private const val NOTIFICATION_ID = 1001
 
+        var instance: FloatingOverlayService? = null
+            private set
+
         /** Accumulated movement (px) below which ACTION_UP is a tap, not a drag. */
         private const val TAP_SLOP_PX = 12
 
@@ -120,6 +123,52 @@ class FloatingOverlayService : Service() {
     private lateinit var bubbleView: View
     private lateinit var bubbleParams: WindowManager.LayoutParams
 
+    // [PERMANENT FIX] Do not remove this! Priority Accessibility Window Management for Floating Bubble
+    // When UiTreeAccessibilityService is active, add bubble using TYPE_ACCESSIBILITY_OVERLAY
+    // via AccessibilityService WindowManager so ColorOS/Realme never hides the bubble on Settings sub-pages!
+    private var currentBubbleWindowManager: WindowManager? = null
+
+    private fun getBubbleWindowManager(): WindowManager {
+        val a11y = UiTreeAccessibilityService.instance
+        return if (a11y != null) {
+            a11y.getSystemService(WINDOW_SERVICE) as WindowManager
+        } else {
+            windowManager
+        }
+    }
+
+    private fun getBubbleWindowType(): Int {
+        val a11y = UiTreeAccessibilityService.instance
+        return if (a11y != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+    }
+
+    // [PERMANENT FIX] Do not remove this! Rebind Floating Bubble to TYPE_ACCESSIBILITY_OVERLAY when accessibility service connects
+    fun rebindBubbleToAccessibilityOverlay() {
+        if (!::bubbleView.isInitialized || !::bubbleParams.isInitialized) return
+        val targetType = getBubbleWindowType()
+        if (bubbleParams.type == targetType) return
+
+        try {
+            val oldWm = currentBubbleWindowManager ?: windowManager
+            runCatching { oldWm.removeView(bubbleView) }
+
+            val newWm = getBubbleWindowManager()
+            bubbleParams.type = targetType
+            newWm.addView(bubbleView, bubbleParams)
+            currentBubbleWindowManager = newWm
+            Log.i(TAG, "Successfully rebound floating bubble to TYPE_ACCESSIBILITY_OVERLAY!")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to rebind bubble to accessibility overlay: ${e.message}")
+        }
+    }
+
     // ── Control panel (shown on tap, dismissed on submit / drag / outside tap) ─
     private var panelView: View? = null
     private var panelInputRef: EditText? = null     // held for keyboard hide
@@ -144,6 +193,7 @@ class FloatingOverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
+        instance = this
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
@@ -191,7 +241,7 @@ class FloatingOverlayService : Service() {
         bubbleParams.x = bubbleParams.x.coerceIn(0, (screenWidth - sizePx).coerceAtLeast(0))
         bubbleParams.y = bubbleParams.y.coerceIn(0, (screenHeight - sizePx).coerceAtLeast(0))
 
-        runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
+        runCatching { (currentBubbleWindowManager ?: windowManager).updateViewLayout(bubbleView, bubbleParams) }
 
         // If panel is currently visible, reposition or safely clamp
         panelView?.let { panel ->
@@ -206,9 +256,10 @@ class FloatingOverlayService : Service() {
     }
 
     override fun onDestroy() {
+        instance = null
         removePanel()
         if (::bubbleView.isInitialized) {
-            runCatching { windowManager.removeView(bubbleView) }
+            runCatching { (currentBubbleWindowManager ?: windowManager).removeView(bubbleView) }
         }
         // ── Track 4 / Stage 1: Tear down the guidance pill HUD ───────────────
         if (::navigationHud.isInitialized) {
@@ -261,7 +312,7 @@ class FloatingOverlayService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
+        runCatching { (currentBubbleWindowManager ?: windowManager).updateViewLayout(bubbleView, bubbleParams) }
         typingModeActive = false
     }
 
@@ -275,7 +326,7 @@ class FloatingOverlayService : Service() {
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
+        runCatching { (currentBubbleWindowManager ?: windowManager).updateViewLayout(bubbleView, bubbleParams) }
         typingModeActive = true
     }
 
@@ -299,10 +350,13 @@ class FloatingOverlayService : Service() {
             )
         }
 
+        val wm = getBubbleWindowManager()
+        val type = getBubbleWindowType()
+
         // Start in idle mode — fully pass-through to system UI
         bubbleParams = WindowManager.LayoutParams(
             sizePx, sizePx,
-            overlayWindowType(),
+            type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -318,7 +372,16 @@ class FloatingOverlayService : Service() {
         }
 
         attachDragAndTapListener()
-        windowManager.addView(bubbleView, bubbleParams)
+        try {
+            wm.addView(bubbleView, bubbleParams)
+            currentBubbleWindowManager = wm
+            Log.i(TAG, "Floating bubble attached with window type: $type (isA11y=${type == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY})")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to attach bubble via primary WM, falling back to Service WM: ${e.message}")
+            bubbleParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            windowManager.addView(bubbleView, bubbleParams)
+            currentBubbleWindowManager = windowManager
+        }
     }
 
     /**
@@ -373,7 +436,7 @@ class FloatingOverlayService : Service() {
 
                     bubbleParams.x = initialX + dx.toInt()
                     bubbleParams.y = initialY + dy.toInt()
-                    runCatching { windowManager.updateViewLayout(bubbleView, bubbleParams) }
+                    runCatching { (currentBubbleWindowManager ?: windowManager).updateViewLayout(bubbleView, bubbleParams) }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
@@ -1229,7 +1292,7 @@ class FloatingOverlayService : Service() {
                     // Remove the bubble view before stopping the service so
                     // there's no orphaned window after the process exits.
                     if (::bubbleView.isInitialized) {
-                        runCatching { windowManager.removeView(bubbleView) }
+                        runCatching { (currentBubbleWindowManager ?: windowManager).removeView(bubbleView) }
                     }
                     removePanel()
                     FloatingOverlayService.stop(applicationContext)

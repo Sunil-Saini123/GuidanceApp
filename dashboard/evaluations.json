@@ -279,6 +279,62 @@
       "status": "wrong",
       "comment": "canyou change it name find the correct name and aall ",
       "updatedAt": 1792963078172
+    },
+    "com.android.settings::Display & brightness::918,Brightness": {
+      "id": "com.android.settings::Display & brightness::918,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "918,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964377468
+    },
+    "com.android.settings::Display & brightness::925,Brightness": {
+      "id": "com.android.settings::Display & brightness::925,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "925,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964383186
+    },
+    "com.android.settings::Display & brightness::936,Brightness": {
+      "id": "com.android.settings::Display & brightness::936,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "936,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964386664
+    },
+    "com.android.settings::Display & brightness::937,Brightness": {
+      "id": "com.android.settings::Display & brightness::937,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "937,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964389446
+    },
+    "com.android.settings::Display & brightness::939,Brightness": {
+      "id": "com.android.settings::Display & brightness::939,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "939,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964392280
+    },
+    "com.android.settings::Display & brightness::942,Brightness": {
+      "id": "com.android.settings::Display & brightness::942,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "942,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964395208
+    },
+    "com.android.settings::Display & brightness::944,Brightness": {
+      "id": "com.android.settings::Display & brightness::944,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "944,Brightness",
+      "status": "wrong",
+      "comment": "why they thsi many are they dublicates ",
+      "updatedAt": 1792964398006
     }
   },
   "screens": {}
