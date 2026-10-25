@@ -250,7 +250,7 @@ class FloatingOverlayService : Service() {
                 val panelW = dp(280)
                 panelParams.x = bubbleParams.x.coerceIn(0, (screenWidth - panelW).coerceAtLeast(0))
                 panelParams.y = (bubbleParams.y + dp(64)).coerceIn(0, (screenHeight - dp(200)).coerceAtLeast(0))
-                runCatching { windowManager.updateViewLayout(panel, panelParams) }
+                runCatching { (currentBubbleWindowManager ?: windowManager).updateViewLayout(panel, panelParams) }
             }
         }
     }
@@ -643,13 +643,23 @@ class FloatingOverlayService : Service() {
             addView(statusText)
             addView(devToolsLabel)
             addView(devRow)
+            setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                    hidePanelAndRestoreIdle()
+                    true
+                } else false
+            }
         }
 
-        // Panel uses its own params; NOT_FOCUSABLE not set here so IME works
+        // [PERMANENT FIX] Do not remove this! Control Panel Accessibility Window Management for Settings Sub-Pages
+        // Uses getBubbleWindowType() and getBubbleWindowManager() so ColorOS / Realme does not hide the panel
+        // on Settings sub-pages (e.g. Display & brightness).
+        val wm = currentBubbleWindowManager ?: getBubbleWindowManager()
+        val winType = getBubbleWindowType()
         val panelParams = WindowManager.LayoutParams(
             dp(280),
             WindowManager.LayoutParams.WRAP_CONTENT,
-            overlayWindowType(),
+            winType,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -665,14 +675,25 @@ class FloatingOverlayService : Service() {
         }
 
         panelView = panel
-        windowManager.addView(panel, panelParams)
+        try {
+            wm.addView(panel, panelParams)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to add panel via primary WM: ${e.message}, falling back to Service WM")
+            panelParams.type = overlayWindowType()
+            windowManager.addView(panel, panelParams)
+        }
 
         // Switch bubble to typing flags so IME can attach to the EditText
         applyTypingFlags()
     }
 
     private fun removePanel() {
-        panelView?.let { runCatching { windowManager.removeView(it) } }
+        panelView?.let { panel ->
+            runCatching {
+                val wm = currentBubbleWindowManager ?: windowManager
+                wm.removeView(panel)
+            }
+        }
         panelView = null
         panelInputRef = null
     }
