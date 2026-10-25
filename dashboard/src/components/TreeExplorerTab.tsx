@@ -15,13 +15,17 @@ import {
   Check,
   Search,
   Code,
-  List,
   X,
   FolderOpen,
   GitFork,
   Smartphone,
   ExternalLink,
-  Layers
+  Download,
+  AlertTriangle,
+  Tag,
+  FileText,
+  Trash2,
+  Filter
 } from 'lucide-react';
 
 interface TreeExplorerTabProps {
@@ -45,52 +49,67 @@ interface ScreenGroup {
   elements: TreeElementItem[];
 }
 
-// ── Layer Styling Map ─────────────────────────────────────────────────────────
+export type ScreenEvaluationStatus = 'correct' | 'wrong';
+
+export interface ScreenEvaluationRecord {
+  id: string; // `${packageName}::${screenTitle}`
+  screenTitle: string;
+  packageName: string;
+  status: ScreenEvaluationStatus;
+  notes?: string;
+  tags?: string[];
+  elementsCount: number;
+  sampleElements?: string[];
+  timestamp?: number;
+  updatedAt: number;
+}
+
+// ── Nexus Layer Styling Map ───────────────────────────────────────────────────
 
 const getLayerStyle = (layer: number) => {
   switch (layer) {
     case 0:
       return {
-        bg: 'bg-[#1e2433]',
-        hover: 'hover:bg-[#252c3e]',
-        borderLeft: 'border-l-[4px] border-emerald-400',
-        badgeBg: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+        bg: 'bg-white',
+        hover: 'hover:bg-slate-50/80',
+        borderLeft: 'border-l-[4px] border-indigo-600',
+        badgeBg: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
         paddingLeft: 'pl-4',
         layerName: 'Screen'
       };
     case 1:
       return {
-        bg: 'bg-[#151922]',
-        hover: 'hover:bg-[#1c222e]',
-        borderLeft: 'border-l-[3px] border-emerald-500/60',
-        badgeBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+        bg: 'bg-slate-50/70',
+        hover: 'hover:bg-indigo-50/40',
+        borderLeft: 'border-l-[3px] border-violet-500',
+        badgeBg: 'bg-violet-50 text-violet-700 border border-violet-200',
         paddingLeft: 'pl-6',
         layerName: 'L1'
       };
     case 2:
       return {
-        bg: 'bg-[#10131b]',
-        hover: 'hover:bg-[#161b25]',
-        borderLeft: 'border-l-[3px] border-sky-500/50',
-        badgeBg: 'bg-sky-500/10 text-sky-400 border border-sky-500/20',
+        bg: 'bg-slate-50/40',
+        hover: 'hover:bg-sky-50/40',
+        borderLeft: 'border-l-[3px] border-sky-500',
+        badgeBg: 'bg-sky-50 text-sky-700 border border-sky-200',
         paddingLeft: 'pl-11',
         layerName: 'L2'
       };
     case 3:
       return {
-        bg: 'bg-[#0b0d13]',
-        hover: 'hover:bg-[#11141c]',
-        borderLeft: 'border-l-[3px] border-indigo-500/40',
-        badgeBg: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+        bg: 'bg-slate-50/20',
+        hover: 'hover:bg-purple-50/40',
+        borderLeft: 'border-l-[3px] border-purple-500',
+        badgeBg: 'bg-purple-50 text-purple-700 border border-purple-200',
         paddingLeft: 'pl-16',
         layerName: 'L3'
       };
     default:
       return {
-        bg: 'bg-[#07080c]',
-        hover: 'hover:bg-[#0c0e14]',
-        borderLeft: 'border-l-[3px] border-purple-500/40',
-        badgeBg: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+        bg: 'bg-white',
+        hover: 'hover:bg-slate-50',
+        borderLeft: 'border-l-[3px] border-slate-400',
+        badgeBg: 'bg-slate-100 text-slate-700 border border-slate-200',
         paddingLeft: 'pl-20',
         layerName: `L${layer}`
       };
@@ -105,14 +124,36 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     return navGraph && navGraph.apps && navGraph.apps.length > 0 ? 'nav_graph' : 'nav_graph';
   });
 
-  const [copied, setCopied] = useState(false);
   const [copiedItemIdx, setCopiedItemIdx] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ── Screen Evaluation & Quality Labeling State ─────────────────────────────
+  const [evaluations, setEvaluations] = useState<Record<string, ScreenEvaluationRecord>>(() => {
+    try {
+      const saved = localStorage.getItem('guidance_screen_evaluations');
+      return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+
+  // Save evaluations persistently in browser storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('guidance_screen_evaluations', JSON.stringify(evaluations));
+    } catch (_) {}
+  }, [evaluations]);
+
+  // Filter in Live Screen Mode: 'all' | 'correct' | 'wrong' | 'unreviewed'
+  const [evalFilter, setEvalFilter] = useState<'all' | 'correct' | 'wrong' | 'unreviewed'>('all');
+
+  // Study & Analysis Modal state for wrong screens
+  const [isStudyModalOpen, setIsStudyModalOpen] = useState(false);
+  const [selectedWrongScreenId, setSelectedWrongScreenId] = useState<string | null>(null);
 
   // Selected App in Nav Graph Mode
   const [selectedAppPkg, setSelectedAppPkg] = useState<string>(() => {
     if (navGraph && navGraph.apps && navGraph.apps.length > 0) {
-      // Prioritize Settings or first app with multiple screens
       const settings = navGraph.apps.find((a) => a.package_name.includes('settings'));
       if (settings) return settings.package_name;
       const multi = navGraph.apps.find((a) => a.screens.length > 1);
@@ -134,7 +175,6 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   }, [navGraph]);
 
   // Track expanded transition nodes in Nav Graph
-  // Key: transition_key, Value: boolean
   const [expandedTransitions, setExpandedTransitions] = useState<Record<string, boolean>>({});
 
   // Active info modal for element details
@@ -197,6 +237,136 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     setTimeout(() => setCopiedItemIdx(null), 1500);
   };
 
+  // ── Evaluation Helpers ────────────────────────────────────────────────────
+
+  const toggleEvaluation = (
+    screen: { id: string; screenTitle: string; packageName: string; elements: TreeElementItem[]; timestamp?: number },
+    targetStatus: ScreenEvaluationStatus
+  ) => {
+    setEvaluations((prev) => {
+      const existing = prev[screen.id];
+      if (existing && existing.status === targetStatus) {
+        // Toggle off if already in this state
+        const updated = { ...prev };
+        delete updated[screen.id];
+        return updated;
+      }
+      return {
+        ...prev,
+        [screen.id]: {
+          id: screen.id,
+          screenTitle: screen.screenTitle,
+          packageName: screen.packageName,
+          status: targetStatus,
+          notes: existing?.notes || '',
+          tags: existing?.tags || [],
+          elementsCount: screen.elements.length,
+          sampleElements: screen.elements.slice(0, 10).map((e) => e.name),
+          timestamp: screen.timestamp || Date.now(),
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const toggleNavGraphEvaluation = (screen: NavGraphScreen, targetStatus: ScreenEvaluationStatus) => {
+    setEvaluations((prev) => {
+      const existing = prev[screen.id];
+      if (existing && existing.status === targetStatus) {
+        const updated = { ...prev };
+        delete updated[screen.id];
+        return updated;
+      }
+      const pkg = screen.id.includes('::') ? screen.id.split('::')[0] : (activeApp?.package_name || 'unknown');
+      return {
+        ...prev,
+        [screen.id]: {
+          id: screen.id,
+          screenTitle: screen.title,
+          packageName: pkg,
+          status: targetStatus,
+          notes: existing?.notes || '',
+          tags: existing?.tags || [],
+          elementsCount: screen.elements.length,
+          sampleElements: screen.elements.slice(0, 10),
+          timestamp: screen.last_seen || Date.now(),
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const updateWrongScreenNotes = (id: string, notes: string) => {
+    setEvaluations((prev) => {
+      const rec = prev[id];
+      if (!rec) return prev;
+      return {
+        ...prev,
+        [id]: {
+          ...rec,
+          notes,
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const toggleWrongScreenTag = (id: string, tag: string) => {
+    setEvaluations((prev) => {
+      const rec = prev[id];
+      if (!rec) return prev;
+      const currentTags = rec.tags || [];
+      const newTags = currentTags.includes(tag)
+        ? currentTags.filter((t) => t !== tag)
+        : [...currentTags, tag];
+      return {
+        ...prev,
+        [id]: {
+          ...rec,
+          tags: newTags,
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const exportEvaluationData = (type: 'correct' | 'wrong' | 'all') => {
+    const list = Object.values(evaluations).filter((rec) => {
+      if (type === 'all') return true;
+      return rec.status === type;
+    });
+
+    const exportPayload = {
+      title: `GuidanceApp Screen Evaluations (${type.toUpperCase()})`,
+      exportedAt: new Date().toISOString(),
+      category: type,
+      totalCount: list.length,
+      screens: list.map((rec) => {
+        const liveMatch = liveScreens.find((s) => s.id === rec.id);
+        return {
+          ...rec,
+          fullElements: liveMatch ? liveMatch.elements : undefined
+        };
+      })
+    };
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `guidance_${type}_screens_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearAllEvaluations = () => {
+    if (window.confirm('Are you sure you want to clear all marked Correct and Wrong screen evaluations?')) {
+      setEvaluations({});
+    }
+  };
+
   // Nav Graph calculations
   const activeApp: NavGraphApp | undefined = useMemo(() => {
     if (!navGraph || !navGraph.apps) return undefined;
@@ -224,7 +394,6 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       return { primaryApps: [], satelliteApps: [], clusterCountMap: new Map<string, number>() };
     }
 
-    // Map all target screen IDs that are pointed to by cross-package transitions
     const crossPackageTargetScreenIds = new Set<string>();
     const clusterMap = new Map<string, number>();
 
@@ -254,7 +423,6 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       }
     }
 
-    // Calculate connected cluster count for primary apps
     for (const p of primaries) {
       const clusterScreenIds = new Set<string>(p.screens.map((s) => s.id));
       let expanded = true;
@@ -294,7 +462,6 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   // Find Root / Entry screen for active app
   const rootScreen = useMemo(() => {
     if (!activeApp || activeApp.screens.length === 0) return undefined;
-    // 1. Screen matching app name (e.g. "Settings" or "Chats")
     const match = activeApp.screens.find(
       (s) =>
         s.title.toLowerCase() === activeApp.display_name.toLowerCase() ||
@@ -302,12 +469,53 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         s.title.toLowerCase() === 'chats'
     );
     if (match) return match;
-    // 2. Highest visit count screen
     const sorted = [...activeApp.screens].sort(
       (a, b) => (b.visit_count || 0) - (a.visit_count || 0)
     );
     return sorted[0];
   }, [activeApp]);
+
+  // Filtered live screens based on evaluation status & search query
+  const displayedLiveScreens = useMemo(() => {
+    return liveScreens.filter((screen) => {
+      // Evaluation filter
+      if (evalFilter === 'correct') {
+        if (evaluations[screen.id]?.status !== 'correct') return false;
+      } else if (evalFilter === 'wrong') {
+        if (evaluations[screen.id]?.status !== 'wrong') return false;
+      } else if (evalFilter === 'unreviewed') {
+        if (evaluations[screen.id]) return false;
+      }
+
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = screen.screenTitle.toLowerCase().includes(q);
+        const matchesPkg = screen.packageName.toLowerCase().includes(q);
+        const matchesElement = screen.elements.some((e) => e.name.toLowerCase().includes(q));
+        const matchesNotes = evaluations[screen.id]?.notes?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesPkg && !matchesElement && !matchesNotes) return false;
+      }
+
+      return true;
+    });
+  }, [liveScreens, evalFilter, searchQuery, evaluations]);
+
+  const correctCount = useMemo(() => {
+    return liveScreens.filter((s) => evaluations[s.id]?.status === 'correct').length;
+  }, [liveScreens, evaluations]);
+
+  const wrongCount = useMemo(() => {
+    return liveScreens.filter((s) => evaluations[s.id]?.status === 'wrong').length;
+  }, [liveScreens, evaluations]);
+
+  const unreviewedCount = useMemo(() => {
+    return liveScreens.length - correctCount - wrongCount;
+  }, [liveScreens.length, correctCount, wrongCount]);
+
+  const wrongScreensList = useMemo(() => {
+    return liveScreens.filter((s) => evaluations[s.id]?.status === 'wrong');
+  }, [liveScreens, evaluations]);
 
   // Recursive NavGraph Screen Renderer (True Multi-Screen Tree!)
   const renderNavGraphScreen = (
@@ -320,8 +528,8 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     nextVisited.add(screen.id);
 
     const style = getLayerStyle(depth);
+    const evalRecord = evaluations[screen.id];
 
-    // Filter elements: drop screen title header, search box, and structural containers (bottom bar, etc.), and deduplicate by base label
     const seenElementBases = new Set<string>();
     const sanitizedElements = screen.elements.filter((el) => {
       const trimmed = el.trim();
@@ -337,165 +545,153 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       return true;
     });
 
-    // Filter elements if search is active
     const q = searchQuery.trim().toLowerCase();
     const visibleElements = q
       ? sanitizedElements.filter((el) => el.toLowerCase().includes(q))
       : sanitizedElements;
 
     return (
-      <div key={screen.id} className="space-y-1">
+      <div key={screen.id} className="space-y-1.5">
         {/* Screen Header */}
         <div
-          className={`flex items-center justify-between px-4 py-2 rounded-lg ${style.bg} ${style.borderLeft} border-b border-dark-800/40 select-none`}
+          className={`flex items-center justify-between px-4 py-2.5 rounded-2xl ${style.bg} ${style.borderLeft} border border-slate-200/80 shadow-xs select-none ${
+            evalRecord?.status === 'correct'
+              ? 'ring-2 ring-emerald-300/40 border-emerald-300'
+              : evalRecord?.status === 'wrong'
+              ? 'ring-2 ring-rose-300/40 border-rose-300'
+              : ''
+          }`}
         >
           <div className="flex items-center space-x-2.5">
-            <FolderOpen className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-semibold text-gray-100">
+            <FolderOpen className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold text-slate-900">
               {screen.title}
             </span>
             <span
-              className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-semibold ${style.badgeBg}`}
+              className={`text-[9px] px-2 py-0.5 rounded-md font-mono font-bold ${style.badgeBg}`}
             >
               Layer {depth}
             </span>
-            <span className="text-[11px] text-gray-400 font-mono">
+            {evalRecord?.status === 'correct' && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
+                <Check className="w-3 h-3 text-emerald-600" />
+                <span>Correct</span>
+              </span>
+            )}
+            {evalRecord?.status === 'wrong' && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1">
+                <X className="w-3 h-3 text-rose-600" />
+                <span>Wrong</span>
+              </span>
+            )}
+            <span className="text-[11px] text-slate-400 font-mono font-medium">
               ({screen.elements.length} elements, {screen.transitions.length} links)
             </span>
           </div>
 
-          <span className="text-[10px] font-mono text-gray-500">
-            Visits: {screen.visit_count || 1}
-          </span>
+          <div className="flex items-center space-x-2.5" onClick={(e) => e.stopPropagation()}>
+            {/* Correct & Wrong buttons for Nav Graph screens */}
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => toggleNavGraphEvaluation(screen, 'correct')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] shadow-xs ${
+                  evalRecord?.status === 'correct'
+                    ? 'bg-emerald-600 text-white border border-emerald-600 shadow-sm ring-2 ring-emerald-200'
+                    : 'bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/90'
+                }`}
+                title="Mark this screen as Correct"
+              >
+                <Check className="w-3 h-3" />
+                <span>Correct</span>
+              </button>
+
+              <button
+                onClick={() => toggleNavGraphEvaluation(screen, 'wrong')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] shadow-xs ${
+                  evalRecord?.status === 'wrong'
+                    ? 'bg-rose-600 text-white border border-rose-600 shadow-sm ring-2 ring-rose-200'
+                    : 'bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200/90'
+                }`}
+                title="Mark this screen as Wrong for study"
+              >
+                <X className="w-3 h-3" />
+                <span>Wrong</span>
+              </button>
+            </div>
+
+            <span className="text-[11px] font-mono text-slate-400 font-medium">
+              Visits: {screen.visit_count || 1}
+            </span>
+          </div>
         </div>
 
         {/* If cycle detected, stop recursion */}
         {isLoop ? (
-          <div className={`${style.paddingLeft} py-1 text-xs text-amber-400/80 font-mono`}>
+          <div className={`${style.paddingLeft} py-1 text-xs text-amber-600 font-mono`}>
             ↳ (Circular reference back to {screen.title})
           </div>
         ) : (
           /* Elements inside this screen */
-          <div className="divide-y divide-dark-800/20 pl-2">
+          <div className="divide-y divide-slate-100 pl-2">
             {visibleElements.length === 0 ? (
-              <div className="py-2 text-xs text-gray-500 pl-4">No matching elements</div>
+              <div className="py-2 text-xs text-slate-400 pl-4">No matching elements</div>
             ) : (
               visibleElements.map((elemName, eIdx) => {
-                // Check if this element triggers a forward transition to another screen!
                 const normElem = normalizeLabel(elemName);
                 const transition = screen.transitions.find((t) => {
                   if (t.type !== 'CLICK') return false;
                   const normAction = normalizeLabel(t.action);
                   const normToTitle = normalizeLabel(t.to_title);
-
-                  if (!normElem || !normAction) return false;
-                  if (normAction === normElem || normToTitle === normElem) return true;
-                  if (normElem.length >= 3 && normAction.includes(normElem)) return true;
-                  if (normAction.length >= 3 && normElem.includes(normAction)) return true;
-                  if (normToTitle && normToTitle.length >= 3 && (normElem.includes(normToTitle) || normToTitle.includes(normElem))) return true;
-                  return false;
+                  return (
+                    normAction === normElem ||
+                    normToTitle === normElem ||
+                    (normElem.length >= 4 && (normAction.includes(normElem) || normToTitle.includes(normElem))) ||
+                    (normAction.length >= 4 && normElem.includes(normAction))
+                  );
                 });
 
-                const hasTargetScreen =
-                  transition && screensById.has(transition.to_id);
-                const targetScreen = hasTargetScreen
-                  ? screensById.get(transition.to_id)
-                  : undefined;
-
-                const transKey = `${screen.id}_to_${elemName}_${eIdx}`;
-                const isExpanded = expandedTransitions[transKey] === true;
+                const targetScreen = transition ? screensById.get(transition.to_id) : undefined;
+                const transitionKey = `${screen.id}->${transition?.to_id || elemName}`;
+                const isTransitionOpen = expandedTransitions[transitionKey] ?? false;
 
                 return (
-                  <div key={`${screen.id}_elem_${eIdx}`} className="py-0.5">
+                  <div key={`${screen.id}_${eIdx}`} className="py-0.5">
                     {/* Element Row */}
                     <div
-                      onClick={() => {
-                        if (hasTargetScreen) {
-                          toggleTransition(transKey);
-                        }
-                      }}
-                      className={`flex items-center justify-between pr-4 py-1.5 ${style.paddingLeft} ${
-                        hasTargetScreen ? 'cursor-pointer hover:bg-sky-500/10' : 'hover:bg-dark-800/40'
-                      } rounded transition-colors select-none`}
+                      className={`flex items-center justify-between px-3.5 py-2 rounded-xl hover:bg-slate-50 transition-colors ${style.paddingLeft}`}
                     >
-                      {/* Left: Indicator, Name, Link Badge */}
-                      <div className="flex items-center space-x-2 min-w-0 mr-3">
-                        {hasTargetScreen ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleTransition(transKey);
-                            }}
-                            className="p-0.5 rounded text-sky-400 hover:text-sky-200 hover:bg-sky-500/10 transition-colors shrink-0"
-                            title={`Click to expand child screen: ${targetScreen?.title}`}
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            ) : (
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        ) : (
-                          <span className="text-gray-600 font-mono text-[11px] select-none shrink-0 w-3.5 text-center">
-                            └─
-                          </span>
-                        )}
-
-                        {/* Name */}
-                        <span
-                          className={`text-xs font-medium truncate ${
-                            hasTargetScreen
-                              ? 'text-sky-300 font-semibold'
-                              : 'text-gray-200'
-                          }`}
-                        >
+                      <div className="flex items-center space-x-2">
+                        <span className="text-slate-300 font-mono text-[11px]">├─</span>
+                        <span className="text-xs text-slate-800 font-semibold">
                           {elemName}
                         </span>
+                      </div>
 
-                        {/* Transition Link Badge */}
-                        {hasTargetScreen && targetScreen && (
-                          <span className="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded text-[10px] font-mono bg-sky-500/10 text-sky-300 border border-sky-500/30">
-                            <ExternalLink className="w-2.5 h-2.5" />
+                      {transition && targetScreen ? (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => toggleTransition(transitionKey)}
+                            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100/80 border border-indigo-200 transition-all active:scale-[0.98]"
+                          >
+                            <ExternalLink className="w-3 h-3 text-indigo-600" />
                             <span>opens {targetScreen.title}</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Right: Badge & Info */}
-                      <div className="flex items-center space-x-2 shrink-0">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                            hasTargetScreen
-                              ? 'text-sky-400 bg-sky-500/10'
-                              : 'text-emerald-400 bg-emerald-500/10'
-                          }`}
-                        >
-                          {hasTargetScreen ? 'Screen Link' : 'Action'}
+                            {isTransitionOpen ? (
+                              <ChevronDown className="w-3 h-3 ml-1" />
+                            ) : (
+                              <ChevronRight className="w-3 h-3 ml-1" />
+                            )}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-mono text-slate-400 font-medium">
+                          leaf action
                         </span>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedElement({
-                              element: {
-                                name: elemName,
-                                screen: screen.title,
-                                leadsTo: targetScreen?.title || null,
-                                actionType: transition?.type || 'STATIC'
-                              },
-                              screenTitle: screen.title
-                            });
-                          }}
-                          className="text-gray-400 hover:text-gray-100 p-1 rounded hover:bg-dark-750 transition-colors"
-                        >
-                          <Info className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Child Screen (Expanded recursively under this link!) */}
-                    {hasTargetScreen && targetScreen && isExpanded && (
-                      <div className="mt-1 mb-2 ml-4 border-l-2 border-sky-500/30 pl-2">
+                    {/* Sub-tree recursion */}
+                    {transition && targetScreen && isTransitionOpen && (
+                      <div className="mt-1 mb-2 ml-4 border-l border-slate-200">
                         {renderNavGraphScreen(targetScreen, depth + 1, nextVisited)}
                       </div>
                     )}
@@ -510,33 +706,33 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-dark-900 px-6 py-4">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-6 py-4">
       {/* Top Header Bar */}
-      <div className="flex flex-wrap items-center justify-between pb-3 border-b border-dark-800 gap-3">
+      <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-slate-200/80 gap-3">
         <div className="flex items-center space-x-3">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-2xs">
             <GitFork className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-gray-100 flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               Navigation Graph & UI Tree Explorer
             </h2>
-            <p className="text-[11px] text-gray-400">
-              True verified parent-child screen transitions directly from{' '}
-              <code className="text-emerald-400 font-mono">nav_graph.db</code>
+            <p className="text-xs text-slate-500 font-medium">
+              Verified parent-child transitions directly from{' '}
+              <code className="text-indigo-600 font-mono font-bold">nav_graph.db</code>
             </p>
           </div>
         </div>
 
         {/* View Mode Toggle: Nav Graph vs Live Capture vs Raw JSON */}
         <div className="flex items-center space-x-2">
-          <div className="flex items-center bg-dark-800 rounded-lg p-0.5 border border-dark-700">
+          <div className="flex items-center bg-slate-100/90 rounded-xl p-1 border border-slate-200/80">
             <button
               onClick={() => setViewMode('nav_graph')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'nav_graph'
-                  ? 'bg-dark-700 text-emerald-300 shadow-sm border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200'
+                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <GitFork className="w-3.5 h-3.5" />
@@ -545,10 +741,10 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
             <button
               onClick={() => setViewMode('live')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'live'
-                  ? 'bg-dark-700 text-gray-100 shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200'
+                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
@@ -557,10 +753,10 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
             <button
               onClick={() => setViewMode('json')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === 'json'
-                  ? 'bg-dark-700 text-gray-100 shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200'
+                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               <Code className="w-3.5 h-3.5" />
@@ -570,12 +766,12 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
           <button
             onClick={() => handleCopy(navGraph || events, 'full_data')}
-            className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-dark-800 hover:bg-dark-750 text-xs font-medium text-gray-300 border border-dark-700 transition-colors"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 border border-slate-200/80 shadow-xs transition-all active:scale-[0.98]"
           >
             {copiedItemIdx === 'full_data' ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
             ) : (
-              <Copy className="w-3.5 h-3.5" />
+              <Copy className="w-3.5 h-3.5 text-slate-500" />
             )}
             <span>{copiedItemIdx === 'full_data' ? 'Copied' : 'Copy JSON'}</span>
           </button>
@@ -587,11 +783,11 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         <div className="flex flex-wrap items-center justify-between gap-3 my-3">
           {/* App Selector Dropdown */}
           <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-400 font-medium">Select App:</span>
+            <span className="text-xs text-slate-500 font-semibold">Select App:</span>
             <select
               value={selectedAppPkg}
               onChange={(e) => setSelectedAppPkg(e.target.value)}
-              className="bg-dark-800 border border-dark-700 text-xs text-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
+              className="bg-white border border-slate-200/80 text-xs text-slate-800 rounded-xl px-3 py-1.5 focus:outline-none focus:border-indigo-500 font-semibold shadow-xs"
             >
               {primaryApps.map((app) => (
                 <option key={app.package_name} value={app.package_name}>
@@ -609,68 +805,187 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
               )}
             </select>
             {activeApp && (
-              <span className="text-[11px] font-mono text-gray-500">
+              <span className="text-[11px] font-mono text-slate-400 font-medium">
                 {activeApp.package_name}
               </span>
             )}
           </div>
 
           {/* Search Filter */}
-          <div className="relative min-w-[200px] max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <div className="relative min-w-[220px] max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search elements in graph..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-dark-800 border border-dark-700 rounded-lg pl-9 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-500"
+              className="w-full bg-white border border-slate-200/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-xs font-medium"
             />
           </div>
         </div>
       )}
 
-      {/* Live Mode Search */}
+      {/* Live Mode Evaluation & Filter Control Bar (Nexus Theme) */}
       {viewMode === 'live' && liveScreens.length > 0 && (
-        <div className="my-3 max-w-xs relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Filter live elements..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-dark-800 border border-dark-700 rounded-lg pl-9 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-500"
-          />
+        <div className="my-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Filter Pills */}
+            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+              <span className="text-xs text-slate-500 font-semibold mr-1 flex items-center space-x-1">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <span>Filter:</span>
+              </span>
+
+              <button
+                onClick={() => setEvalFilter('all')}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'all'
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/60'
+                }`}
+              >
+                All ({liveScreens.length})
+              </button>
+
+              <button
+                onClick={() => setEvalFilter('correct')}
+                className={`flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'correct'
+                    ? 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
+                    : 'bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-200'
+                }`}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Correct ({correctCount})</span>
+              </button>
+
+              <button
+                onClick={() => setEvalFilter('wrong')}
+                className={`flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'wrong'
+                    ? 'bg-rose-500 text-white border border-rose-600 shadow-sm'
+                    : 'bg-rose-50 hover:bg-rose-100/80 text-rose-700 border border-rose-200'
+                }`}
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Wrong ({wrongCount})</span>
+              </button>
+
+              <button
+                onClick={() => setEvalFilter('unreviewed')}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'unreviewed'
+                    ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/60'
+                }`}
+              >
+                Unreviewed ({unreviewedCount})
+              </button>
+            </div>
+
+            {/* Action Buttons: Export & Study */}
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+              <button
+                onClick={() => exportEvaluationData('correct')}
+                disabled={correctCount === 0}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] shadow-xs ${
+                  correctCount > 0
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                }`}
+                title="Download JSON of all verified correct screens"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Save Correct ({correctCount})</span>
+              </button>
+
+              <button
+                onClick={() => exportEvaluationData('wrong')}
+                disabled={wrongCount === 0}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] shadow-xs ${
+                  wrongCount > 0
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                    : 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                }`}
+                title="Download structured JSON of all wrong screens for study and analysis"
+              >
+                <Download className="w-3.5 h-3.5 text-rose-600" />
+                <span>Export Wrong ({wrongCount})</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (wrongScreensList.length > 0) {
+                    setSelectedWrongScreenId(wrongScreensList[0].id);
+                  }
+                  setIsStudyModalOpen(true);
+                }}
+                disabled={wrongCount === 0}
+                className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-[0.98] shadow-sm ${
+                  wrongCount > 0
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'
+                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                }`}
+                title="Open analysis workspace to study wrong screens and diagnosis reasons"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Study & Analyze ({wrongCount})</span>
+              </button>
+
+              {(correctCount > 0 || wrongCount > 0) && (
+                <button
+                  onClick={clearAllEvaluations}
+                  className="p-1.5 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-transparent hover:border-rose-200 transition-colors shadow-2xs"
+                  title="Clear all marked evaluations"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative max-w-sm">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Filter live elements or screen titles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 font-semibold shadow-2xs"
+            />
+          </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto rounded-lg border border-dark-800 bg-dark-950 p-3">
+      <div className="flex-1 overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs">
         {/* VIEW 1: NAV GRAPH (from nav_graph.db) */}
         {viewMode === 'nav_graph' && (
           <div>
             {!navGraph || !activeApp ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500 text-xs">
+              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400 text-xs font-medium">
                 No nav_graph loaded yet. Open apps on your phone to build the graph.
               </div>
             ) : !rootScreen ? (
-              <div className="py-10 text-center text-gray-500 text-xs">
+              <div className="py-10 text-center text-slate-400 text-xs font-medium">
                 No screens found for this app.
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Information banner */}
-                <div className="px-3 py-2 rounded-lg bg-dark-850/80 border border-dark-800 flex items-center justify-between text-xs text-gray-400">
+                <div className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between text-xs text-slate-600">
                   <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     <span>
                       Navigation Tree rooted at{' '}
-                      <strong className="text-gray-200 font-semibold">
+                      <strong className="text-slate-900 font-bold">
                         {rootScreen.title}
                       </strong>
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono text-gray-500">
-                    Click any <span className="text-sky-300">🔗 opens screen</span> link to expand sub-pages
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Click any <span className="text-indigo-600 font-semibold">🔗 opens screen</span> link to expand sub-pages
                   </span>
                 </div>
 
@@ -685,12 +1000,23 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         {viewMode === 'live' && (
           <div>
             {liveScreens.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500 text-xs">
+              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400 text-xs font-medium">
                 No UI elements captured yet. Open a screen on your phone.
+              </div>
+            ) : displayedLiveScreens.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400 text-xs space-y-2">
+                <Filter className="w-6 h-6 text-slate-300 mb-1" />
+                <span>No screens match the current filter "{evalFilter}".</span>
+                <button
+                  onClick={() => setEvalFilter('all')}
+                  className="text-indigo-600 font-semibold hover:underline text-xs"
+                >
+                  Reset filter to All
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
-                {liveScreens.map((screen, sIdx) => {
+                {displayedLiveScreens.map((screen, sIdx) => {
                   const isScreenOpen =
                     expandedLiveScreens[screen.id] ?? (sIdx === 0);
 
@@ -700,66 +1026,140 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                       )
                     : screen.elements;
 
+                  const evalRecord = evaluations[screen.id];
+
                   return (
                     <div
                       key={screen.id}
-                      className="rounded-lg border border-dark-800 bg-dark-900 overflow-hidden"
+                      className={`rounded-2xl border bg-white overflow-hidden transition-all duration-200 shadow-xs hover:shadow-md ${
+                        evalRecord?.status === 'correct'
+                          ? 'border-emerald-300 ring-2 ring-emerald-100'
+                          : evalRecord?.status === 'wrong'
+                          ? 'border-rose-300 ring-2 ring-rose-100'
+                          : 'border-slate-200/80'
+                      }`}
                     >
-                      {/* Live Screen Header (Layer 0) */}
+                      {/* Live Screen Header (Layer 0) with Evaluation Buttons */}
                       <div
                         onClick={() => toggleLiveScreen(screen.id)}
-                        className="flex items-center justify-between px-4 py-2.5 bg-[#1e2433] hover:bg-[#252c3e] cursor-pointer select-none border-b border-dark-800/80 transition-colors"
+                        className={`flex items-center justify-between px-4 py-3 bg-slate-50/70 hover:bg-slate-100/70 cursor-pointer select-none border-b border-slate-100 transition-colors ${
+                          evalRecord?.status === 'correct'
+                            ? 'border-l-[4px] border-l-emerald-500 bg-emerald-50/20'
+                            : evalRecord?.status === 'wrong'
+                            ? 'border-l-[4px] border-l-rose-500 bg-rose-50/20'
+                            : ''
+                        }`}
                       >
-                        <div className="flex items-center space-x-2.5">
-                          <span className="text-gray-400">
+                        <div className="flex items-center space-x-2.5 flex-1 min-w-0 mr-3">
+                          <span className="text-slate-400 flex-shrink-0">
                             {isScreenOpen ? (
-                              <ChevronDown className="w-4 h-4 text-gray-200" />
+                              <ChevronDown className="w-4 h-4 text-slate-600" />
                             ) : (
                               <ChevronRight className="w-4 h-4" />
                             )}
                           </span>
-                          <FolderOpen className="w-4 h-4 text-emerald-400" />
-                          <span className="text-sm font-semibold text-gray-100">
+                          <FolderOpen className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                          <span className="text-sm font-bold text-slate-900 truncate">
                             {screen.screenTitle}
                           </span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold bg-dark-800 text-gray-400">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200/60 flex-shrink-0">
                             Live Screen
                           </span>
-                          <span className="text-xs text-gray-400 font-mono">
+                          {evalRecord?.status === 'correct' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1 flex-shrink-0">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>Correct</span>
+                            </span>
+                          )}
+                          {evalRecord?.status === 'wrong' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1 flex-shrink-0">
+                              <X className="w-3 h-3 text-rose-600" />
+                              <span>Wrong</span>
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400 font-mono font-medium flex-shrink-0">
                             ({screen.elements.length} elements)
                           </span>
                         </div>
 
-                        <span className="text-[11px] font-mono text-gray-500">
-                          {screen.packageName}
-                        </span>
+                        {/* Right side: Evaluation Buttons + Package Name */}
+                        <div className="flex items-center space-x-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center space-x-1.5">
+                            {/* Correct Button */}
+                            <button
+                              onClick={() => toggleEvaluation(screen, 'correct')}
+                              className={`flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] shadow-xs ${
+                                evalRecord?.status === 'correct'
+                                  ? 'bg-emerald-600 text-white border border-emerald-600 shadow-sm ring-2 ring-emerald-200'
+                                  : 'bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/90'
+                              }`}
+                              title={evalRecord?.status === 'correct' ? 'Marked Correct (click to clear)' : 'Mark this screen as Correct'}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Correct</span>
+                            </button>
+
+                            {/* Wrong Button */}
+                            <button
+                              onClick={() => toggleEvaluation(screen, 'wrong')}
+                              className={`flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] shadow-xs ${
+                                evalRecord?.status === 'wrong'
+                                  ? 'bg-rose-600 text-white border border-rose-600 shadow-sm ring-2 ring-rose-200'
+                                  : 'bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200/90'
+                              }`}
+                              title={evalRecord?.status === 'wrong' ? 'Marked Wrong (click to clear)' : 'Mark this screen as Wrong for study'}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Wrong</span>
+                            </button>
+
+                            {/* Analyze button when marked Wrong */}
+                            {evalRecord?.status === 'wrong' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedWrongScreenId(screen.id);
+                                  setIsStudyModalOpen(true);
+                                }}
+                                className="flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100/80 transition-all active:scale-[0.98] shadow-xs"
+                                title="Study & Add Analysis Notes"
+                              >
+                                <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                <span>{evalRecord.notes ? 'Notes ✓' : 'Analyze'}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <span className="text-[11px] font-mono text-slate-400 font-medium pl-1">
+                            {screen.packageName}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Live Elements List (Clean Layer 1 siblings, NO fake nesting!) */}
+                      {/* Live Elements List */}
                       {isScreenOpen && (
-                        <div className="divide-y divide-dark-800/30">
+                        <div className="divide-y divide-slate-100">
                           {filtered.map((el, eIdx) => {
                             const isClickable = el.is_clickable === true;
                             return (
                               <div
                                 key={`${screen.id}_${eIdx}`}
-                                className="flex items-center justify-between px-6 py-2 bg-[#151922] hover:bg-[#1c222e] transition-colors border-l-[3px] border-emerald-500/60"
+                                className="flex items-center justify-between px-6 py-2.5 bg-white hover:bg-indigo-50/30 transition-colors border-l-[3px] border-indigo-500/70"
                               >
                                 <div className="flex items-center space-x-2.5">
-                                  <span className="text-gray-600 font-mono text-[11px]">
+                                  <span className="text-slate-300 font-mono text-[11px]">
                                     └─
                                   </span>
-                                  <span className="text-xs font-medium text-gray-200 truncate">
+                                  <span className="text-xs font-semibold text-slate-800 truncate">
                                     {el.name}
                                   </span>
                                 </div>
 
                                 <div className="flex items-center space-x-2.5">
                                   <span
-                                    className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                    className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${
                                       isClickable
-                                        ? 'text-emerald-400 bg-emerald-500/10'
-                                        : 'text-gray-400 bg-dark-800'
+                                        ? 'text-emerald-700 bg-emerald-50 border border-emerald-100'
+                                        : 'text-slate-500 bg-slate-100 border border-slate-200/60'
                                     }`}
                                   >
                                     {isClickable ? 'Clickable' : 'Static'}
@@ -772,7 +1172,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                                         screenTitle: screen.screenTitle
                                       })
                                     }
-                                    className="text-gray-400 hover:text-gray-100 p-1 rounded hover:bg-dark-750 transition-colors"
+                                    className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                                   >
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
@@ -792,35 +1192,35 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
         {/* VIEW 3: RAW JSON */}
         {viewMode === 'json' && (
-          <pre className="text-gray-300 font-mono text-xs leading-relaxed overflow-x-auto p-2">
+          <pre className="text-slate-800 font-mono text-xs leading-relaxed overflow-x-auto p-4 bg-slate-50 rounded-xl border border-slate-200">
             {JSON.stringify(navGraph || events, null, 2)}
           </pre>
         )}
       </div>
 
-      {/* Info Modal */}
+      {/* Info Modal for Single Element */}
       {selectedElement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-dark-850 border border-dark-700 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-dark-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-sm font-semibold text-gray-100">
+                <h3 className="text-sm font-bold text-slate-900">
                   {selectedElement.element.name}
                 </h3>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-slate-500 font-medium">
                   {selectedElement.screenTitle}
                 </span>
               </div>
               <button
                 onClick={() => setSelectedElement(null)}
-                className="text-gray-400 hover:text-gray-200 p-1 rounded"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs text-gray-300">
-              <pre className="p-3 bg-dark-900 rounded-lg overflow-x-auto text-[11px] text-gray-300">
+            <div className="space-y-3 font-mono text-xs text-slate-700">
+              <pre className="p-3 bg-slate-50 border border-slate-200 rounded-xl overflow-x-auto text-[11px] text-slate-800">
                 {JSON.stringify(selectedElement.element, null, 2)}
               </pre>
             </div>
@@ -830,12 +1230,12 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 onClick={() =>
                   handleCopy(selectedElement.element, 'single_element')
                 }
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-xs font-medium text-gray-200 transition-colors"
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
               >
                 {copiedItemIdx === 'single_element' ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
                 ) : (
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-3.5 h-3.5 text-slate-500" />
                 )}
                 <span>
                   {copiedItemIdx === 'single_element' ? 'Copied' : 'Copy JSON'}
@@ -843,10 +1243,233 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
               </button>
               <button
                 onClick={() => setSelectedElement(null)}
-                className="px-3 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-xs text-gray-300 transition-colors"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-600 transition-colors"
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Study & Analysis Modal for Wrong Screens (Nexus Light Theme) */}
+      {isStudyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 bg-slate-50/70">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shadow-2xs">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    Screen Extraction Failure Study & Analysis
+                    <span className="text-xs px-2.5 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      {wrongScreensList.length} marked
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Analyze screens marked as wrong, diagnose extraction errors, tag failure patterns, and export for debugging.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsStudyModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-200/60 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 min-h-0 flex overflow-hidden">
+              {/* Left sidebar: list of wrong screens */}
+              <div className="w-1/3 border-r border-slate-200 bg-slate-50/50 overflow-y-auto p-3.5 space-y-2">
+                <span className="text-[11px] font-mono uppercase font-bold text-slate-400 px-1">
+                  Marked Screens ({wrongScreensList.length})
+                </span>
+                {wrongScreensList.map((ws) => {
+                  const rec = evaluations[ws.id];
+                  const isSelected = (selectedWrongScreenId || wrongScreensList[0]?.id) === ws.id;
+                  return (
+                    <div
+                      key={ws.id}
+                      onClick={() => setSelectedWrongScreenId(ws.id)}
+                      className={`p-3 rounded-xl cursor-pointer transition-all border text-left ${
+                        isSelected
+                          ? 'bg-rose-50 border-rose-300 shadow-xs'
+                          : 'bg-white hover:bg-slate-100/70 border-slate-200/70'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-slate-900 truncate">
+                        {ws.screenTitle}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 truncate mt-0.5">
+                        {ws.packageName}
+                      </div>
+                      {rec?.tags && rec.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {rec.tags.map((t) => (
+                            <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-md font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {rec?.notes && (
+                        <div className="text-[11px] text-slate-500 truncate mt-1 italic font-medium">
+                          "{rec.notes}"
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right panel: Active Wrong Screen Analysis */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
+                {(() => {
+                  const activeWrongScreen = wrongScreensList.find(
+                    (s) => s.id === (selectedWrongScreenId || wrongScreensList[0]?.id)
+                  );
+                  if (!activeWrongScreen) {
+                    return (
+                      <div className="py-20 text-center text-xs text-slate-400 font-medium">
+                        No wrong screen selected.
+                      </div>
+                    );
+                  }
+                  const rec = evaluations[activeWrongScreen.id];
+                  const DIAGNOSIS_TAGS = [
+                    'Wrong Title Extracted',
+                    'Dynamic Status Noise',
+                    'Sub-Page Confusion',
+                    'Backdrop / Scrim Leak',
+                    'Activity Name Leak',
+                    'Missing Elements',
+                    'Duplicate Title'
+                  ];
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Active Screen Info Header */}
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-rose-700">
+                            {activeWrongScreen.screenTitle}
+                          </span>
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-white text-slate-600 border border-slate-200 font-semibold shadow-2xs">
+                            {activeWrongScreen.packageName}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          Elements Captured: <span className="text-slate-900 font-bold">{activeWrongScreen.elements.length}</span> | ID: <span className="text-slate-400">{activeWrongScreen.id}</span>
+                        </div>
+                      </div>
+
+                      {/* Diagnostic Tags */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                          <Tag className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Diagnostic Failure Tags (Click to toggle):</span>
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {DIAGNOSIS_TAGS.map((t) => {
+                            const isTagged = rec?.tags?.includes(t);
+                            return (
+                              <button
+                                key={t}
+                                onClick={() => toggleWrongScreenTag(activeWrongScreen.id, t)}
+                                className={`text-[11px] px-3 py-1 rounded-full font-semibold transition-all border shadow-2xs ${
+                                  isTagged
+                                    ? 'bg-amber-100 text-amber-800 border-amber-300 shadow-xs'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                }`}
+                              >
+                                {isTagged ? `✓ ${t}` : `+ ${t}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Analysis Notes Textarea */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                          <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Failure Analysis Notes (Auto-saved):</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={rec?.notes || ''}
+                          onChange={(e) => updateWrongScreenNotes(activeWrongScreen.id, e.target.value)}
+                          placeholder="Describe what was wrong: e.g. 'Applying, Style1 is a wallpaper preview screen from com.bbk.theme that should have been titled Wallpapers'..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 font-medium shadow-2xs"
+                        />
+                      </div>
+
+                      {/* Elements extracted preview */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          Captured Elements ({activeWrongScreen.elements.length}):
+                        </label>
+                        <div className="max-h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl divide-y divide-slate-200/70 p-1">
+                          {activeWrongScreen.elements.map((el, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs hover:bg-white rounded-lg transition-colors">
+                              <span className="text-slate-800 truncate font-semibold">{el.name}</span>
+                              <span className="text-[10px] font-mono text-slate-400 font-medium">
+                                {el.is_clickable ? 'Clickable' : 'Static'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Change status buttons */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => toggleEvaluation(activeWrongScreen, 'correct')}
+                            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-all active:scale-[0.98] shadow-xs"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Mark Correct instead</span>
+                          </button>
+                          <button
+                            onClick={() => toggleEvaluation(activeWrongScreen, 'wrong')}
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-xs font-semibold transition-all active:scale-[0.98]"
+                          >
+                            Remove Mark (Unreview)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-200/80 bg-slate-50/70 text-xs">
+              <span className="text-slate-500 font-mono font-medium">
+                Notes & evaluations are auto-saved in your browser.
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => exportEvaluationData('wrong')}
+                  className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold transition-all active:scale-[0.98] shadow-xs"
+                >
+                  <Download className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Download Wrong Analysis JSON</span>
+                </button>
+                <button
+                  onClick={() => setIsStudyModalOpen(false)}
+                  className="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold transition-colors shadow-xs"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
