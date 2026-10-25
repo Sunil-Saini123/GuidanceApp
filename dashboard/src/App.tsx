@@ -50,9 +50,9 @@ export const App: React.FC = () => {
   // Persist active tab across browser refreshes
   const [activeTab, setActiveTab] = useState(() => {
     try {
-      return localStorage.getItem('guidance_active_tab') || 'timeline';
+      return localStorage.getItem('guidance_active_tab') || 'tree';
     } catch (_) {
-      return 'timeline';
+      return 'tree';
     }
   });
 

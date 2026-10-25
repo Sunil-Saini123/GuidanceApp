@@ -615,6 +615,37 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     return liveScreens.filter((s) => evaluations[s.id]?.status === 'wrong');
   }, [liveScreens, evaluations]);
 
+  // Search match counter for visual feedback
+  const searchMatchInfo = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const q = searchQuery.trim().toLowerCase();
+    if (viewMode === 'nav_graph' && activeApp) {
+      let matchCount = 0;
+      let screenCount = 0;
+      for (const s of (activeApp.screens || [])) {
+        const hits = (s.elements || []).filter((el) => el.toLowerCase().includes(q)).length;
+        if (hits > 0) {
+          matchCount += hits;
+          screenCount++;
+        }
+      }
+      return { matchCount, screenCount };
+    }
+    if (viewMode === 'live') {
+      let matchCount = 0;
+      let screenCount = 0;
+      for (const s of liveScreens) {
+        const hits = s.elements.filter((el) => el.name.toLowerCase().includes(q)).length;
+        if (hits > 0) {
+          matchCount += hits;
+          screenCount++;
+        }
+      }
+      return { matchCount, screenCount };
+    }
+    return null;
+  }, [searchQuery, viewMode, activeApp, liveScreens]);
+
   // Recursive NavGraph Screen Renderer (True Multi-Screen Tree!)
   const renderNavGraphScreen = (
     screen: NavGraphScreen,
@@ -700,7 +731,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     );
 
     return (
-      <div key={screen.id} className="space-y-1.5">
+      <div key={screen.id} className="space-y-2">
         {/* Screen Header - [PERMANENT FIX] High-contrast glowing live location marker box */}
         <div
           className={`flex items-center justify-between px-4 py-2.5 rounded-2xl select-none transition-all duration-200 border ${
@@ -717,7 +748,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         >
           <div className="flex items-center space-x-2.5">
             <FolderOpen className={`w-4 h-4 ${isCurrentLiveScreen ? 'text-emerald-600 animate-pulse' : 'text-indigo-600'}`} />
-            <span className={`text-xs font-bold ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : 'text-slate-900'}`}>
+            <span className={`text-[13px] font-bold ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : 'text-slate-900'}`}>
               {screen.title}
             </span>
             {isCurrentLiveScreen && (
@@ -858,7 +889,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 const isLastElem = eIdx === visibleElements.length - 1;
 
                 return (
-                  <div key={`${screen.id}_elem_${eIdx}`} className="py-0.5">
+                  <div key={`${screen.id}_elem_${eIdx}`} className="py-0.5 first:pt-1">
                     {/* Element Row - [PERMANENT FIX] High-contrast target step marker box & code nesting */}
                     <div
                       onClick={() => {
@@ -866,7 +897,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                           toggleTransition(transKey);
                         }
                       }}
-                      className={`flex items-center justify-between pr-4 py-2 ${style.paddingLeft} rounded-xl select-none transition-all ${
+                      className={`flex items-center justify-between pr-4 py-2.5 ${style.paddingLeft} rounded-xl select-none transition-all ${
                         isTargetStep
                           ? 'bg-gradient-to-r from-amber-50 via-amber-100/50 to-orange-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
                           : hasTargetScreen
@@ -897,12 +928,12 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         )}
 
                         <span
-                          className={`text-xs truncate ${
+                          className={`text-[13px] truncate ${
                             isTargetStep
                               ? 'text-amber-950 font-black'
                               : hasTargetScreen
-                              ? 'text-indigo-600 font-bold hover:underline'
-                              : 'text-slate-700 font-medium'
+                              ? 'text-indigo-700 font-bold hover:underline'
+                              : 'text-slate-800 font-medium'
                           }`}
                         >
                           {elemName}
@@ -1021,7 +1052,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-6 py-4">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-5 py-3">
       {/* Top Header & View Mode Switcher */}
       <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-slate-200/80 gap-3">
         <div className="flex items-center space-x-3">
@@ -1306,6 +1337,36 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Sticky Live Phone Location Banner */}
+      {latestLiveLocation.screenTitle && viewMode === 'nav_graph' && (
+        <div className="sticky top-0 z-10 my-2 px-3.5 py-2 bg-emerald-50/90 backdrop-blur-sm border border-emerald-200 rounded-xl flex items-center justify-between shadow-xs">
+          <div className="flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-xs font-semibold text-emerald-800">
+              Phone is on: <span className="font-bold text-emerald-950">{latestLiveLocation.screenTitle}</span>
+            </span>
+            {latestLiveLocation.packageName && (
+              <span className="text-[10px] font-mono text-emerald-600/70">{latestLiveLocation.packageName}</span>
+            )}
+          </div>
+          {latestLiveLocation.currentStep && (
+            <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
+              🎯 Next: {latestLiveLocation.currentStep}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Search Match Counter */}
+      {searchMatchInfo && (
+        <div className="mb-2 px-3 py-1.5 bg-indigo-50/80 border border-indigo-200/60 rounded-lg flex items-center space-x-2">
+          <Search className="w-3 h-3 text-indigo-500" />
+          <span className="text-xs font-semibold text-indigo-700">
+            Found <span className="font-bold">{searchMatchInfo.matchCount}</span> match{searchMatchInfo.matchCount !== 1 ? 'es' : ''} in <span className="font-bold">{searchMatchInfo.screenCount}</span> screen{searchMatchInfo.screenCount !== 1 ? 's' : ''}
+          </span>
         </div>
       )}
 
