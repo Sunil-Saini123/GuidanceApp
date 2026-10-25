@@ -238,7 +238,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     }
   });
 
-  // Keyboard shortcuts: Esc to close modal/drawer or clear search, / to focus search
+  // [PERMANENT FIX] Do not remove this! Keyboard shortcuts: Esc closes side drawer, clears search, or exits tree fullscreen.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -246,6 +246,8 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
           setSelectedElement(null);
         } else if (searchQuery) {
           setSearchQuery('');
+        } else if (isFullscreen) {
+          setIsFullscreen(false);
         }
       } else if (
         (e.key === '/' || (e.ctrlKey && e.key === 'k')) &&
@@ -258,7 +260,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElement, searchQuery]);
+  }, [selectedElement, searchQuery, isFullscreen]);
 
   // Save evaluations persistently in browser storage
   useEffect(() => {
@@ -1293,119 +1295,112 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
   return (
     <div className={`flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-5 py-3 transition-all ${
-      isFullscreen ? 'fixed inset-0 z-50 p-6 overflow-y-auto bg-[#f8fafc]' : ''
+      isFullscreen ? 'fixed inset-0 z-[100] p-4 sm:p-5 overflow-hidden bg-[#f8fafc]' : ''
     }`}>
-      {/* Top Header & View Mode Switcher */}
-      <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-slate-200/80 gap-3">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-xs">
-            <Layers className="w-5 h-5" />
+      {/* Top Header & View Mode Switcher - Hidden in Fullscreen */}
+      {!isFullscreen && (
+        <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-slate-200/80 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-xs">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                Screen Hierarchy & Nav Tree
+                {activeApp && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-md font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {activeApp.app_name || activeApp.package_name}
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                Explore app screens, recursive transitions, and live UI dumps
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              Screen Hierarchy & Nav Tree
-              {activeApp && (
-                <span className="text-xs px-2.5 py-0.5 rounded-md font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {activeApp.app_name || activeApp.package_name}
-                </span>
-              )}
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Explore app screens, recursive transitions, and live UI dumps
-            </p>
-          </div>
-        </div>
 
-        {/* Top Action Controls: Fullscreen, Text Size, View Modes */}
-        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-          {/* Text Size Switcher */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+          {/* Top Action Controls: Fullscreen, Text Size, View Modes */}
+          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+            {/* Text Size Switcher */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+              <button
+                onClick={() => setTextSize('normal')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  textSize === 'normal'
+                    ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Standard Text Size"
+              >
+                A Normal
+              </button>
+              <button
+                onClick={() => setTextSize('large')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  textSize === 'large'
+                    ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Large Text Size (Easy reading on big monitors)"
+              >
+                A+ Large
+              </button>
+            </div>
+
+            {/* Fullscreen Button */}
             <button
-              onClick={() => setTextSize('normal')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                textSize === 'normal'
-                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title="Standard Text Size"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
+              title="Enter Fullscreen (Focus on Tree)"
             >
-              A Normal
+              <Maximize className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Fullscreen</span>
             </button>
-            <button
-              onClick={() => setTextSize('large')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                textSize === 'large'
-                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-              title="Large Text Size (Easy reading on big monitors)"
-            >
-              A+ Large
-            </button>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+              <button
+                onClick={() => setViewMode('nav_graph')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === 'nav_graph'
+                    ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <GitFork className="w-3.5 h-3.5" />
+                <span>Nav Graph Tree</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('live')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === 'live'
+                    ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Live Captures ({liveScreens.length})</span>
+              </button>
+
+              <button
+                onClick={() => setViewMode('json')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === 'json'
+                    ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <Code className="w-3.5 h-3.5" />
+                <span>Raw JSON</span>
+              </button>
+            </div>
           </div>
-
-          {/* Fullscreen Button */}
-          <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Fullscreen</span>
-              </>
-            )}
-          </button>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-          <button
-            onClick={() => setViewMode('nav_graph')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewMode === 'nav_graph'
-                ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <GitFork className="w-3.5 h-3.5" />
-            <span>Nav Graph Tree</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('live')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewMode === 'live'
-                ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Live Captures ({liveScreens.length})</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('json')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewMode === 'json'
-                ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <Code className="w-3.5 h-3.5" />
-            <span>Raw JSON</span>
-          </button>
         </div>
-        </div>
-      </div>
+      )}
 
-      {/* Graph Health & Quality Stats Bar */}
-      {viewMode === 'nav_graph' && navGraphStats && (
+      {/* Graph Health & Quality Stats Bar - Hidden in Fullscreen */}
+      {!isFullscreen && viewMode === 'nav_graph' && navGraphStats && (
         <div className="my-2.5 px-4 py-2 bg-white rounded-2xl border border-slate-200/80 text-xs shadow-xs flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center space-x-2.5 flex-wrap gap-y-1">
             <span className="font-bold text-slate-800 flex items-center space-x-1.5 mr-1">
@@ -1438,7 +1433,9 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
       {/* App Selector & Search Controls (Nav Graph Mode) */}
       {viewMode === 'nav_graph' && navGraph && navGraph.apps && navGraph.apps.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 my-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className={`flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs ${
+          isFullscreen ? 'mb-3.5 ring-1 ring-slate-200/60 shadow-sm' : 'my-3.5'
+        }`}>
           <div className="flex items-center space-x-3 flex-wrap gap-y-2">
             <span className="text-xs text-slate-500 font-semibold">Select App:</span>
             <select
@@ -1463,7 +1460,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             </select>
 
             {activeApp && (
-              <span className="text-[11px] font-mono text-slate-400 font-medium">
+              <span className="text-[11px] font-mono text-slate-400 font-medium hidden sm:inline">
                 {(activeApp.screens || []).length} screens, {totalTransitionsCount} transitions
               </span>
             )}
@@ -1471,7 +1468,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             {/* Expand / Collapse All Toggle Button */}
             <button
               onClick={() => setIsAllExpanded(!isAllExpanded)}
-              className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex items-center space-x-1"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex items-center space-x-1"
             >
               {isAllExpanded ? (
                 <>
@@ -1482,6 +1479,58 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 <>
                   <ChevronRight className="w-3 h-3 text-indigo-600" />
                   <span>Expand All</span>
+                </>
+              )}
+            </button>
+
+            {/* Text Size Switcher in Fullscreen */}
+            {isFullscreen && (
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/80 text-xs">
+                <button
+                  onClick={() => setTextSize('normal')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition-all ${
+                    textSize === 'normal'
+                      ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Standard Text Size"
+                >
+                  A
+                </button>
+                <button
+                  onClick={() => setTextSize('large')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition-all ${
+                    textSize === 'large'
+                      ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Large Text Size"
+                >
+                  A+
+                </button>
+              </div>
+            )}
+
+            {/* Fullscreen Toggle Button */}
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-xs ${
+                isFullscreen
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                  : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 active:scale-[0.98]'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Enter Fullscreen (Focus on Tree)'}
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize className="w-3.5 h-3.5" />
+                  <span>Exit Fullscreen</span>
+                  <span className="text-[10px] opacity-75 font-mono ml-0.5">(Esc)</span>
+                </>
+              ) : (
+                <>
+                  <Maximize className="w-3.5 h-3.5" />
+                  <span>Fullscreen</span>
                 </>
               )}
             </button>
@@ -1638,6 +1687,30 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                   </>
                 )}
               </button>
+
+              {/* Fullscreen Toggle Button in Live Mode */}
+              <button
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-xs ${
+                  isFullscreen
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80'
+                }`}
+                title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Focus Live Screens in Fullscreen'}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize className="w-3.5 h-3.5" />
+                    <span>Exit Fullscreen</span>
+                    <span className="text-[10px] opacity-75 font-mono ml-0.5">(Esc)</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize className="w-3.5 h-3.5" />
+                    <span>Fullscreen</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
@@ -1699,8 +1772,8 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         </div>
       )}
 
-      {/* Sticky Live Phone Location Banner */}
-      {latestLiveLocation.screenTitle && viewMode === 'nav_graph' && (
+      {/* Sticky Live Phone Location Banner - Hidden in Fullscreen */}
+      {!isFullscreen && latestLiveLocation.screenTitle && viewMode === 'nav_graph' && (
         <div className="sticky top-0 z-10 my-2 px-3.5 py-2 bg-emerald-50/90 backdrop-blur-sm border border-emerald-200 rounded-xl flex items-center justify-between shadow-xs">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
@@ -2042,7 +2115,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
       {/* Side Inspector Drawer for Single Element (Non-blocking, Tree stays visible!) */}
       {selectedElement && (
-        <aside className="fixed top-0 right-0 bottom-0 w-84 md:w-96 bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-200 ease-out">
+        <aside className="fixed top-0 right-0 bottom-0 w-84 md:w-96 bg-white border-l border-slate-200 shadow-2xl z-[110] flex flex-col transition-transform duration-200 ease-out">
           {/* Drawer Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/80 bg-slate-50/60">
             <div className="flex items-center space-x-2.5 truncate mr-2">
@@ -2155,7 +2228,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
       {/* Study & Analysis Modal for Wrong Screens (Nexus Light Theme) */}
       {isStudyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 bg-slate-50/50">
