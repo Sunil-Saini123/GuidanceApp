@@ -222,7 +222,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-dark-900 text-gray-100 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="flex flex-col h-screen bg-[#f8fafc] text-slate-900 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Top Header */}
       <Header
         appState={appState}

@@ -1,13 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  TelemetryEvent,
-  BoundingBox,
-  NavGraphData,
-  NavGraphApp,
-  NavGraphScreen,
-  NavGraphTransition
-} from '../types';
-import {
+  Folder,
+  FileCode,
   ChevronRight,
   ChevronDown,
   Info,
@@ -21,95 +15,131 @@ import {
   GitFork,
   Smartphone,
   ExternalLink,
-  Layers
+  Layers,
+  Download,
+  AlertTriangle,
+  Tag,
+  FileText,
+  Trash2,
+  Filter
 } from 'lucide-react';
+import { NavGraph, NavGraphApp, NavGraphScreen, NavGraphTransition } from '../types';
 
 interface TreeExplorerTabProps {
-  events: TelemetryEvent[];
-  navGraph?: NavGraphData | null;
+  events: any[];
+  navGraph: NavGraph | null;
 }
 
 export interface TreeElementItem {
+  id: string;
   name: string;
-  is_clickable?: boolean;
-  class_name?: string;
-  resource_id?: string;
-  bounds?: BoundingBox;
+  resource_id: string;
+  class_name: string;
+  bounds: string;
+  is_clickable: boolean;
+  is_scrollable: boolean;
+  type: string;
 }
 
 interface ScreenGroup {
   id: string;
   screenTitle: string;
   packageName: string;
-  timestamp: number;
   elements: TreeElementItem[];
+  timestamp: number;
 }
 
-// ── Layer Styling Map ─────────────────────────────────────────────────────────
+export type ScreenEvaluationStatus = 'correct' | 'wrong';
+
+export interface ScreenEvaluationRecord {
+  id: string; // `${packageName}::${screenTitle}`
+  screenTitle: string;
+  packageName: string;
+  status: ScreenEvaluationStatus;
+  notes?: string;
+  tags?: string[];
+  elementsCount: number;
+  sampleElements?: string[];
+  timestamp?: number;
+  updatedAt: number;
+}
 
 // [PERMANENT FIX] Do not remove this! Code-editor nested tree indentation and color palette.
 const getLayerStyle = (layer: number) => {
   switch (layer) {
-    case 0:
     case 1:
       return {
-        bg: 'bg-[#151a26]',
-        hover: 'hover:bg-[#1d2434]',
-        borderLeft: 'border-l-[4px] border-emerald-400',
-        guideBorder: 'border-l-2 border-emerald-500/40',
-        badgeBg: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-        paddingLeft: 'pl-4',
-        layerName: 'Root'
+        bg: 'bg-indigo-50/70',
+        borderLeft: 'border-l-4 border-indigo-500',
+        badgeBg: 'bg-indigo-100 text-indigo-700',
+        paddingLeft: 'pl-4'
       };
     case 2:
       return {
-        bg: 'bg-[#10141e]',
-        hover: 'hover:bg-[#171d2b]',
-        borderLeft: 'border-l-[4px] border-sky-400',
-        guideBorder: 'border-l-2 border-sky-500/40',
-        badgeBg: 'bg-sky-500/20 text-sky-300 border border-sky-500/30',
-        paddingLeft: 'pl-6',
-        layerName: 'Depth 2'
+        bg: 'bg-sky-50/70',
+        borderLeft: 'border-l-4 border-sky-500',
+        badgeBg: 'bg-sky-100 text-sky-700',
+        paddingLeft: 'pl-8'
       };
     case 3:
       return {
-        bg: 'bg-[#0c0e16]',
-        hover: 'hover:bg-[#121622]',
-        borderLeft: 'border-l-[4px] border-indigo-400',
-        guideBorder: 'border-l-2 border-indigo-500/40',
-        badgeBg: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
-        paddingLeft: 'pl-8',
-        layerName: 'Depth 3'
+        bg: 'bg-emerald-50/70',
+        borderLeft: 'border-l-4 border-emerald-500',
+        badgeBg: 'bg-emerald-100 text-emerald-700',
+        paddingLeft: 'pl-12'
+      };
+    case 4:
+      return {
+        bg: 'bg-amber-50/70',
+        borderLeft: 'border-l-4 border-amber-500',
+        badgeBg: 'bg-amber-100 text-amber-700',
+        paddingLeft: 'pl-16'
       };
     default:
       return {
-        bg: 'bg-[#08090f]',
-        hover: 'hover:bg-[#0e101a]',
-        borderLeft: 'border-l-[4px] border-purple-400',
-        guideBorder: 'border-l-2 border-purple-500/40',
-        badgeBg: 'bg-purple-500/20 text-purple-300 border border-purple-500/30',
-        paddingLeft: 'pl-10',
-        layerName: `Depth ${layer}`
+        bg: 'bg-purple-50/70',
+        borderLeft: 'border-l-4 border-purple-500',
+        badgeBg: 'bg-purple-100 text-purple-700',
+        paddingLeft: 'pl-20'
       };
   }
 };
 
-// ── Main Component ────────────────────────────────────────────────────────────
-
 export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGraph }) => {
-  // View Modes: 'nav_graph' (Real Navigation Tree from .db), 'live' (Current screen capture), 'json'
   const [viewMode, setViewMode] = useState<'nav_graph' | 'live' | 'json'>(() => {
     return navGraph && navGraph.apps && navGraph.apps.length > 0 ? 'nav_graph' : 'nav_graph';
   });
 
-  const [copied, setCopied] = useState(false);
   const [copiedItemIdx, setCopiedItemIdx] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // ── Screen Evaluation & Quality Labeling State ─────────────────────────────
+  const [evaluations, setEvaluations] = useState<Record<string, ScreenEvaluationRecord>>(() => {
+    try {
+      const saved = localStorage.getItem('guidance_screen_evaluations');
+      return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+
+  // Save evaluations persistently in browser storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('guidance_screen_evaluations', JSON.stringify(evaluations));
+    } catch (_) {}
+  }, [evaluations]);
+
+  // Filter in Live Screen Mode: 'all' | 'correct' | 'wrong' | 'unreviewed'
+  const [evalFilter, setEvalFilter] = useState<'all' | 'correct' | 'wrong' | 'unreviewed'>('all');
+
+  // Study & Analysis Modal state for wrong screens
+  const [isStudyModalOpen, setIsStudyModalOpen] = useState(false);
+  const [selectedWrongScreenId, setSelectedWrongScreenId] = useState<string | null>(null);
 
   // Selected App in Nav Graph Mode
   const [selectedAppPkg, setSelectedAppPkg] = useState<string>(() => {
     if (navGraph && navGraph.apps && navGraph.apps.length > 0) {
-      // Prioritize Settings or first app with multiple screens
       const settings = navGraph.apps.find((a) => a.package_name.includes('settings'));
       if (settings) return settings.package_name;
       const multi = navGraph.apps.find((a) => a.screens.length > 1);
@@ -118,7 +148,6 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     return '';
   });
 
-  // Keep selectedAppPkg in sync when navGraph loads or updates
   useEffect(() => {
     if (navGraph && navGraph.apps && navGraph.apps.length > 0) {
       setSelectedAppPkg((prev) => {
@@ -130,116 +159,93 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     }
   }, [navGraph]);
 
-  // Track expanded transition nodes in Nav Graph
-  // Key: transition_key, Value: boolean
+  // Nav Graph transition expansion state
   const [expandedTransitions, setExpandedTransitions] = useState<Record<string, boolean>>({});
 
-  // Active info modal for element details
+  // Element info modal
   const [selectedElement, setSelectedElement] = useState<{
-    element: any;
+    element: TreeElementItem;
     screenTitle: string;
+    packageName: string;
   } | null>(null);
 
   // [PERMANENT FIX] Do not remove this! Cumulative Live UI Element Capture & Scroll Merging.
   // Instead of dropping subsequent telemetry events for an existing screen, merge newly scrolled elements
-  // into the screen group. Ensures sub-screens like WhatsApp Settings show all elements (Chats, Appearance, Notifications)
-  // across vertical scroll passes.
+  // into the screen group. Ensures sub-screens like WhatsApp Settings show all elements (Chats, Appearance, etc.)
   const liveScreens: ScreenGroup[] = useMemo(() => {
-    const list: ScreenGroup[] = [];
     const screensMap = new Map<string, ScreenGroup>();
 
-    for (const event of events) {
-      if (event.elements && event.elements.length > 0) {
-        const title = event.screenTitle || 'Unknown Screen';
-        const pkg = event.packageName || 'unknown.app';
-        const dedupeKey = `${pkg}::${title}`;
+    events.forEach((ev) => {
+      if (ev.tag === 'CLEAN_PAGE' && ev.payload) {
+        const p = ev.payload;
+        const screenTitle = p.screen_title || p.title || 'Unknown Screen';
+        const packageName = p.package_name || 'unknown.app';
+        const dedupeKey = `${packageName}::${screenTitle}`;
+
+        const incomingElements: TreeElementItem[] = (p.elements || []).map((el: any, idx: number) => ({
+          id: el.id || el.resource_id || `el_${idx}`,
+          name: el.name || el.text || el.content_desc || '(unnamed)',
+          resource_id: el.resource_id || '',
+          class_name: el.class_name || '',
+          bounds: el.bounds || '',
+          is_clickable: Boolean(el.is_clickable),
+          is_scrollable: Boolean(el.is_scrollable),
+          type: el.type || 'element'
+        }));
 
         let group = screensMap.get(dedupeKey);
         if (!group) {
           group = {
             id: dedupeKey,
-            screenTitle: title,
-            packageName: pkg,
-            timestamp: event.timestamp,
-            elements: [...event.elements]
+            screenTitle,
+            packageName,
+            elements: [],
+            timestamp: ev.timestamp || Date.now()
           };
           screensMap.set(dedupeKey, group);
-          list.push(group);
-        } else {
-          // Merge newly scrolled elements into existing screen group
-          const seenNames = new Set(group.elements.map((e) => e.name?.trim().toLowerCase()));
-          for (const el of event.elements) {
-            const normName = el.name?.trim().toLowerCase();
-            if (normName && !seenNames.has(normName)) {
-              seenNames.add(normName);
-              group.elements.push(el);
-            }
+        }
+
+        const existingNames = new Set(group.elements.map((e) => e.name.trim().toLowerCase()));
+        for (const inc of incomingElements) {
+          const norm = inc.name.trim().toLowerCase();
+          if (norm && !existingNames.has(norm)) {
+            existingNames.add(norm);
+            group.elements.push(inc);
           }
         }
       }
-    }
-    return list;
+    });
+
+    return Array.from(screensMap.values());
   }, [events]);
 
   // [PERMANENT FIX] Do not remove this! Real-time phone location flagging with live screen and target step indicator.
-  // events[0] is the newest event (newest-first array from App.tsx). Iterating newest-first prevents locking onto stale root events.
   const latestLiveLocation = useMemo(() => {
-    // 1. Check live telemetry events newest-first (events[0] is the latest)
-    for (const ev of events) {
-      if (ev.screenTitle || ev.packageName) {
-        return {
-          screenTitle: ev.screenTitle?.trim(),
-          packageName: ev.packageName?.trim(),
-          currentStep: ev.currentStep?.trim(),
-          stepIndex: ev.stepIndex,
-          totalSteps: ev.totalSteps,
-          timestamp: ev.timestamp
-        };
+    let screenTitle = '';
+    let packageName = '';
+    let currentStep = '';
+
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i];
+      if (!screenTitle && (ev.tag === 'SCREEN_CHANGED' || ev.tag === 'CLEAN_PAGE') && ev.payload) {
+        screenTitle = ev.payload.screen_title || ev.payload.title || ev.payload.new_screen || '';
+        packageName = ev.payload.package_name || ev.payload.package || '';
       }
-    }
-
-    // 2. Authoritative Fallback from navGraph.active_stacks:
-    // When the phone navigates through screens (e.g. Chats -> Menu -> Settings),
-    // active_stacks tracks the live back stack. The top element is the physical screen on device!
-    if (navGraph && (navGraph as any).active_stacks && selectedAppPkg) {
-      const stacks = (navGraph as any).active_stacks;
-      const stack = stacks[selectedAppPkg];
-      if (Array.isArray(stack) && stack.length > 0) {
-        const topScreenId: string = stack[stack.length - 1];
-        const screenTitle = topScreenId.includes('::') ? topScreenId.split('::')[1] : topScreenId;
-        return {
-          screenTitle,
-          packageName: selectedAppPkg,
-          currentStep: undefined,
-          stepIndex: undefined,
-          totalSteps: undefined,
-          timestamp: Date.now()
-        };
+      if (!currentStep && ev.tag === 'STEP_ADVANCED' && ev.payload) {
+        currentStep = ev.payload.next_step || ev.payload.step || '';
       }
+      if (screenTitle && currentStep) break;
     }
+    return { screenTitle, packageName, currentStep };
+  }, [events]);
 
-    // 3. Fallback from live captured screens
-    if (liveScreens.length > 0) {
-      return {
-        screenTitle: liveScreens[0].screenTitle?.trim(),
-        packageName: liveScreens[0].packageName?.trim(),
-        currentStep: undefined,
-        stepIndex: undefined,
-        totalSteps: undefined,
-        timestamp: Date.now()
-      };
-    }
-
-    return null;
-  }, [events, navGraph, selectedAppPkg, liveScreens]);
-
-  const [expandedLiveScreens, setExpandedLiveScreens] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    if (liveScreens.length > 0) {
-      initial[liveScreens[0].id] = true;
-    }
-    return initial;
+  const [expandedLiveScreens, setExpandedLiveScreens] = useState<Record<string, boolean>>({
+    0: true
   });
+
+  // [PERMANENT FIX] Do not remove this! Global Expand/Collapse All and Active Phone Screen Unfolding.
+  const [isAllExpanded, setIsAllExpanded] = useState<boolean>(false);
+  const [isAllLiveExpanded, setIsAllLiveExpanded] = useState<boolean>(true);
 
   const toggleLiveScreen = (screenId: string) => {
     setExpandedLiveScreens((prev) => ({
@@ -248,96 +254,211 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     }));
   };
 
-  // [PERMANENT FIX] Do not remove this! Global Expand/Collapse All and Active Phone Screen Unfolding.
-  const [isAllExpanded, setIsAllExpanded] = useState<boolean>(false);
-  const [isAllLiveExpanded, setIsAllLiveExpanded] = useState<boolean>(true);
-
-  const toggleExpandAll = () => {
-    setIsAllExpanded((prev) => {
-      const next = !prev;
-      setExpandedTransitions({});
-      return next;
-    });
-  };
-
-  const toggleAllLiveExpanded = () => {
-    const nextState = !isAllLiveExpanded;
-    setIsAllLiveExpanded(nextState);
-    const updated: Record<string, boolean> = {};
-    liveScreens.forEach((s) => {
-      updated[s.id] = nextState;
-    });
-    setExpandedLiveScreens(updated);
-  };
-
   const toggleTransition = (key: string) => {
-    setExpandedTransitions((prev) => {
-      const current = isAllExpanded ? (prev[key] !== false) : (prev[key] === true);
+    setExpandedTransitions((prev) => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleCopy = (data: any, key: string) => {
+    navigator.clipboard.writeText(typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+    setCopiedItemIdx(key);
+    setTimeout(() => setCopiedItemIdx(null), 2000);
+  };
+
+  // ── Evaluation Helpers ────────────────────────────────────────────────────
+
+  const toggleEvaluation = (
+    screen: { id: string; screenTitle: string; packageName: string; elements: TreeElementItem[]; timestamp?: number },
+    targetStatus: ScreenEvaluationStatus
+  ) => {
+    setEvaluations((prev) => {
+      const existing = prev[screen.id];
+      if (existing && existing.status === targetStatus) {
+        const updated = { ...prev };
+        delete updated[screen.id];
+        return updated;
+      }
       return {
         ...prev,
-        [key]: !current
+        [screen.id]: {
+          id: screen.id,
+          screenTitle: screen.screenTitle,
+          packageName: screen.packageName,
+          status: targetStatus,
+          notes: existing?.notes || '',
+          tags: existing?.tags || [],
+          elementsCount: screen.elements.length,
+          sampleElements: screen.elements.slice(0, 10).map((e) => e.name),
+          timestamp: screen.timestamp || Date.now(),
+          updatedAt: Date.now()
+        }
       };
     });
   };
 
-  const handleCopy = (data: any, key: string) => {
-    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    setCopiedItemIdx(key);
-    setTimeout(() => setCopiedItemIdx(null), 1500);
+  const toggleNavGraphEvaluation = (screen: NavGraphScreen, targetStatus: ScreenEvaluationStatus) => {
+    setEvaluations((prev) => {
+      const existing = prev[screen.id];
+      if (existing && existing.status === targetStatus) {
+        const updated = { ...prev };
+        delete updated[screen.id];
+        return updated;
+      }
+      const pkg = screen.id.includes('::') ? screen.id.split('::')[0] : (activeApp?.package_name || 'unknown');
+      return {
+        ...prev,
+        [screen.id]: {
+          id: screen.id,
+          screenTitle: screen.title,
+          packageName: pkg,
+          status: targetStatus,
+          notes: existing?.notes || '',
+          tags: existing?.tags || [],
+          elementsCount: screen.elements.length,
+          sampleElements: screen.elements.slice(0, 10),
+          timestamp: screen.last_seen || Date.now(),
+          updatedAt: Date.now()
+        }
+      };
+    });
   };
 
-  // Nav Graph calculations
-  const activeApp: NavGraphApp | undefined = useMemo(() => {
-    if (!navGraph || !navGraph.apps) return undefined;
-    if (selectedAppPkg) {
-      const found = navGraph.apps.find((a) => a.package_name === selectedAppPkg);
-      if (found) return found;
+  const updateWrongScreenNotes = (id: string, notes: string) => {
+    setEvaluations((prev) => {
+      const rec = prev[id];
+      if (!rec) return prev;
+      return {
+        ...prev,
+        [id]: {
+          ...rec,
+          notes,
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const toggleWrongScreenTag = (id: string, tag: string) => {
+    setEvaluations((prev) => {
+      const rec = prev[id];
+      if (!rec) return prev;
+      const currentTags = rec.tags || [];
+      const newTags = currentTags.includes(tag)
+        ? currentTags.filter((t) => t !== tag)
+        : [...currentTags, tag];
+      return {
+        ...prev,
+        [id]: {
+          ...rec,
+          tags: newTags,
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const exportEvaluationData = (type: 'correct' | 'wrong' | 'all') => {
+    const list = Object.values(evaluations).filter((rec) => {
+      if (type === 'all') return true;
+      return rec.status === type;
+    });
+
+    const exportPayload = {
+      title: `GuidanceApp Screen Evaluations (${type.toUpperCase()})`,
+      exportedAt: new Date().toISOString(),
+      category: type,
+      totalCount: list.length,
+      screens: list.map((rec) => {
+        const liveMatch = liveScreens.find((s) => s.id === rec.id);
+        return {
+          ...rec,
+          fullElements: liveMatch ? liveMatch.elements : undefined
+        };
+      })
+    };
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `guidance_${type}_screens_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearAllEvaluations = () => {
+    if (window.confirm('Are you sure you want to clear all marked Correct and Wrong screen evaluations?')) {
+      setEvaluations({});
     }
-    return navGraph.apps[0];
-  }, [navGraph, selectedAppPkg]);
+  };
 
   // [PERMANENT FIX] Do not remove this! Extract multi-path candidates suggested by local Dijkstra search from telemetry events
   interface DiscoveredRoute {
     pathString: string;
     steps: string[];
     cost: number;
-    startScreen: string;
-    destinationScreen: string;
-    targetElement?: string;
-    isShortest?: boolean;
-    score?: number;
-    description?: string;
+    destinationScreen?: string;
+    exactTask?: string;
+    timestamp: number;
   }
 
-  const latestPathSuggestions = useMemo<{
-    selectedPath?: string;
-    routes: DiscoveredRoute[];
-    timestamp?: number;
-  }>(() => {
-    for (const ev of events) {
-      if (
-        ev.type === 'INTENT_PARSED' &&
-        ev.payload?.allPaths &&
-        Array.isArray(ev.payload.allPaths) &&
-        ev.payload.allPaths.length > 0
-      ) {
-        return {
-          selectedPath: ev.payload.pathString || ev.description,
-          routes: ev.payload.allPaths,
-          timestamp: ev.timestamp
-        };
+  const discoveredRoutes = useMemo(() => {
+    const routes: DiscoveredRoute[] = [];
+    const seen = new Set<string>();
+
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i];
+      if (ev.tag === 'DIJKSTRA_CANDIDATE' || ev.tag === 'SEARCH_PATH' || ev.tag === 'PATH_FOUND') {
+        const p = ev.payload || {};
+        const pathStr = p.path_string || (Array.isArray(p.path) ? p.path.join(' -> ') : '');
+        if (pathStr && !seen.has(pathStr)) {
+          seen.add(pathStr);
+          routes.push({
+            pathString: pathStr,
+            steps: Array.isArray(p.path) ? p.path : pathStr.split(' -> ').map((s: string) => s.trim()),
+            cost: p.cost !== undefined ? p.cost : 0,
+            destinationScreen: p.destination_screen || p.target_screen || '',
+            exactTask: p.exact_task || p.task || '',
+            timestamp: ev.timestamp || Date.now()
+          });
+        }
       }
     }
-    return { routes: [] };
+    return routes;
   }, [events]);
+
+  // [PERMANENT FIX] Do not remove this! Typographic, Emoji & Ellipsis normalizer for transition matching.
+  const normalizeLabel = (text: string): string => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-')
+      .replace(/[\u00A0\u202F\u2007]/g, ' ')
+      .replace(/[…\.]/g, '')
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+      .replace(/[\u2600-\u27BF]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  // Nav Graph calculations
+  const activeApp: NavGraphApp | undefined = useMemo(() => {
+    if (!navGraph || !navGraph.apps) return undefined;
+    return navGraph.apps.find((a) => a.package_name === selectedAppPkg);
+  }, [navGraph, selectedAppPkg]);
 
   // Index ALL screens across all apps in navGraph by ID (so cross-package transitions resolve!)
   const screensById = useMemo(() => {
     const map = new Map<string, NavGraphScreen>();
-    if (navGraph && navGraph.apps) {
-      navGraph.apps.forEach((app) => {
-        app.screens.forEach((s) => map.set(s.id, s));
-      });
+    if (!navGraph || !navGraph.apps) return map;
+    for (const app of navGraph.apps) {
+      for (const screen of app.screens) {
+        map.set(screen.id, screen);
+      }
     }
     return map;
   }, [navGraph]);
@@ -348,234 +469,159 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       return { primaryApps: [], satelliteApps: [], clusterCountMap: new Map<string, number>() };
     }
 
-    // Map all target screen IDs that are pointed to by cross-package transitions
-    const crossPackageTargetScreenIds = new Set<string>();
-    const clusterMap = new Map<string, number>();
-
+    const clusters = new Map<string, number>();
     for (const app of navGraph.apps) {
-      for (const screen of app.screens) {
-        for (const t of screen.transitions) {
-          if (t.type === 'CLICK' && !t.to_id.startsWith(app.package_name + '::')) {
-            crossPackageTargetScreenIds.add(t.to_id);
-          }
-        }
-      }
+      clusters.set(app.package_name, app.screens.length);
     }
 
-    const primaries: NavGraphApp[] = [];
-    const satellites: NavGraphApp[] = [];
+    const primary: NavGraphApp[] = [];
+    const satellite: NavGraphApp[] = [];
 
     for (const app of navGraph.apps) {
-      const isPureSatellite =
-        app.package_name !== 'com.android.settings' &&
-        app.screens.length > 0 &&
-        app.screens.every((s) => crossPackageTargetScreenIds.has(s.id));
+      const isSatellite =
+        app.package_name.startsWith('com.oplus.') ||
+        app.package_name.startsWith('com.coloros.') ||
+        app.package_name.startsWith('com.android.settings.') ||
+        (app.screens.length <= 2 && app.package_name.includes('settings'));
 
-      if (isPureSatellite) {
-        satellites.push(app);
+      if (isSatellite && app.screens.length <= 5) {
+        satellite.push(app);
       } else {
-        primaries.push(app);
+        primary.push(app);
       }
     }
 
-    // Calculate connected cluster count for primary apps
-    for (const p of primaries) {
-      const clusterScreenIds = new Set<string>(p.screens.map((s) => s.id));
-      let expanded = true;
-      while (expanded) {
-        expanded = false;
-        for (const sId of Array.from(clusterScreenIds)) {
-          const s = screensById.get(sId);
-          if (s) {
-            for (const t of s.transitions) {
-              if (t.type === 'CLICK' && !clusterScreenIds.has(t.to_id) && screensById.has(t.to_id)) {
-                clusterScreenIds.add(t.to_id);
-                expanded = true;
-              }
-            }
-          }
-        }
-      }
-      clusterMap.set(p.package_name, clusterScreenIds.size);
-    }
-
-    return { primaryApps: primaries, satelliteApps: satellites, clusterCountMap: clusterMap };
-  }, [navGraph, screensById]);
-
-  // [PERMANENT FIX] Do not remove this! Typographic, Emoji & Ellipsis normalizer for transition matching.
-  const normalizeLabel = (text: string): string => {
-    if (!text) return '';
-    return text
-      .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g, '-')
-      .replace(/[\u00A0\u202F\u2007\u200B]/g, ' ')
-      .split(/\s*[\u00B7\u2022\u22C5\u2014]\s*/)[0]
-      .replace(/\s+(on|off|high|low|medium|connected|disconnected|disabled|enabled)\s*$/i, '')
-      .replace(/\s+\d+$/, '')
-      .replace(/[…\.]/g, '')
-      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
-      .trim()
-      .toLowerCase();
-  };
+    return { primaryApps: primary, satelliteApps: satellite, clusterCountMap: clusters };
+  }, [navGraph]);
 
   // [PERMANENT FIX] Do not remove this! App-Aware Root Resolution & Topological In-Degree Root Detection.
-  // In WhatsApp (com.whatsapp), the root screen is ALWAYS "Chats" or "WhatsApp" - Settings is a sub-page, NEVER a root screen!
-  // Prevents Settings from hijacking the root of the WhatsApp navigation tree and causing all chat conversations to vanish.
   const rootScreen = useMemo(() => {
     if (!activeApp || activeApp.screens.length === 0) return undefined;
-    const pkg = (activeApp.package_name || '').toLowerCase();
-    const displayName = (activeApp.display_name || '').toLowerCase();
 
-    // 1. App-specific canonical root screens:
-    if (pkg.includes('whatsapp') || displayName.includes('whatsapp')) {
-      const chats = activeApp.screens.find(
-        (s) => s.title.toLowerCase() === 'chats' || s.title.toLowerCase() === 'whatsapp'
-      );
-      if (chats) return chats;
-    }
+    const inDegree = new Map<string, number>();
+    activeApp.screens.forEach((s) => inDegree.set(s.id, 0));
 
-    if (pkg.includes('settings') || displayName.includes('setting')) {
-      const settings = activeApp.screens.find(
-        (s) => s.title.toLowerCase() === 'settings' || s.title.toLowerCase() === 'settings home'
-      );
-      if (settings) return settings;
-    }
-
-    // 2. Exact match to app display name
-    const exactNameMatch = activeApp.screens.find(
-      (s) => s.title.toLowerCase() === displayName
-    );
-    if (exactNameMatch) return exactNameMatch;
-
-    // 3. Known general entry titles
-    const generalEntryTitles = ['home', 'main', 'conversations', 'dialer', 'phone', 'camera'];
-    for (const title of generalEntryTitles) {
-      const entry = activeApp.screens.find((s) => s.title.toLowerCase() === title);
-      if (entry) return entry;
-    }
-
-    // 4. True topological root: Screen with ZERO incoming forward CLICK transitions
-    const forwardTargets = new Set<string>();
-    activeApp.screens.forEach((s) => {
-      s.transitions.forEach((t) => {
-        if (t.type === 'CLICK' && t.action.toLowerCase() !== 'back') {
-          forwardTargets.add(t.to_id);
-          forwardTargets.add(t.to_title.toLowerCase());
-        }
-      });
+    activeApp.transitions.forEach((t) => {
+      if (t.type === 'CLICK' && inDegree.has(t.to_id)) {
+        inDegree.set(t.to_id, (inDegree.get(t.to_id) || 0) + 1);
+      }
     });
-    const zeroInDegree = activeApp.screens.find(
-      (s) => !forwardTargets.has(s.id) && !forwardTargets.has(s.title.toLowerCase())
-    );
-    if (zeroInDegree) return zeroInDegree;
 
-    // 5. Fallback: Screen with highest visit count
-    const sorted = [...activeApp.screens].sort(
-      (a, b) => (b.visit_count || 0) - (a.visit_count || 0)
-    );
-    return sorted[0];
+    const isWhatsApp = activeApp.package_name.includes('whatsapp');
+    const isSettings = activeApp.package_name.includes('settings');
+
+    let zeroInDegree = activeApp.screens.filter((s) => (inDegree.get(s.id) || 0) === 0);
+
+    if (isWhatsApp) {
+      const waHome = activeApp.screens.find((s) => {
+        const titleNorm = normalizeLabel(s.title);
+        return titleNorm === 'whatsapp' || titleNorm === 'chats';
+      });
+      if (waHome) return waHome;
+    }
+
+    if (isSettings) {
+      const settingsHome = activeApp.screens.find((s) => {
+        const titleNorm = normalizeLabel(s.title);
+        return titleNorm === 'settings' || titleNorm === 'oplus settings';
+      });
+      if (settingsHome) return settingsHome;
+    }
+
+    if (zeroInDegree.length > 0) {
+      zeroInDegree.sort((a, b) => b.elements.length - a.elements.length);
+      return zeroInDegree[0];
+    }
+
+    return activeApp.screens[0];
   }, [activeApp]);
 
   // [PERMANENT FIX] Do not remove this! Auto-Expand Active Phone Screen Path in Nav Graph.
-  // When phone moves to a sub-screen (e.g. Settings, Chats Settings, Chat backup),
-  // automatically trace the transition path from rootScreen and unfold parent nodes
-  // so the active screen and its elements (Chats, Appearance, Notifications) are immediately visible.
   useEffect(() => {
-    if (!activeApp || !rootScreen || !latestLiveLocation?.screenTitle) return;
-    const targetTitle = normalizeLabel(latestLiveLocation.screenTitle.replace(/,\s*\d+\s+new.*$/i, ''));
-    if (!targetTitle) return;
+    if (!latestLiveLocation.screenTitle || !activeApp) return;
 
-    if (normalizeLabel(rootScreen.title) === targetTitle) return;
+    const targetTitleNorm = normalizeLabel(latestLiveLocation.screenTitle);
+    const targetScreen = activeApp.screens.find(
+      (s) => normalizeLabel(s.title) === targetTitleNorm
+    );
+    if (!targetScreen) return;
 
-    // BFS to find path from rootScreen to targetTitle
-    const visited = new Set<string>();
-    visited.add(rootScreen.id);
-    const parentMap = new Map<string, { parentId: string; transKey: string }>();
-    const queue: string[] = [rootScreen.id];
+    const toExpand: Record<string, boolean> = {};
 
-    let foundScreenId: string | null = null;
-
-    while (queue.length > 0) {
-      const currId = queue.shift()!;
-      const currScreen = screensById.get(currId);
-      if (!currScreen) continue;
-
-      if (normalizeLabel(currScreen.title) === targetTitle) {
-        foundScreenId = currId;
-        break;
-      }
-
-      // Check transitions
-      currScreen.elements.forEach((elemName, eIdx) => {
-        const normElem = normalizeLabel(elemName);
-        const trans = currScreen.transitions.find((t) => {
-          if (t.type !== 'CLICK') return false;
-          const normAction = normalizeLabel(t.action);
-          const normToTitle = normalizeLabel(t.to_title);
-          return normAction === normElem || normToTitle === normElem ||
-                 (normElem.length >= 3 && normAction.includes(normElem)) ||
-                 (normAction.length >= 3 && normElem.includes(normAction)) ||
-                 (normToTitle && normToTitle.length >= 3 && (normElem.includes(normToTitle) || normToTitle.includes(normElem)));
-        });
-
-        let targetId = trans?.to_id;
-        if (!targetId) {
-          const matchScreen = activeApp.screens.find((s) => {
-            if (s.id === currScreen.id) return false;
-            const sTitle = normalizeLabel(s.title);
-            return sTitle === normElem || (sTitle.length >= 3 && normElem.includes(sTitle));
-          });
-          if (matchScreen) targetId = matchScreen.id;
-        }
-
-        if (targetId && !visited.has(targetId)) {
-          visited.add(targetId);
-          const transKey = `${currScreen.id}_to_${elemName}_${eIdx}`;
-          parentMap.set(targetId, { parentId: currScreen.id, transKey });
-          queue.push(targetId);
+    activeApp.screens.forEach((parent) => {
+      parent.elements.forEach((elem, eIdx) => {
+        const transKey = `${parent.id}_to_${elem}_${eIdx}`;
+        const hasTransition = activeApp.transitions.some(
+          (t) => t.from_id === parent.id && t.to_id === targetScreen.id
+        );
+        if (hasTransition || normalizeLabel(elem) === targetTitleNorm) {
+          toExpand[transKey] = true;
         }
       });
+    });
 
-      currScreen.transitions.forEach((t, idx) => {
-        if (t.type === 'CLICK' && t.to_id && !visited.has(t.to_id)) {
-          visited.add(t.to_id);
-          const transKey = `${currScreen.id}_unmapped_${t.action}_${idx}`;
-          parentMap.set(t.to_id, { parentId: currScreen.id, transKey });
-          queue.push(t.to_id);
-        }
-      });
+    if (Object.keys(toExpand).length > 0) {
+      setExpandedTransitions((prev) => ({ ...prev, ...toExpand }));
     }
+  }, [latestLiveLocation.screenTitle, activeApp]);
 
-    if (foundScreenId && parentMap.has(foundScreenId)) {
-      const keysToExpand: Record<string, boolean> = {};
-      let curr: string | undefined = foundScreenId;
-      while (curr && parentMap.has(curr)) {
-        const step = parentMap.get(curr)!;
-        keysToExpand[step.transKey] = true;
-        curr = step.parentId;
+  // Filtered live screens based on evaluation status & search query
+  const displayedLiveScreens = useMemo(() => {
+    return liveScreens.filter((screen) => {
+      // Evaluation filter
+      if (evalFilter === 'correct') {
+        if (evaluations[screen.id]?.status !== 'correct') return false;
+      } else if (evalFilter === 'wrong') {
+        if (evaluations[screen.id]?.status !== 'wrong') return false;
+      } else if (evalFilter === 'unreviewed') {
+        if (evaluations[screen.id]) return false;
       }
-      setExpandedTransitions((prev) => ({
-        ...prev,
-        ...keysToExpand
-      }));
-    }
-  }, [activeApp, rootScreen, latestLiveLocation?.screenTitle, screensById]);
+
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = screen.screenTitle.toLowerCase().includes(q);
+        const matchesPkg = screen.packageName.toLowerCase().includes(q);
+        const matchesElement = screen.elements.some((e) => e.name.toLowerCase().includes(q));
+        const matchesNotes = evaluations[screen.id]?.notes?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesPkg && !matchesElement && !matchesNotes) return false;
+      }
+
+      return true;
+    });
+  }, [liveScreens, evalFilter, searchQuery, evaluations]);
+
+  const correctCount = useMemo(() => {
+    return liveScreens.filter((s) => evaluations[s.id]?.status === 'correct').length;
+  }, [liveScreens, evaluations]);
+
+  const wrongCount = useMemo(() => {
+    return liveScreens.filter((s) => evaluations[s.id]?.status === 'wrong').length;
+  }, [liveScreens, evaluations]);
+
+  const unreviewedCount = useMemo(() => {
+    return liveScreens.length - correctCount - wrongCount;
+  }, [liveScreens.length, correctCount, wrongCount]);
+
+  const wrongScreensList = useMemo(() => {
+    return liveScreens.filter((s) => evaluations[s.id]?.status === 'wrong');
+  }, [liveScreens, evaluations]);
 
   // Recursive NavGraph Screen Renderer (True Multi-Screen Tree!)
   const renderNavGraphScreen = (
     screen: NavGraphScreen,
     depth: number = 1,
-    visitedScreens: Set<string> = new Set(),
-    renderedScreenIds?: Set<string>
+    visitedScreens: Set<string> = new Set()
   ) => {
-    renderedScreenIds?.add(screen.id);
     const isLoop = visitedScreens.has(screen.id);
     const nextVisited = new Set(visitedScreens);
     nextVisited.add(screen.id);
 
     const style = getLayerStyle(depth);
+    const evalRecord = evaluations[screen.id];
 
     // [PERMANENT FIX] Do not remove this! Dynamic scroll element merging for real-time tree expansion on scroll.
-    // Seamlessly merges elements discovered during live phone scrolling into the nav graph tree in real-time.
+    // Seamlessly merges elements discovered during live phone scrolling into the nav graph tree in memory.
     const liveGroup = liveScreens.find(
       (ls) => ls.id === screen.id || (ls.packageName === screen.package_name && ls.screenTitle?.toLowerCase() === screen.title.toLowerCase())
     );
@@ -592,10 +638,10 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     }
 
     // [PERMANENT FIX] Do not remove this! Filter Navigation Return Controls and Header Title Redundancies.
-    // 1. Back controls (Back, Navigate up, Arrow back, Close) are stack unwinding controls, NOT forward tree links.
-    // 2. Header titles (e.g. "Chats" and "Chat settings" under "Chats Settings") are screen titles, NOT interactive actions.
+    // 1. Back controls (Back, Navigate up, Arrow back, Close) are stack unwinding controls, NOT forward transitions.
+    // 2. Header titles (e.g. "Chats" and "Chat settings" under "Chats Settings") are screen titles, NOT nested links.
     const seenElementBases = new Set<string>();
-    const NAV_RETURN_LABELS = new Set(['back', 'navigate up', 'up', 'go back', 'arrow_back', 'close', 'cancel']);
+    const NAV_RETURN_LABELS = new Set(['back', 'navigate up', 'up', 'go back', 'arrow_back', 'close', 'done']);
 
     const sanitizedElements = combinedElements.filter((el) => {
       const trimmed = el.trim();
@@ -604,15 +650,15 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       if (lower === screen.title.toLowerCase()) return false;
       if (lower === 'search box') return false;
       if (NAV_RETURN_LABELS.has(lower)) return false;
-      
+
       // Header noise on sub-screens (e.g. "Chats" and "Chat settings" under "Chats Settings").
-      // Do NOT filter out "Chats" on the root "Settings" screen where it is a valid menu item that opens Chats Settings!
+      // Do NOT filter out "Chats" on the root "Settings" screen where it is a valid menu item that leads to "Chats Settings".
       if (screen.title.toLowerCase() === 'chats settings' && (lower === 'chats' || lower === 'chat settings')) return false;
-      if (screen.title.toLowerCase() !== 'settings' && screen.title.toLowerCase().endsWith('settings') && (lower === 'chats' || lower === 'chat settings')) return false;
-      if (screen.title.toLowerCase().startsWith(lower) && lower.length <= 15 && screen.title.toLowerCase() !== lower && screen.title.toLowerCase() !== 'settings') return false;
+      if (screen.title.toLowerCase() !== 'settings' && screen.title.toLowerCase().endsWith('settings') && lower.endsWith('settings')) return false;
+      if (screen.title.toLowerCase().startsWith(lower) && lower.length <= 15 && screen.title.toLowerCase() !== 'settings') return false;
 
       const normNoise = lower.replace(/_/g, ' ');
-      if (normNoise === 'bottom bar' || normNoise === 'action bar' || normNoise === 'scrollable list' || normNoise === 'touch outside' || normNoise === 'scrim') return false;
+      if (normNoise === 'bottom bar' || normNoise === 'action bar' || normNoise === 'scrollable list') return false;
       const base = normalizeLabel(trimmed);
       if (!base) return false;
       if (seenElementBases.has(base)) return false;
@@ -634,7 +680,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
     const isCurrentLiveScreen = Boolean(
       liveTitleNorm &&
-      (!latestLiveLocation?.packageName || screen.id.toLowerCase().startsWith(latestLiveLocation.packageName.toLowerCase()) || activeApp?.package_name.toLowerCase() === latestLiveLocation.packageName.toLowerCase()) &&
+      (!latestLiveLocation?.packageName || screen.id.toLowerCase().startsWith(latestLiveLocation.packageName.toLowerCase())) &&
       (
         screenTitleNorm === liveTitleNorm ||
         (screenTitleNorm === 'chats' && (liveTitleNorm === 'whatsapp' || liveTitleNorm === 'chats')) ||
@@ -649,53 +695,101 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       <div key={screen.id} className="space-y-1.5">
         {/* Screen Header - [PERMANENT FIX] High-contrast glowing live location marker box */}
         <div
-          className={`flex items-center justify-between px-4 py-2.5 rounded-lg select-none transition-all ${
+          className={`flex items-center justify-between px-4 py-2.5 rounded-2xl select-none transition-all duration-200 border ${
             isCurrentLiveScreen
-              ? 'bg-gradient-to-r from-emerald-950/90 via-[#04281e] to-dark-900 border-2 border-emerald-400 ring-2 ring-emerald-500/40 shadow-[0_0_24px_rgba(52,211,153,0.4)]'
-              : style.bg + ' ' + style.borderLeft + ' border-b border-dark-800/50'
+              ? 'bg-gradient-to-r from-emerald-50 via-emerald-100/50 to-teal-50 border-2 border-emerald-500 shadow-md ring-2 ring-emerald-400/20'
+              : `${style.bg} ${style.borderLeft} border-slate-200/80 shadow-xs`
+          } ${
+            evalRecord?.status === 'correct'
+              ? 'ring-2 ring-emerald-300/40 border-emerald-300'
+              : evalRecord?.status === 'wrong'
+              ? 'ring-2 ring-rose-300/40 border-rose-300'
+              : ''
           }`}
         >
           <div className="flex items-center space-x-2.5">
-            <FolderOpen className={`w-4 h-4 ${isCurrentLiveScreen ? 'text-emerald-300' : 'text-emerald-400'}`} />
-            <span className={`text-xs font-bold ${isCurrentLiveScreen ? 'text-emerald-100' : 'text-gray-100'}`}>
+            <FolderOpen className={`w-4 h-4 ${isCurrentLiveScreen ? 'text-emerald-600 animate-pulse' : 'text-indigo-600'}`} />
+            <span className={`text-xs font-bold ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : 'text-slate-900'}`}>
               {screen.title}
             </span>
             {isCurrentLiveScreen && (
-              <span className="flex items-center space-x-1.5 text-[10px] px-2.5 py-0.5 rounded-full font-bold font-mono bg-emerald-400 text-black border border-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.7)] animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-black inline-block animate-ping" />
-                <span>📍 CURRENT ON THIS PAGE HERE</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-600 text-white animate-pulse shadow-sm flex items-center space-x-1">
+                <span>📍 ACTIVE PHONE SCREEN</span>
               </span>
             )}
             <span
-              className={`text-[9px] px-2 py-0.5 rounded font-mono font-semibold ${style.badgeBg}`}
+              className={`text-[9px] px-2 py-0.5 rounded-md font-mono font-bold ${style.badgeBg}`}
             >
-              {style.layerName}
+              Layer {depth}
             </span>
-            <span className="text-[11px] text-gray-400 font-mono">
+            {evalRecord?.status === 'correct' && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
+                <Check className="w-3 h-3 text-emerald-600" />
+                <span>Correct</span>
+              </span>
+            )}
+            {evalRecord?.status === 'wrong' && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1">
+                <X className="w-3 h-3 text-rose-600" />
+                <span>Wrong</span>
+              </span>
+            )}
+            <span className="text-[11px] text-slate-400 font-mono">
               ({screen.elements.length} elements, {screen.transitions.length} links)
             </span>
           </div>
 
-          <span className="text-[10px] font-mono text-gray-400">
-            Visits: {screen.visit_count || 1}
-          </span>
+          <div className="flex items-center space-x-2.5" onClick={(e) => e.stopPropagation()}>
+            {/* Correct & Wrong buttons for Nav Graph screens */}
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => toggleNavGraphEvaluation(screen, 'correct')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
+                  evalRecord?.status === 'correct'
+                    ? 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
+                    : 'bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/80'
+                }`}
+                title="Mark this screen as Correct"
+              >
+                <Check className="w-3 h-3" />
+                <span>Correct</span>
+              </button>
+
+              <button
+                onClick={() => toggleNavGraphEvaluation(screen, 'wrong')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
+                  evalRecord?.status === 'wrong'
+                    ? 'bg-rose-500 text-white border border-rose-600 shadow-sm'
+                    : 'bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200/80'
+                }`}
+                title="Mark this screen as Wrong for study"
+              >
+                <X className="w-3 h-3" />
+                <span>Wrong</span>
+              </button>
+            </div>
+
+            <span className="text-[10px] font-mono text-slate-400">
+              Visits: {screen.visit_count || 1}
+            </span>
+          </div>
         </div>
 
         {/* If cycle detected, stop recursion */}
         {isLoop ? (
-          <div className={`${style.paddingLeft} py-1 text-xs text-amber-400/80 font-mono`}>
+          <div className={`${style.paddingLeft} py-1 text-xs text-amber-600 font-mono`}>
             ↳ (Circular reference back to {screen.title})
           </div>
         ) : (
           /* Elements inside this screen */
-          <div className="divide-y divide-dark-800/20 pl-2">
+          <div className="divide-y divide-slate-100 pl-2">
             {visibleElements.length === 0 ? (
-              <div className="py-2 text-xs text-gray-500 pl-4">No matching elements</div>
+              <div className="py-2 text-xs text-slate-400 pl-4">No matching elements</div>
             ) : (
               visibleElements.map((elemName, eIdx) => {
                 // [PERMANENT FIX] Do not remove this! Universal screen link matching for contact chats & sub-screens.
-                // Matches via forward CLICK transitions, or by matching element name to existing screen titles,
-                // or where another screen has a BACK transition returning to this screen (e.g. Rohit Thatikonda (You) -[BACK]-> Chats).
+                // Matches via forward CLICK transitions, or by matching element name to existing screen,
+                // or where another screen has a BACK transition returning to this screen (e.g. Rohit -> WhatsApp).
                 const normElem = normalizeLabel(elemName);
                 const transition = screen.transitions.find((t) => {
                   if (t.type !== 'CLICK') return false;
@@ -716,8 +810,8 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
                 if (!targetScreen && activeApp) {
                   // [PERMANENT FIX] Do not remove this! Tight Title Matching without Loose Substring Collisions.
-                  // Generic words (e.g. "chats") must never match compound options ("Keep chats archived", "Transfer chats").
-                  // Matching to rootScreen or visited ancestors is strictly forbidden to eliminate infinite replication loops.
+                  // Generic words (e.g. "chats") must never match compound options ("Keep chats archived").
+                  // Matching to rootScreen or visited ancestors is strictly forbidden to eliminate circular loops.
                   targetScreen = activeApp.screens.find((s) => {
                     if (s.id === screen.id) return false;
                     if (rootScreen && s.id === rootScreen.id) return false;
@@ -726,10 +820,10 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                     const sTitleNorm = normalizeLabel(s.title);
                     if (!sTitleNorm || !normElem) return false;
 
-                    // Require exact match or exact multi-word contact name match (never match substring of short generic titles)
+                    // Require exact match or exact multi-word contact name match (never match substrings like 'chats' in 'Keep chats archived')
                     const matchesName = sTitleNorm === normElem ||
                       (sTitleNorm.length >= 5 && normElem.startsWith(sTitleNorm + ' '));
-                    
+
                     const returnsToThis = s.transitions.some(
                       (t) => (t.type === 'BACK' || t.action === 'BACK') &&
                              (t.to_id === screen.id || t.to_title.toLowerCase() === screen.title.toLowerCase())
@@ -739,8 +833,8 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 }
 
                 // [PERMANENT FIX] Do not remove this! Anti-Circular Navigation & Root Screen Recursion Guard.
-                // A forward child screen must NEVER link back to rootScreen or to any ancestor currently in the visited path.
-                // When user presses Back, the live location marker shifts up to the parent page; it NEVER adds a child page below!
+                // A forward child screen must NEVER link back to rootScreen or to any ancestor currently in visitedScreens.
+                // When user presses Back, the live location marker shifts up to the parent page; it does NOT append child loops!
                 if (targetScreen && (rootScreen && targetScreen.id === rootScreen.id || visitedScreens.has(targetScreen.id))) {
                   targetScreen = undefined;
                 }
@@ -748,7 +842,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 const hasTargetScreen = Boolean(targetScreen);
 
                 const transKey = `${screen.id}_to_${elemName}_${eIdx}`;
-                const isExpanded = isAllExpanded ? expandedTransitions[transKey] !== false : expandedTransitions[transKey] === true;
+                const isExpanded = isAllExpanded ? expandedTransitions[transKey] !== false : expandedTransitions[transKey];
                 const isTargetStep = Boolean(
                   latestLiveLocation?.currentStep &&
                   elemName.trim().toLowerCase() === latestLiveLocation.currentStep.trim().toLowerCase()
@@ -764,12 +858,12 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                           toggleTransition(transKey);
                         }
                       }}
-                      className={`flex items-center justify-between pr-4 py-2 ${style.paddingLeft} rounded-lg transition-all select-none ${
+                      className={`flex items-center justify-between pr-4 py-2 ${style.paddingLeft} rounded-xl select-none transition-all ${
                         isTargetStep
-                          ? 'bg-gradient-to-r from-amber-950/90 via-[#2f2008] to-dark-900 border-2 border-amber-400 ring-2 ring-amber-400/50 shadow-[0_0_22px_rgba(251,191,36,0.45)] my-1'
+                          ? 'bg-gradient-to-r from-amber-50 via-amber-100/50 to-orange-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
                           : hasTargetScreen
-                          ? 'cursor-pointer hover:bg-sky-500/15 border border-transparent'
-                          : 'hover:bg-dark-800/50 border border-transparent'
+                          ? 'cursor-pointer hover:bg-indigo-50/60 border border-transparent'
+                          : 'hover:bg-slate-50 border border-transparent'
                       }`}
                     >
                       {/* Left: Indicator, Name, Link Badge */}
@@ -780,94 +874,63 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                               e.stopPropagation();
                               toggleTransition(transKey);
                             }}
-                            className="p-1 rounded text-sky-400 hover:text-sky-200 hover:bg-sky-500/20 transition-colors shrink-0"
-                            title={`Click to expand child screen: ${targetScreen?.title}`}
+                            className="p-1 rounded-md hover:bg-slate-200/60 text-slate-400 hover:text-slate-600 transition-colors"
                           >
                             {isExpanded ? (
-                              <ChevronDown className="w-3.5 h-3.5" />
+                              <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
                             ) : (
-                              <ChevronRight className="w-3.5 h-3.5" />
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                             )}
                           </button>
                         ) : (
-                          <span className="text-gray-500 font-mono text-[11px] select-none shrink-0 w-4 text-center">
-                            {isLastElem ? '└──' : '├──'}
+                          <span className="text-slate-300 font-mono text-[11px] select-none shrink-0 w-5 text-center">
+                            {isLastElem ? '└' : '├'}
                           </span>
                         )}
 
-                        {/* Name */}
                         <span
                           className={`text-xs truncate ${
                             isTargetStep
-                              ? 'text-amber-100 font-extrabold text-sm'
+                              ? 'text-amber-950 font-black'
                               : hasTargetScreen
-                              ? 'text-sky-300 font-semibold'
-                              : 'text-gray-200 font-medium'
+                              ? 'text-indigo-600 font-bold hover:underline'
+                              : 'text-slate-700 font-medium'
                           }`}
                         >
                           {elemName}
                         </span>
 
-                        {/* Live Target Step Badge */}
                         {isTargetStep && (
-                          <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-amber-400 text-black border border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.6)] animate-pulse">
-                            <span>🎯</span>
-                            <span>TARGET STEP</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-amber-500 text-white animate-pulse shadow-sm flex items-center space-x-1 shrink-0">
+                            <span>🎯 NEXT TARGET STEP</span>
                           </span>
                         )}
 
-                        {/* Transition Link Badge */}
-                        {hasTargetScreen && targetScreen && (
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                            <ExternalLink className="w-2.5 h-2.5" />
-                            <span>opens {targetScreen.title}</span>
+                        {hasTargetScreen && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-mono font-semibold shrink-0 flex items-center space-x-1">
+                            <span>→ {targetScreen?.title}</span>
                           </span>
                         )}
                       </div>
 
-                      {/* Right: Badge & Info */}
+                      {/* Right: Action or Type */}
                       <div className="flex items-center space-x-2 shrink-0">
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                            hasTargetScreen
-                              ? 'text-sky-400 bg-sky-500/15 border border-sky-500/30'
-                              : 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
-                          }`}
-                        >
-                          {hasTargetScreen ? 'Screen Link' : 'Action'}
-                        </span>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedElement({
-                              element: {
-                                name: elemName,
-                                screen: screen.title,
-                                leadsTo: targetScreen?.title || null,
-                                actionType: transition?.type || 'STATIC'
-                              },
-                              screenTitle: screen.title
-                            });
-                          }}
-                          className="text-gray-400 hover:text-gray-100 p-1 rounded hover:bg-dark-750 transition-colors"
-                        >
-                          <Info className="w-3.5 h-3.5" />
-                        </button>
+                        {hasTargetScreen ? (
+                          <span className="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                            SCREEN LINK
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400">
+                            action
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Child Screen (Expanded recursively under this link!) - [PERMANENT FIX] Code-editor nested block indentation */}
-                    {hasTargetScreen && targetScreen && isExpanded && (
-                      <div className="mt-2 mb-3 ml-6 relative border-l-2 border-sky-400/60 pl-4 py-2 bg-[#0d121c]/90 rounded-r-xl border-y border-r border-sky-500/20 shadow-xl">
-                        {/* Code-style indentation indicator line */}
-                        <div className="text-[10px] font-mono text-sky-300/80 mb-2 flex items-center space-x-2 pb-1 border-b border-sky-500/20">
-                          <span className="text-sky-400 font-bold">┌─ nested block</span>
-                          <span className="text-gray-500">•</span>
-                          <span className="text-gray-400">sub-page:</span>
-                          <code className="text-sky-200 font-bold bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30">{targetScreen.title}</code>
-                        </div>
-                        {renderNavGraphScreen(targetScreen, depth + 1, nextVisited, renderedScreenIds)}
+                    {hasTargetScreen && isExpanded && targetScreen && (
+                      <div className="ml-6 pl-4 border-l-2 border-indigo-200/80 my-1.5 transition-all">
+                        {renderNavGraphScreen(targetScreen, depth + 1, nextVisited)}
                       </div>
                     )}
                   </div>
@@ -876,54 +939,65 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             )}
 
             {/* [PERMANENT FIX] Do not remove this! Direct / Unmapped Screen Transitions.
-                If a screen records a forward CLICK transition whose label wasn't in visibleElements,
-                display it as an expandable link so deep child screens are never lost. */}
+                If this screen has outgoing transitions that were not matched to individual elements above,
+                render them here so the user can still unfold the navigation tree without missing screens! */}
             {(() => {
-              const matchedActionNorms = new Set(visibleElements.map((e) => normalizeLabel(e)));
-              const unmapped = screen.transitions.filter((t) => {
+              const directTransitions = screen.transitions.filter((t) => {
                 if (t.type !== 'CLICK') return false;
-                const normA = normalizeLabel(t.action);
-                const normT = normalizeLabel(t.to_title);
-                return !matchedActionNorms.has(normA) && !matchedActionNorms.has(normT);
+                const normAction = normalizeLabel(t.action);
+                const normToTitle = normalizeLabel(t.to_title);
+                return !visibleElements.some((elem) => {
+                  const normElem = normalizeLabel(elem);
+                  return (
+                    normAction === normElem ||
+                    normToTitle === normElem ||
+                    (normElem.length >= 3 && normAction.includes(normElem)) ||
+                    (normAction.length >= 3 && normElem.includes(normAction))
+                  );
+                });
               });
-              if (unmapped.length === 0) return null;
-              return (
-                <div className="pt-2 pb-1 pl-4 space-y-1 border-t border-dark-800/40">
-                  <div className="text-[10px] font-mono font-semibold text-gray-400 uppercase tracking-wider">
-                    Direct Navigation Links ({unmapped.length})
-                  </div>
-                  {unmapped.map((t, idx) => {
-                    let targetScreen = screensById.get(t.to_id);
-                    // [PERMANENT FIX] Do not remove this! Direct transition recursion guard.
-                    if (targetScreen && ((rootScreen && targetScreen.id === rootScreen.id) || visitedScreens.has(targetScreen.id))) {
-                      targetScreen = undefined;
-                    }
-                    if (!targetScreen) return null;
 
-                    const transKey = `${screen.id}_unmapped_${t.action}_${idx}`;
-                    const isExpanded = isAllExpanded ? expandedTransitions[transKey] !== false : expandedTransitions[transKey] === true;
+              if (directTransitions.length === 0) return null;
+
+              return (
+                <div className="mt-2 pt-2 border-t border-slate-200/60 pl-4 space-y-1">
+                  <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                    Additional Direct Transitions ({directTransitions.length})
+                  </div>
+                  {directTransitions.map((dt, dtIdx) => {
+                    const directTarget = screensById.get(dt.to_id);
+                    // [PERMANENT FIX] Do not remove this! Direct transition recursion guard.
+                    if (!directTarget || (rootScreen && directTarget.id === rootScreen.id) || visitedScreens.has(directTarget.id)) {
+                      return null;
+                    }
+
+                    const dtKey = `${screen.id}_direct_${dt.to_id}_${dtIdx}`;
+                    const isDtExpanded = isAllExpanded ? expandedTransitions[dtKey] !== false : expandedTransitions[dtKey];
+
                     return (
-                      <div key={transKey} className="py-0.5">
+                      <div key={dtKey} className="py-1">
                         <div
-                          onClick={() => {
-                            if (targetScreen) toggleTransition(transKey);
-                          }}
-                          className={`flex items-center justify-between pr-4 py-1.5 pl-3 rounded-lg ${
-                            targetScreen ? 'cursor-pointer hover:bg-sky-500/10' : ''
-                          } border border-dark-800/60 bg-dark-850/40 text-xs transition-colors`}
+                          onClick={() => toggleTransition(dtKey)}
+                          className="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-indigo-50/50 cursor-pointer border border-slate-200/70 select-none"
                         >
                           <div className="flex items-center space-x-2">
-                            <span className="text-gray-300 font-medium">{t.action}</span>
-                            <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                              <ExternalLink className="w-2.5 h-2.5" />
-                              <span>opens {t.to_title}</span>
+                            {isDtExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                            )}
+                            <span className="text-xs font-bold text-slate-800">
+                              via "{dt.action || 'CLICK'}"
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono font-semibold">
+                              → {directTarget.title}
                             </span>
                           </div>
-                          <span className="text-[10px] font-mono text-sky-400">Direct Link</span>
                         </div>
-                        {targetScreen && isExpanded && (
-                          <div className="mt-2 mb-3 ml-4 relative border-l-2 border-sky-400/60 pl-3 py-2 bg-[#0d121c]/90 rounded-r-xl border-y border-r border-sky-500/20 shadow-xl">
-                            {renderNavGraphScreen(targetScreen, depth + 1, nextVisited, renderedScreenIds)}
+
+                        {isDtExpanded && (
+                          <div className="ml-6 pl-4 border-l-2 border-indigo-200/80 my-1.5">
+                            {renderNavGraphScreen(directTarget, depth + 1, nextVisited)}
                           </div>
                         )}
                       </div>
@@ -939,354 +1013,384 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-dark-900 px-6 py-4">
-      {/* Top Header Bar */}
-      <div className="flex flex-wrap items-center justify-between pb-3 border-b border-dark-800 gap-3">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-6 py-4">
+      {/* Top Header & View Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-slate-200/80 gap-3">
         <div className="flex items-center space-x-3">
-          <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <GitFork className="w-4 h-4" />
+          <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-xs">
+            <Layers className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-gray-100 flex items-center gap-2">
-              Navigation Graph & UI Tree Explorer
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              Screen Hierarchy & Nav Tree
+              {activeApp && (
+                <span className="text-xs px-2.5 py-0.5 rounded-md font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  {activeApp.app_name || activeApp.package_name}
+                </span>
+              )}
             </h2>
-            <p className="text-[11px] text-gray-400">
-              True verified parent-child screen transitions directly from{' '}
-              <code className="text-emerald-400 font-mono">nav_graph.db</code>
+            <p className="text-xs text-slate-500 font-medium">
+              Explore app screens, recursive transitions, and live UI dumps
             </p>
           </div>
         </div>
 
-        {/* View Mode Toggle: Nav Graph vs Live Capture vs Raw JSON */}
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center bg-dark-800 rounded-lg p-0.5 border border-dark-700">
-            <button
-              onClick={() => setViewMode('nav_graph')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                viewMode === 'nav_graph'
-                  ? 'bg-dark-700 text-emerald-300 shadow-sm border border-emerald-500/30'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <GitFork className="w-3.5 h-3.5" />
-              <span>Nav Graph (from .db)</span>
-            </button>
-
-            <button
-              onClick={() => setViewMode('live')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                viewMode === 'live'
-                  ? 'bg-dark-700 text-gray-100 shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>Live Phone Screen</span>
-            </button>
-
-            <button
-              onClick={() => setViewMode('json')}
-              className={`flex items-center space-x-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                viewMode === 'json'
-                  ? 'bg-dark-700 text-gray-100 shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              <Code className="w-3.5 h-3.5" />
-              <span>Raw JSON</span>
-            </button>
-          </div>
+        {/* View Mode Toggle */}
+        <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+          <button
+            onClick={() => setViewMode('nav_graph')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              viewMode === 'nav_graph'
+                ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
+          >
+            <GitFork className="w-3.5 h-3.5" />
+            <span>Nav Graph Tree</span>
+          </button>
 
           <button
-            onClick={() => handleCopy(navGraph || events, 'full_data')}
-            className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-dark-800 hover:bg-dark-750 text-xs font-medium text-gray-300 border border-dark-700 transition-colors"
+            onClick={() => setViewMode('live')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              viewMode === 'live'
+                ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
           >
-            {copiedItemIdx === 'full_data' ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
-            <span>{copiedItemIdx === 'full_data' ? 'Copied' : 'Copy JSON'}</span>
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Live Captures ({liveScreens.length})</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('json')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              viewMode === 'json'
+                ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
+          >
+            <Code className="w-3.5 h-3.5" />
+            <span>Raw JSON</span>
           </button>
         </div>
       </div>
 
-      {/* Live Phone Location Status Banner */}
-      {latestLiveLocation && (
-        <div className="flex flex-wrap items-center justify-between px-4 py-2.5 mb-3 bg-gradient-to-r from-rose-950/40 via-[#151922] to-dark-900 border border-rose-500/30 rounded-lg text-xs font-mono text-gray-200 shadow-md">
-          <div className="flex items-center space-x-2.5">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
-            </span>
-            <span className="font-semibold text-rose-300">LIVE PHONE LOCATION:</span>
-            <span className="text-gray-100 font-bold bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/40">
-              {latestLiveLocation.screenTitle || 'Active Screen'}
-            </span>
-            {latestLiveLocation.packageName && (
-              <span className="text-gray-400 text-[11px]">({latestLiveLocation.packageName})</span>
-            )}
-          </div>
-          {latestLiveLocation.currentStep && (
-            <div className="flex items-center space-x-1.5 text-amber-300 mt-1 sm:mt-0">
-              <span className="text-gray-400">Target:</span>
-              <span className="font-semibold bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30 text-amber-200">
-                '{latestLiveLocation.currentStep}'
-              </span>
-              {latestLiveLocation.totalSteps && (
-                <span className="text-gray-400 text-[10px]">
-                  [Step {(latestLiveLocation.stepIndex ?? 0) + 1}/{latestLiveLocation.totalSteps}]
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* [PERMANENT FIX] Do not remove this! All Local Query Paths Multi-Route Explorer Card */}
-      {latestPathSuggestions.routes.length > 0 && (
-        <div className="mb-3 p-3.5 rounded-xl bg-gradient-to-r from-dark-850 via-[#131722] to-dark-900 border border-emerald-500/30 shadow-lg space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="p-1 rounded bg-emerald-500/20 text-emerald-400 text-xs">🧭</span>
-              <h3 className="text-xs font-bold text-gray-100 flex items-center gap-1.5 font-mono">
-                LOCAL QUERY PATH SUGGESTIONS
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
-                  {latestPathSuggestions.routes.length} candidate route{latestPathSuggestions.routes.length > 1 ? 's' : ''} evaluated
-                </span>
-              </h3>
-            </div>
-            {latestPathSuggestions.timestamp && (
-              <span className="text-[10px] font-mono text-gray-400">
-                {new Date(latestPathSuggestions.timestamp).toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            {latestPathSuggestions.routes.map((route, rIdx) => {
-              const isBest = route.isShortest || rIdx === 0;
-              return (
-                <div
-                  key={rIdx}
-                  className={`p-2.5 rounded-lg border transition-all ${
-                    isBest
-                      ? 'bg-emerald-950/30 border-emerald-500/50 ring-1 ring-emerald-500/20'
-                      : 'bg-dark-800/60 border-dark-700/60 hover:bg-dark-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold ${
-                          isBest
-                            ? 'bg-emerald-400 text-black shadow-sm'
-                            : 'bg-dark-700 text-gray-400 border border-dark-600'
-                        }`}
-                      >
-                        {isBest ? '⭐ BEST ROUTE (ACTIVE)' : `ROUTE #${rIdx + 1}`}
-                      </span>
-                      <span className="text-[11px] text-gray-300 font-medium">
-                        {route.startScreen} → {route.destinationScreen}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-[10px] font-mono text-gray-400">
-                      <span>{route.steps.length} step{route.steps.length > 1 ? 's' : ''}</span>
-                      <span>•</span>
-                      <span>Cost: {route.cost.toFixed(1)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs font-mono">
-                    {route.steps.map((step, sIdx) => (
-                      <React.Fragment key={sIdx}>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
-                            isBest
-                              ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30'
-                              : 'bg-dark-700/80 text-gray-300 border-dark-600'
-                          }`}
-                        >
-                          {sIdx + 1}. {step}
-                        </span>
-                        {sIdx < route.steps.length - 1 && (
-                          <span className="text-gray-500 text-[10px]">→</span>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* App Selector & Search Controls (Nav Graph Mode) */}
-      {viewMode === 'nav_graph' && navGraph && navGraph.apps && (
-        <div className="flex flex-wrap items-center justify-between gap-3 my-3">
-          {/* App Selector Dropdown */}
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-400 font-medium">Select App:</span>
+      {viewMode === 'nav_graph' && navGraph && navGraph.apps && navGraph.apps.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 my-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+            <span className="text-xs text-slate-500 font-semibold">Select App:</span>
             <select
               value={selectedAppPkg}
               onChange={(e) => setSelectedAppPkg(e.target.value)}
-              className="bg-dark-800 border border-dark-700 text-xs text-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
+              className="bg-white border border-slate-200/80 text-xs text-slate-800 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             >
-              {primaryApps.map((app) => (
-                <option key={app.package_name} value={app.package_name}>
-                  {app.display_name} ({clusterCountMap.get(app.package_name) || app.screens.length} screens in tree)
+              {primaryApps.map((a) => (
+                <option key={a.package_name} value={a.package_name}>
+                  {a.app_name || a.package_name} ({clusterCountMap.get(a.package_name) || a.screens.length} screens)
                 </option>
               ))}
               {satelliteApps.length > 0 && (
-                <optgroup label="Sub-Screen Packages">
-                  {satelliteApps.map((app) => (
-                    <option key={app.package_name} value={app.package_name}>
-                      ↳ {app.display_name} ({app.screens.length} screen)
+                <optgroup label="── Satellite & OEM Sub-Packages ──">
+                  {satelliteApps.map((a) => (
+                    <option key={a.package_name} value={a.package_name}>
+                      {a.app_name || a.package_name} ({a.screens.length} screens)
                     </option>
                   ))}
                 </optgroup>
               )}
             </select>
+
             {activeApp && (
-              <span className="text-[11px] font-mono text-gray-500">
-                {activeApp.package_name}
+              <span className="text-[11px] font-mono text-slate-400 font-medium">
+                {activeApp.screens.length} screens, {activeApp.transitions.length} transitions
               </span>
             )}
+
+            {/* Expand / Collapse All Toggle Button */}
+            <button
+              onClick={() => setIsAllExpanded(!isAllExpanded)}
+              className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex items-center space-x-1"
+            >
+              {isAllExpanded ? (
+                <>
+                  <ChevronDown className="w-3 h-3 text-indigo-600" />
+                  <span>Collapse All</span>
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="w-3 h-3 text-indigo-600" />
+                  <span>Expand All</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Search Filter */}
-          <div className="relative min-w-[200px] max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <div className="relative min-w-[220px] max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search elements in graph..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-dark-800 border border-dark-700 rounded-lg pl-9 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-500"
+              className="w-full bg-white border border-slate-200/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Live Mode Search & Expand All */}
+      {/* Live Mode Evaluation & Filter Control Bar (Nexus Theme) */}
       {viewMode === 'live' && liveScreens.length > 0 && (
-        <div className="my-3 flex items-center justify-between gap-3">
-          <div className="max-w-xs relative flex-1">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <div className="my-3.5 p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Filter Pills */}
+            <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+              <span className="text-xs text-slate-500 font-semibold mr-1 flex items-center space-x-1">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <span>Filter:</span>
+              </span>
+
+              <button
+                onClick={() => setEvalFilter('all')}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'all'
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/60'
+                }`}
+              >
+                All ({liveScreens.length})
+              </button>
+
+              <button
+                onClick={() => setEvalFilter('correct')}
+                className={`flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'correct'
+                    ? 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
+                    : 'bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-200'
+                }`}
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Correct ({correctCount})</span>
+              </button>
+
+              <button
+                onClick={() => setEvalFilter('wrong')}
+                className={`flex items-center space-x-1 px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'wrong'
+                    ? 'bg-rose-500 text-white border border-rose-600 shadow-sm'
+                    : 'bg-rose-50 hover:bg-rose-100/80 text-rose-700 border border-rose-200'
+                }`}
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Wrong ({wrongCount})</span>
+              </button>
+
+              <button
+                onClick={() => setEvalFilter('unreviewed')}
+                className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                  evalFilter === 'unreviewed'
+                    ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/60'
+                }`}
+              >
+                Unreviewed ({unreviewedCount})
+              </button>
+            </div>
+
+            {/* Action Buttons: Export & Study */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => exportEvaluationData('correct')}
+                disabled={correctCount === 0}
+                className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  correctCount > 0
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer shadow-xs'
+                    : 'bg-slate-100 text-slate-400 border border-slate-200/60 cursor-not-allowed'
+                }`}
+                title="Download JSON of all verified correct screens"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Save Correct ({correctCount})</span>
+              </button>
+
+              <button
+                onClick={() => exportEvaluationData('wrong')}
+                disabled={wrongCount === 0}
+                className={`flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  wrongCount > 0
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 cursor-pointer shadow-xs'
+                    : 'bg-slate-100 text-slate-400 border border-slate-200/60 cursor-not-allowed'
+                }`}
+                title="Download structured JSON of all wrong screens for study and analysis"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Wrong ({wrongCount})</span>
+              </button>
+
+              {wrongCount > 0 && (
+                <button
+                  onClick={() => {
+                    if (wrongScreensList.length > 0) {
+                      setSelectedWrongScreenId(wrongScreensList[0].id);
+                    }
+                    setIsStudyModalOpen(true);
+                  }}
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-all cursor-pointer shadow-xs animate-pulse"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Study & Analyze ({wrongCount})</span>
+                </button>
+              )}
+
+              {/* Expand / Collapse All Live Screens Toggle */}
+              <button
+                onClick={() => {
+                  const nextState = !isAllLiveExpanded;
+                  setIsAllLiveExpanded(nextState);
+                  const updated: Record<string, boolean> = {};
+                  liveScreens.forEach((_, idx) => {
+                    updated[idx] = nextState;
+                  });
+                  setExpandedLiveScreens(updated);
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex items-center space-x-1"
+              >
+                {isAllLiveExpanded ? (
+                  <>
+                    <ChevronDown className="w-3 h-3 text-indigo-600" />
+                    <span>Collapse All</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronRight className="w-3 h-3 text-indigo-600" />
+                    <span>Expand All</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Search bar inside Live mode */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Filter live elements..."
+              placeholder="Filter live screens by title, package, elements, or notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-dark-800 border border-dark-700 rounded-lg pl-9 pr-3 py-1 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
-          <button
-            onClick={toggleAllLiveExpanded}
-            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-dark-800 hover:bg-dark-700 text-emerald-400 hover:text-emerald-300 border border-dark-700 transition-colors text-[11px] font-medium shrink-0"
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>{isAllLiveExpanded ? 'Collapse All Screens' : 'Expand All Screens'}</span>
-          </button>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto rounded-lg border border-dark-800 bg-dark-950 p-3">
-        {/* VIEW 1: NAV GRAPH (from nav_graph.db) */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* NAV GRAPH TREE MODE */}
         {viewMode === 'nav_graph' && (
-          <div>
-            {!navGraph || !activeApp ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500 text-xs">
-                No nav_graph loaded yet. Open apps on your phone to build the graph.
+          <div className="space-y-4">
+            {!activeApp ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
+                <GitFork className="w-10 h-10 stroke-[1.5] mb-2 opacity-40 text-slate-400" />
+                <p className="text-sm font-semibold text-slate-700">No App Selected or No Graph Data</p>
+                <p className="text-xs text-slate-500 mt-1">Select an app above to view its screen hierarchy</p>
               </div>
             ) : !rootScreen ? (
-              <div className="py-10 text-center text-gray-500 text-xs">
-                No screens found for this app.
+              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
+                <FolderOpen className="w-10 h-10 stroke-[1.5] mb-2 opacity-40 text-slate-400" />
+                <p className="text-sm font-semibold text-slate-700">No Screens in App</p>
+                <p className="text-xs text-slate-500 mt-1">{activeApp.package_name} has 0 screens recorded</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {/* Information banner */}
-                <div className="px-3 py-2 rounded-lg bg-dark-850/80 border border-dark-800 flex items-center justify-between text-xs text-gray-400">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span>
-                      Navigation Tree rooted at{' '}
-                      <strong className="text-gray-200 font-semibold">
-                        {rootScreen.title}
-                      </strong>
-                    </span>
+              <div className="space-y-3">
+                {/* [PERMANENT FIX] Do not remove this! All Local Query Paths Multi-Route Explorer Card */}
+                {discoveredRoutes.length > 0 && (
+                  <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <GitFork className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-bold text-slate-900">
+                          Active Dijkstra Multi-Route Candidates ({discoveredRoutes.length})
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">Local Graph Tier 1</span>
+                    </div>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                      {discoveredRoutes.map((route, rIdx) => (
+                        <div
+                          key={`route_${rIdx}`}
+                          className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/70 text-xs font-mono"
+                        >
+                          <div className="flex items-center space-x-2 truncate mr-2">
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[10px]">
+                              Route {rIdx + 1}
+                            </span>
+                            <span className="text-slate-800 font-semibold truncate">
+                              {route.pathString}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 shrink-0">
+                            <span className="text-[10px] text-slate-500">
+                              Cost: {route.cost}
+                            </span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                              {route.steps.length} steps
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={toggleExpandAll}
-                      className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-dark-800 hover:bg-dark-700 text-sky-400 hover:text-sky-300 border border-dark-700 transition-colors text-[11px] font-medium"
-                      title={isAllExpanded ? "Collapse all tree nodes" : "Expand all tree nodes to view every sub-screen"}
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                      <span>{isAllExpanded ? 'Collapse All' : 'Expand All'}</span>
-                    </button>
-                    <span className="text-[11px] font-mono text-gray-500 hidden sm:inline">
-                      Click any <span className="text-sky-300">🔗 opens screen</span> link to expand sub-pages
-                    </span>
-                  </div>
-                </div>
+                )}
+
+                {/* Graph recursive transitions tree */}
+                {renderNavGraphScreen(rootScreen, 1)}
 
                 {/* [PERMANENT FIX] Do not remove this! Render Root Screen + Additional Unconnected Screens Guard.
-                    Guarantees that every single screen in the app's database is visible in the tree explorer,
-                    preventing any screens from ever vanishing even if disconnected from the root tree. */}
+                    In case some screens in this app are not reachable directly via forward transitions from root,
+                    surface them below in an Unconnected / Island Screens section so the user can still see them! */}
                 {(() => {
-                  // Compute all screens reachable from rootScreen via forward transitions or child screen matching
-                  const reachableScreenIds = new Set<string>();
-                  reachableScreenIds.add(rootScreen.id);
-                  const queue: string[] = [rootScreen.id];
+                  const renderedScreens = new Set<string>();
+                  const collectRendered = (scr: NavGraphScreen, visited: Set<string>) => {
+                    if (visited.has(scr.id)) return;
+                    visited.add(scr.id);
+                    renderedScreens.add(scr.id);
+                    scr.transitions.forEach((t) => {
+                      const tgt = screensById.get(t.to_id);
+                      if (tgt) collectRendered(tgt, visited);
+                    });
+                  };
+                  collectRendered(rootScreen, new Set());
 
-                  while (queue.length > 0) {
-                    const currId = queue.shift()!;
-                    const currScreen = screensById.get(currId);
-                    if (!currScreen) continue;
+                  const unconnected = activeApp.screens.filter((s) => !renderedScreens.has(s.id));
+                  if (unconnected.length === 0) return null;
 
-                    // Direct forward transitions
-                    for (const t of currScreen.transitions) {
-                      if (t.type === 'CLICK' && !reachableScreenIds.has(t.to_id) && screensById.has(t.to_id)) {
-                        reachableScreenIds.add(t.to_id);
-                        queue.push(t.to_id);
-                      }
-                    }
-
-                    // Element to screen title matches
-                    for (const el of currScreen.elements) {
-                      const normE = normalizeLabel(el);
-                      for (const s of activeApp.screens) {
-                        if (!reachableScreenIds.has(s.id)) {
-                          const normT = normalizeLabel(s.title);
-                          if (normT === normE || (normT.length >= 3 && normE.includes(normT)) || (normE.length >= 3 && normT.includes(normE))) {
-                            reachableScreenIds.add(s.id);
-                            queue.push(s.id);
-                          }
-                        }
-                      }
-                    }
-                  }
-
-                  const renderedScreenIds = new Set<string>();
-                  const rootTree = renderNavGraphScreen(rootScreen, 1, new Set(), renderedScreenIds);
-                  const unrenderedScreens = activeApp.screens.filter(
-                    (s) => !reachableScreenIds.has(s.id) && s.id !== rootScreen.id
-                  );
                   return (
-                    <div className="space-y-6">
-                      {rootTree}
-                      {unrenderedScreens.length > 0 && (
-                        <div className="pt-4 border-t border-dark-800/80 space-y-3">
-                          <div className="flex items-center space-x-2 text-xs font-semibold text-gray-400">
-                            <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-                            <span>Additional / Standalone Screens ({unrenderedScreens.length})</span>
-                          </div>
-                          {unrenderedScreens.map((s) => renderNavGraphScreen(s, 1, new Set(), renderedScreenIds))}
-                        </div>
-                      )}
+                    <div className="mt-6 pt-4 border-t-2 border-dashed border-slate-200 space-y-3">
+                      <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        <Info className="w-4 h-4 text-slate-400" />
+                        <span>Additional Sub-Screens ({unconnected.length})</span>
+                      </div>
+                      <div className="space-y-2">
+                        {unconnected.map((islandScreen) => renderNavGraphScreen(islandScreen, 1))}
+                      </div>
                     </div>
                   );
                 })()}
@@ -1295,193 +1399,524 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
           </div>
         )}
 
-        {/* VIEW 2: LIVE PHONE SCREEN (Current Screen Capture) */}
+        {/* LIVE CAPTURES MODE */}
         {viewMode === 'live' && (
-          <div>
+          <div className="space-y-3">
             {liveScreens.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-gray-500 text-xs">
-                No UI elements captured yet. Open a screen on your phone.
+              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
+                <Smartphone className="w-10 h-10 stroke-[1.5] mb-2 opacity-40 text-slate-400" />
+                <p className="text-sm font-semibold text-slate-700">No Live Screen Captures</p>
+                <p className="text-xs text-slate-500 mt-1">Screen dumps from active phone navigation will appear here in real time</p>
+              </div>
+            ) : displayedLiveScreens.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400">
+                <Filter className="w-6 h-6 text-slate-300 mb-1" />
+                <p className="text-xs font-semibold text-slate-600">No screens match filter "{evalFilter}"</p>
+                <button
+                  onClick={() => {
+                    setEvalFilter('all');
+                    setSearchQuery('');
+                  }}
+                  className="mt-2 text-xs text-indigo-600 hover:underline font-semibold"
+                >
+                  Reset filters
+                </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {liveScreens.map((screen, sIdx) => {
-                  const isScreenOpen = expandedLiveScreens[screen.id] ?? isAllLiveExpanded;
+              displayedLiveScreens.map((screen, sIdx) => {
+                const isExpanded = expandedLiveScreens[sIdx] !== false;
+                const evalRecord = evaluations[screen.id];
 
-                  const filtered = searchQuery.trim()
-                    ? screen.elements.filter((e) =>
-                        e.name.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                    : screen.elements;
-
-                  return (
+                return (
+                  <div
+                    key={screen.id}
+                    className={`rounded-2xl border bg-white overflow-hidden transition-all duration-200 shadow-xs ${
+                      evalRecord?.status === 'correct'
+                        ? 'border-emerald-300/80 ring-2 ring-emerald-300/20'
+                        : evalRecord?.status === 'wrong'
+                        ? 'border-rose-300/80 ring-2 ring-rose-300/20'
+                        : 'border-slate-200/80'
+                    }`}
+                  >
+                    {/* Screen Card Header */}
                     <div
-                      key={screen.id}
-                      className="rounded-lg border border-dark-800 bg-dark-900 overflow-hidden"
+                      onClick={() => toggleLiveScreen(String(sIdx))}
+                      className="flex items-center justify-between px-4 py-3 bg-slate-50/60 hover:bg-slate-100/50 cursor-pointer select-none transition-colors border-b border-slate-200/60"
                     >
-                      {/* Live Screen Header (Layer 0) */}
-                      {(() => {
-                        const isThisLive = Boolean(
-                          latestLiveLocation?.screenTitle &&
-                          (
-                            screen.screenTitle.trim().toLowerCase() === latestLiveLocation.screenTitle.trim().toLowerCase() ||
-                            (screen.screenTitle.trim().toLowerCase() === 'chats' && (latestLiveLocation.screenTitle.toLowerCase() === 'whatsapp' || latestLiveLocation.screenTitle.toLowerCase() === 'chats')) ||
-                            (screen.screenTitle.trim().toLowerCase() === 'whatsapp' && (latestLiveLocation.screenTitle.toLowerCase() === 'chats' || latestLiveLocation.screenTitle.toLowerCase() === 'whatsapp'))
-                          )
-                        );
-                        return (
-                          <div
-                            onClick={() => toggleLiveScreen(screen.id)}
-                            className={`flex items-center justify-between px-4 py-2.5 ${
-                              isThisLive
-                                ? 'bg-gradient-to-r from-emerald-950/90 via-[#04281e] to-dark-900 border-2 border-emerald-400 ring-2 ring-emerald-500/40 shadow-[0_0_24px_rgba(52,211,153,0.4)]'
-                                : 'bg-[#1e2433] hover:bg-[#252c3e]'
-                            } cursor-pointer select-none border-b border-dark-800/80 transition-all rounded-t-lg`}
-                          >
-                            <div className="flex items-center space-x-2.5">
-                              <span className="text-gray-400">
-                                {isScreenOpen ? (
-                                  <ChevronDown className="w-4 h-4 text-gray-200" />
-                                ) : (
-                                  <ChevronRight className="w-4 h-4" />
-                                )}
-                              </span>
-                              <FolderOpen className={`w-4 h-4 ${isThisLive ? 'text-emerald-300' : 'text-emerald-400'}`} />
-                              <span className={`text-sm font-bold ${isThisLive ? 'text-emerald-100' : 'text-gray-100'}`}>
-                                {screen.screenTitle}
-                              </span>
-                              {isThisLive && (
-                                <span className="flex items-center space-x-1.5 text-[10px] px-2.5 py-0.5 rounded-full font-bold font-mono bg-emerald-400 text-black border border-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.7)] animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-black inline-block animate-ping" />
-                                  <span>📍 CURRENT ON THIS PAGE HERE</span>
-                                </span>
-                              )}
-                              <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold bg-dark-800 text-gray-400">
-                                Live Screen
-                              </span>
-                          <span className="text-xs text-gray-400 font-mono">
-                            ({screen.elements.length} elements)
-                          </span>
-                        </div>
-
-                        <span className="text-[11px] font-mono text-gray-500">
+                      <div className="flex items-center space-x-2.5">
+                        <button className="text-slate-400 hover:text-slate-600">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-indigo-600" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                          )}
+                        </button>
+                        <Folder className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-bold text-slate-900">
+                          {screen.screenTitle}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-md">
                           {screen.packageName}
                         </span>
-                      </div>
-                        );
-                      })()}
+                        <span className="text-[10px] font-mono text-slate-400">
+                          ({screen.elements.length} elements)
+                        </span>
 
-                      {/* Live Elements List (Clean Layer 1 siblings, NO fake nesting!) */}
-                      {isScreenOpen && (
-                        <div className="divide-y divide-dark-800/30">
-                          {filtered.map((el, eIdx) => {
-                            const isClickable = el.is_clickable === true;
-                            return (
+                        {evalRecord?.status === 'correct' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span>Correct</span>
+                          </span>
+                        )}
+                        {evalRecord?.status === 'wrong' && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1">
+                            <X className="w-3 h-3 text-rose-600" />
+                            <span>Wrong</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Right Header Actions */}
+                      <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                        {/* Evaluation Buttons */}
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => toggleEvaluation(screen, 'correct')}
+                            className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
+                              evalRecord?.status === 'correct'
+                                ? 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
+                                : 'bg-white hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/80 shadow-xs'
+                            }`}
+                            title="Mark this screen as Correct"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Correct</span>
+                          </button>
+
+                          <button
+                            onClick={() => toggleEvaluation(screen, 'wrong')}
+                            className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
+                              evalRecord?.status === 'wrong'
+                                ? 'bg-rose-500 text-white border border-rose-600 shadow-sm'
+                                : 'bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200/80 shadow-xs'
+                            }`}
+                            title="Mark this screen as Wrong for study"
+                          >
+                            <X className="w-3 h-3" />
+                            <span>Wrong</span>
+                          </button>
+                        </div>
+
+                        <span className="text-[10px] font-mono text-slate-400">
+                          Capture #{sIdx + 1}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Screen Card Body: Elements List */}
+                    {isExpanded && (
+                      <div className="p-3 bg-white">
+                        {screen.elements.length === 0 ? (
+                          <div className="py-2 text-xs text-slate-400 text-center font-medium">0 elements captured</div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {screen.elements.map((el, elIdx) => (
                               <div
-                                key={`${screen.id}_${eIdx}`}
-                                className="flex items-center justify-between px-6 py-2 bg-[#151922] hover:bg-[#1c222e] transition-colors border-l-[3px] border-emerald-500/60"
+                                key={el.id || `live_el_${elIdx}`}
+                                onClick={() =>
+                                  setSelectedElement({
+                                    element: el,
+                                    screenTitle: screen.screenTitle,
+                                    packageName: screen.packageName
+                                  })
+                                }
+                                className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/80 border border-slate-200/60 cursor-pointer select-none transition-colors"
                               >
-                                <div className="flex items-center space-x-2.5">
-                                  <span className="text-gray-600 font-mono text-[11px]">
-                                    └─
-                                  </span>
-                                  <span className="text-xs font-medium text-gray-200 truncate">
+                                <div className="flex items-center space-x-2 truncate mr-2">
+                                  <FileCode className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span className="text-xs font-semibold text-slate-800 truncate">
                                     {el.name}
                                   </span>
                                 </div>
-
-                                <div className="flex items-center space-x-2.5">
-                                  <span
-                                    className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                                      isClickable
-                                        ? 'text-emerald-400 bg-emerald-500/10'
-                                        : 'text-gray-400 bg-dark-800'
-                                    }`}
-                                  >
-                                    {isClickable ? 'Clickable' : 'Static'}
-                                  </span>
-
-                                  <button
-                                    onClick={() =>
-                                      setSelectedElement({
-                                        element: el,
-                                        screenTitle: screen.screenTitle
-                                      })
-                                    }
-                                    className="text-gray-400 hover:text-gray-100 p-1 rounded hover:bg-dark-750 transition-colors"
-                                  >
-                                    <Info className="w-3.5 h-3.5" />
-                                  </button>
+                                <div className="flex items-center space-x-1.5 shrink-0">
+                                  {el.is_clickable && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                      tap
+                                    </span>
+                                  )}
+                                  {el.is_scrollable && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                                      scroll
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            );
-                          })}
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* RAW JSON MODE */}
+        {viewMode === 'json' && (
+          <div className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-xs">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200/80">
+              <span className="text-xs font-bold text-slate-700 font-mono">
+                {activeApp ? `${activeApp.package_name}.json` : 'nav_graph.json'}
+              </span>
+              <button
+                onClick={() => handleCopy(activeApp || navGraph, 'json_view')}
+                className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-xs transition-all"
+              >
+                {copiedItemIdx === 'json_view' ? (
+                  <>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-600">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3 h-3" />
+                    <span>Copy JSON</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <pre className="p-4 text-xs font-mono text-slate-800 bg-slate-50/50 overflow-x-auto max-h-[70vh]">
+              {JSON.stringify(activeApp || navGraph, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+
+      {/* Info Modal for Single Element */}
+      {selectedElement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center space-x-2">
+                <FileCode className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-sm font-bold text-slate-900 truncate">
+                  {selectedElement.element.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedElement(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-semibold">Screen:</span>
+                <span className="text-slate-800 font-mono font-medium truncate ml-2">
+                  {selectedElement.screenTitle}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-semibold">Package:</span>
+                <span className="text-slate-800 font-mono font-medium truncate ml-2">
+                  {selectedElement.packageName}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-semibold">Resource ID:</span>
+                <span className="text-slate-800 font-mono truncate ml-2">
+                  {selectedElement.element.resource_id || 'none'}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-semibold">Class Name:</span>
+                <span className="text-slate-800 font-mono truncate ml-2">
+                  {selectedElement.element.class_name || 'none'}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-semibold">Bounds:</span>
+                <span className="text-slate-800 font-mono ml-2">
+                  {selectedElement.element.bounds || 'none'}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-semibold">Clickable:</span>
+                <span
+                  className={`font-semibold font-mono ${
+                    selectedElement.element.is_clickable ? 'text-emerald-600' : 'text-slate-400'
+                  }`}
+                >
+                  {selectedElement.element.is_clickable ? 'YES' : 'NO'}
+                </span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-500 font-semibold">Scrollable:</span>
+                <span
+                  className={`font-semibold font-mono ${
+                    selectedElement.element.is_scrollable ? 'text-sky-600' : 'text-slate-400'
+                  }`}
+                >
+                  {selectedElement.element.is_scrollable ? 'YES' : 'NO'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <button
+                onClick={() => handleCopy(selectedElement.element, 'element_modal')}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                {copiedItemIdx === 'element_modal' ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-600">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Copy JSON</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setSelectedElement(null)}
+                className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Study & Analysis Modal for Wrong Screens (Nexus Light Theme) */}
+      {isStudyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 bg-slate-50/50">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shadow-xs">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    Screen Extraction Failure Study & Analysis
+                    <span className="text-xs px-2.5 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                      {wrongScreensList.length} marked
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Analyze screens marked as wrong, diagnose extraction errors, tag failure patterns, and export report
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsStudyModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-200/60 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 min-h-0 flex overflow-hidden">
+              {/* Left sidebar: list of wrong screens */}
+              <div className="w-1/3 border-r border-slate-200 bg-slate-50/50 overflow-y-auto p-3.5 space-y-2">
+                <span className="text-[11px] font-mono uppercase font-bold text-slate-400 px-1">
+                  Marked Screens ({wrongScreensList.length})
+                </span>
+                {wrongScreensList.map((ws) => {
+                  const rec = evaluations[ws.id];
+                  const isSelected = (selectedWrongScreenId || wrongScreensList[0]?.id) === ws.id;
+                  return (
+                    <div
+                      key={ws.id}
+                      onClick={() => setSelectedWrongScreenId(ws.id)}
+                      className={`p-3 rounded-xl cursor-pointer transition-all border text-left ${
+                        isSelected
+                          ? 'bg-rose-50 border-rose-300 shadow-xs'
+                          : 'bg-white hover:bg-slate-100/70 border-slate-200/70'
+                      }`}
+                    >
+                      <div className="text-xs font-bold text-slate-900 truncate">
+                        {ws.screenTitle}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 truncate mt-0.5">
+                        {ws.packageName}
+                      </div>
+                      {rec?.tags && rec.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {rec.tags.map((t) => (
+                            <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-md font-semibold bg-rose-100/80 text-rose-800">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {rec?.notes && (
+                        <div className="text-[11px] text-slate-500 truncate mt-1 italic font-medium">
+                          "{rec.notes}"
                         </div>
                       )}
                     </div>
                   );
                 })}
               </div>
-            )}
-          </div>
-        )}
 
-        {/* VIEW 3: RAW JSON */}
-        {viewMode === 'json' && (
-          <pre className="text-gray-300 font-mono text-xs leading-relaxed overflow-x-auto p-2">
-            {JSON.stringify(navGraph || events, null, 2)}
-          </pre>
-        )}
-      </div>
+              {/* Right panel: Active Wrong Screen Analysis */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
+                {(() => {
+                  const activeWrongScreen = wrongScreensList.find(
+                    (s) => s.id === (selectedWrongScreenId || wrongScreensList[0]?.id)
+                  );
+                  if (!activeWrongScreen) {
+                    return (
+                      <div className="py-20 text-center text-slate-400 text-xs">
+                        Select a screen on the left to analyze
+                      </div>
+                    );
+                  }
+                  const rec = evaluations[activeWrongScreen.id];
 
-      {/* Info Modal */}
-      {selectedElement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-dark-850 border border-dark-700 rounded-xl max-w-md w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-dark-700">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-100">
-                  {selectedElement.element.name}
-                </h3>
-                <span className="text-xs text-gray-500">
-                  {selectedElement.screenTitle}
-                </span>
+                  const FAILURE_TAGS = [
+                    'Noise Elements Captured',
+                    'Missing Visible Elements',
+                    'Wrong Parent Linking',
+                    'Circular Navigation Loop',
+                    'Phantom Screen / Keystroke Noise',
+                    'Status / Toggle Suffix Not Stripped',
+                    'Return / Back Control Misinterpreted',
+                    'Incomplete Tree'
+                  ];
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Active Screen Info */}
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-slate-900">
+                            {activeWrongScreen.screenTitle}
+                          </h4>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800">
+                            MARKED WRONG
+                          </span>
+                        </div>
+                        <p className="text-xs font-mono text-slate-500">
+                          Package: {activeWrongScreen.packageName}
+                        </p>
+                        <p className="text-xs text-slate-500 font-medium">
+                          Total elements captured: {activeWrongScreen.elements.length}
+                        </p>
+                      </div>
+
+                      {/* Diagnostic Tagging */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                          <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Diagnostic Failure Tags:</span>
+                        </label>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {FAILURE_TAGS.map((t) => {
+                            const isTagged = rec?.tags?.includes(t);
+                            return (
+                              <button
+                                key={t}
+                                onClick={() => toggleWrongScreenTag(activeWrongScreen.id, t)}
+                                className={`text-xs px-2.5 py-1 rounded-xl font-semibold transition-all cursor-pointer border ${
+                                  isTagged
+                                    ? 'bg-rose-500 text-white border-rose-600 shadow-xs'
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                }`}
+                              >
+                                {isTagged ? `✓ ${t}` : `+ ${t}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Analysis Notes Textarea */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 flex items-center space-x-1.5">
+                          <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Failure Analysis Notes (Auto-saved):</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={rec?.notes || ''}
+                          onChange={(e) => updateWrongScreenNotes(activeWrongScreen.id, e.target.value)}
+                          placeholder="Describe what was wrong: e.g. 'Incomplete tree on scroll', 'Linked to wrong parent screen', etc."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium resize-none"
+                        />
+                      </div>
+
+                      {/* Elements extracted preview */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">
+                          Captured Elements ({activeWrongScreen.elements.length}):
+                        </label>
+                        <div className="max-h-48 overflow-y-auto bg-slate-50 border border-slate-200 rounded-xl divide-y divide-slate-100">
+                          {activeWrongScreen.elements.map((el, i) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                              <span className="text-slate-800 truncate font-semibold">{el.name}</span>
+                              <span className="text-[10px] font-mono text-slate-400 font-medium">
+                                {el.is_clickable ? 'Clickable' : 'Static'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Change status buttons */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => toggleEvaluation(activeWrongScreen, 'correct')}
+                            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Mark Correct instead</span>
+                          </button>
+                          <button
+                            onClick={() => toggleEvaluation(activeWrongScreen, 'wrong')}
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold cursor-pointer"
+                          >
+                            Remove Mark (Unreview)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-              <button
-                onClick={() => setSelectedElement(null)}
-                className="text-gray-400 hover:text-gray-200 p-1 rounded"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs text-gray-300">
-              <pre className="p-3 bg-dark-900 rounded-lg overflow-x-auto text-[11px] text-gray-300">
-                {JSON.stringify(selectedElement.element, null, 2)}
-              </pre>
-            </div>
-
-            <div className="flex items-center justify-end space-x-2 pt-2">
-              <button
-                onClick={() =>
-                  handleCopy(selectedElement.element, 'single_element')
-                }
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-dark-700 hover:bg-dark-600 text-xs font-medium text-gray-200 transition-colors"
-              >
-                {copiedItemIdx === 'single_element' ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-                <span>
-                  {copiedItemIdx === 'single_element' ? 'Copied' : 'Copy JSON'}
-                </span>
-              </button>
-              <button
-                onClick={() => setSelectedElement(null)}
-                className="px-3 py-1.5 rounded-lg bg-dark-800 hover:bg-dark-750 text-xs text-gray-300 transition-colors"
-              >
-                Close
-              </button>
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-200/80 bg-slate-50/50 text-xs">
+              <span className="text-slate-500 font-mono font-medium">
+                Notes & evaluations are auto-saved in your browser.
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => exportEvaluationData('wrong')}
+                  className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Download Wrong Analysis JSON</span>
+                </button>
+                <button
+                  onClick={() => setIsStudyModalOpen(false)}
+                  className="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
