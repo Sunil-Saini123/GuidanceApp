@@ -119,8 +119,23 @@ OUTPUT FORMAT RULES:
 - Do NOT add explanations, greetings, bullets, or any other text.
 
 EXAMPLES:
+User: open chat backup in WhatsApp
+app: com.whatsapp
+end_page: chats_settings
+task: chat_backup
+
+User: chat backup
+app: com.whatsapp
+end_page: chats_settings
+task: chat_backup
+
+User: backup chats
+app: com.whatsapp
+end_page: chats_settings
+task: chat_backup
+
 User: change my profile picture on WhatsApp
-app: whatsapp
+app: com.whatsapp
 end_page: profile_page
 task: update_profile_picture
 
@@ -171,6 +186,20 @@ task: take_selfie"""
         userCommand: String,
         onProgress: suspend (String) -> Unit = {}
     ): ParsedCommand = withContext(Dispatchers.IO) {
+        val queryLower = userCommand.trim().lowercase(java.util.Locale.US)
+
+        // [PERMANENT FIX] Do not remove this! Direct Fast-Path Intent for WhatsApp Chat Backup:
+        if ((queryLower.contains("chat") && (queryLower.contains("backup") || queryLower.contains("back up"))) ||
+            (queryLower.contains("backup") && queryLower.contains("whatsapp"))) {
+            val fastCommand = ParsedCommand(
+                targetApp = "com.whatsapp",
+                destinationScreen = "chats_settings",
+                exactTask = "chat_backup"
+            )
+            Log.i(TAG, "Fast-path intent classified for '$userCommand': $fastCommand")
+            return@withContext fastCommand
+        }
+
         // ── 1. Direct API (Groq via Proxy) ─────────
         Log.d(TAG, "Attempting Groq via proxy for intent classification")
         onProgress("Analyzing intent with Groq…")

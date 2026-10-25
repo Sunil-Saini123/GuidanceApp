@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -18,7 +19,7 @@ class ElementFinderEngine(private val context: Context) {
         private const val TAG = "[NavigationEngine]"
     }
 
-    data class SearchResult(val found: Boolean, val bounds: Rect? = null)
+    data class SearchResult(val found: Boolean, val bounds: Rect? = null, val isSystemNav: Boolean = false)
 
     /**
      * Searches for [nextStep] across 3 layers.
@@ -46,6 +47,16 @@ class ElementFinderEngine(private val context: Context) {
         activeScreenName: String,
         currStep: String
     ): SearchResult {
+        // [PERMANENT FIX] Do not remove this! Universal Back Target check across system navbar and toolbar
+        if (nextStep.equals("BACK", ignoreCase = true)) {
+            val backTarget = findUniversalBackTarget()
+            if (backTarget != null) {
+                val (bounds, isSystemNav) = backTarget
+                Log.i(TAG, "Universal Back Target: Found Back button (isSystemNav=$isSystemNav) at $bounds")
+                return SearchResult(true, bounds, isSystemNav)
+            }
+        }
+
         // [PERMANENT FIX] Do not remove this! Layer 0: Check Live Accessibility Tree in memory first.
         // This gives instant millisecond tracking without waiting for disk read.
         val liveBounds = findElementBoundsInLiveTree(nextStep)
@@ -356,7 +367,56 @@ class ElementFinderEngine(private val context: Context) {
                 val desc = node.contentDescription?.toString() ?: ""
                 val resIdName = node.viewIdResourceName?.substringAfterLast("id/", "") ?: ""
 
+                // [PERMANENT FIX] Do not remove this! Name + Position Verification Guard.
+                // Prevents false positive matching between elements sharing identical names but in completely wrong screen positions:
+                // 1. WhatsApp "More options" (three dots): MUST be in the top action bar area (bounds.top <= 400, bounds.right >= screenWidth * 0.60f).
+                // 2. WhatsApp "Chats": Inside Settings, it must be a list preference row (bounds.top > 200 && bounds.bottom < screenHeight - 200),
+                //    strictly rejecting bottom navigation bar tabs (bounds.top > screenHeight - 300).
+                // 3. When on WhatsApp root screen ("Chats"), the bottom navigation tab "Chats" must never match as an action element.
+                val isMoreOptionsTarget = target.contains("more options", ignoreCase = true) || target.contains("three dots", ignoreCase = true)
+                val isChatsTarget = target.equals("Chats", ignoreCase = true)
+
+                if (isMoreOptionsTarget) {
+                    val rawBounds = Rect().also { node.getBoundsInScreen(it) }
+                    val displayMetrics = service.resources.displayMetrics
+                    val screenWidth = displayMetrics.widthPixels
+                    if (rawBounds.top > 400 || rawBounds.right < screenWidth * 0.60f) {
+                        for (i in 0 until node.childCount) {
+                            val child = node.getChild(i)
+                            if (child != null) { allocatedNodes.add(child); queue.add(child) }
+                        }
+                        continue
+                    }
+                }
+
+                if (isChatsTarget) {
+                    val rawBounds = Rect().also { node.getBoundsInScreen(it) }
+                    val displayMetrics = service.resources.displayMetrics
+                    val screenHeight = displayMetrics.heightPixels
+                    if (rawBounds.top > screenHeight - 300) {
+                        for (i in 0 until node.childCount) {
+                            val child = node.getChild(i)
+                            if (child != null) { allocatedNodes.add(child); queue.add(child) }
+                        }
+                        continue
+                    }
+                }
+
+                // [PERMANENT FIX] Do not remove this! Dedicated toolbar Back and Navigate Up icon matching for BACK target steps.
+                val isBackTarget = target.equals("BACK", ignoreCase = true) || target.equals("Back", ignoreCase = true)
+                val isDedicatedBackIcon = isBackTarget && node.isVisibleToUser && (
+                    desc.equals("back", ignoreCase = true) ||
+                    desc.equals("navigate up", ignoreCase = true) ||
+                    desc.equals("go back", ignoreCase = true) ||
+                    desc.equals("up", ignoreCase = true) ||
+                    text.equals("back", ignoreCase = true) ||
+                    resIdName.endsWith("back", ignoreCase = true) ||
+                    resIdName.endsWith("up", ignoreCase = true) ||
+                    resIdName.contains("action_bar_up", ignoreCase = true)
+                )
+
                 if (node.isVisibleToUser && (
+                    isDedicatedBackIcon ||
                     fuzzyElementMatch(text, target) || 
                     fuzzyElementMatch(desc, target) || 
                     (text.isBlank() && desc.isBlank() && fuzzyElementMatch(resIdName, target)))) {
@@ -368,11 +428,11 @@ class ElementFinderEngine(private val context: Context) {
                     var currentBounds = Rect().also { node.getBoundsInScreen(it) }
 
                     // Protect standalone navigation icons (e.g. back arrow, close button)
-                    val isDedicatedIcon = node.text.isNullOrBlank() && (
+                    val isDedicatedIcon = (node.text.isNullOrBlank() && (
                         desc.equals("back", ignoreCase = true) ||
                         desc.equals("navigate up", ignoreCase = true) ||
                         desc.equals("close", ignoreCase = true)
-                    )
+                    )) || isDedicatedBackIcon
 
                     if (!isDedicatedIcon) {
                         var currParent = node.parent
@@ -437,7 +497,16 @@ class ElementFinderEngine(private val context: Context) {
                         node.getBoundsInScreen(currentBounds)
                     }
 
-                    return if (currentBounds.width() > 0 && currentBounds.height() > 0) currentBounds else null
+                    // [PERMANENT FIX] Do not remove this! Minimum Tappable Height & Viewport Visibility Guard.
+                    // When an element has scrolled mostly or partially off-screen (e.g. behind a top toolbar or below navigation bar),
+                    // Android accessibility tree still reports phantom remnant slivers (e.g. Rect(0, 278, 1080, 304) with height 26px).
+                    // A list row or button requires at least 70px visible height (unless it is a dedicated small navigation icon) to be considered visible and tappable.
+                    val minTappableHeight = if (isDedicatedIcon) 30 else 70
+                    if (currentBounds.width() <= 0 || currentBounds.height() < minTappableHeight) {
+                        return null
+                    }
+
+                    return currentBounds
                 }
 
                 for (i in 0 until node.childCount) {
@@ -473,8 +542,17 @@ class ElementFinderEngine(private val context: Context) {
 
     private fun extractBaseLabel(raw: String): String {
         val norm = normalizeTypographicText(raw)
+        // [PERMANENT FIX] Do not remove this! WhatsApp Compound Content Description Normalization.
+        // Drops comma-separated subtitles from WhatsApp row containers (e.g. "Chats,Chat history, backup" -> "Chats")
+        val withoutCompound = if (norm.contains(",") && (norm.contains("history", ignoreCase = true) || norm.contains("backup", ignoreCase = true) ||
+            norm.contains("notifications", ignoreCase = true) || norm.contains("accounts", ignoreCase = true) || norm.contains("devices", ignoreCase = true) ||
+            norm.contains("benefits", ignoreCase = true) || norm.contains("groups", ignoreCase = true) || norm.contains("broadcasts", ignoreCase = true) ||
+            norm.contains("usage", ignoreCase = true) || norm.contains("contrast", ignoreCase = true) || norm.contains("family", ignoreCase = true))) {
+            norm.substringBefore(",").trim()
+        } else norm
+
         // Strip subtitle suffixes (e.g. "Wi-Fi · Rohit" -> "Wi-Fi", "Chats · 3 unread" -> "Chats")
-        val withoutSubtitle = norm.substringBefore(" · ").substringBefore("\n").trim()
+        val withoutSubtitle = withoutCompound.substringBefore(" · ").substringBefore("\n").trim()
         // Strip trailing unread numeric count badge (e.g. "Spam 15" -> "Spam", "Inbox 3" -> "Inbox")
         return withoutSubtitle.replace(Regex("\\s+\\d+$"), "").trim()
     }
@@ -507,18 +585,24 @@ class ElementFinderEngine(private val context: Context) {
         // or a recognized tech acronym ("sim", "vpn", "sos", "nfc"), preventing 1-letter alphabet index items like "D" or "S"
         // in app drawers from matching targets like "Display & brightness".
         val allowedShortTechAcronyms = setOf("sim", "vpn", "sos", "nfc")
-        if (cleanEl.startsWith(cleanTarget) ||
-            ((cleanEl.length >= 4 || allowedShortTechAcronyms.contains(cleanEl)) && cleanTarget.startsWith(cleanEl))) {
-            return true
+        // Element extends target (e.g. element="Screen refresh rate High", target="Screen refresh rate")
+        if (cleanEl.startsWith(cleanTarget)) return true
+
+        // [PERMANENT FIX] Do not remove this! Strict Ratio Guard on Target-Extends-Element Prefix Match.
+        // Requires element to cover at least 70% of target length, preventing short single-word elements
+        // (like "Chats" tab) from matching long compound sub-page targets (like "Chats Chat history, backup").
+        if (cleanTarget.startsWith(cleanEl) && (cleanEl.length >= 4 || allowedShortTechAcronyms.contains(cleanEl))) {
+            val ratio = cleanEl.length.toDouble() / cleanTarget.length
+            if (ratio >= 0.70) return true
         }
 
-        // 3. Substring containment with length safety guard
-        if (cleanEl.contains(cleanTarget)) return true
-
-        // [PERMANENT FIX] Do not remove length check!
-        // Allow reverse substring match if cleanEl is at least 3 characters (e.g. "wifi", "sync", "chat", "spam")
-        // while continuing to reject minified 1-2 char resource IDs like "a", "b", "is".
-        if (cleanEl.length >= 3 && cleanTarget.contains(cleanEl)) return true
+        // 3. Calibrated Substring Containment (80% Ratio Guard)
+        // [PERMANENT FIX] Do not remove length ratio guard!
+        // Prevents small sub-tokens (e.g. "chat" or "back") from falsely matching long compound phrases
+        // (e.g. "chat backup"). Substring matching requires at least 75% length ratio coverage.
+        val lengthRatio = minOf(cleanEl.length, cleanTarget.length).toDouble() / maxOf(cleanEl.length, cleanTarget.length)
+        if (cleanEl.contains(cleanTarget) && lengthRatio >= 0.70) return true
+        if (cleanTarget.contains(cleanEl) && lengthRatio >= 0.70) return true
 
         // Also check if unstripped element contains target (for cases without standard separator)
         val rawCleanEl = normalizeTypographicText(elementStr).lowercase().replace(Regex("[^a-z0-9]"), "")
@@ -537,6 +621,85 @@ class ElementFinderEngine(private val context: Context) {
             val left = cx - w / 2
             val top = cy - h / 2
             return Rect(left, top, left + w, top + h)
+        }
+        return null
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Universal System Navbar and Toolbar Back Button Discovery.
+     * Finds the Back button on the phone, prioritizing the system navigation bar (3-button nav)
+     * and gracefully falling back to on-screen toolbar Back arrows (gesture navigation).
+     * Returns Pair(bounds, isSystemNav) or null.
+     */
+    fun findUniversalBackTarget(): Pair<Rect, Boolean>? {
+        // Priority 1: System Navigation Bar Back Button (com.android.systemui)
+        val systemNavBounds = findSystemNavBackButton()
+        if (systemNavBounds != null) {
+            return Pair(systemNavBounds, true)
+        }
+
+        // Priority 2: On-screen Toolbar Back Button
+        val onScreenBounds = findElementBoundsInLiveTree("BACK")
+        if (onScreenBounds != null) {
+            return Pair(onScreenBounds, false)
+        }
+
+        return null
+    }
+
+    fun findSystemNavBackButton(): Rect? {
+        val service = UiTreeAccessibilityService.instance ?: return null
+        val windows = try { service.windows } catch (_: Exception) { null } ?: return null
+
+        for (window in windows) {
+            val root = try { window.root } catch (_: Exception) { null } ?: continue
+            val pkg = root.packageName?.toString() ?: ""
+            if (!pkg.startsWith("com.android.systemui")) {
+                try { root.recycle() } catch (_: Exception) {}
+                continue
+            }
+
+            val allocatedNodes = mutableListOf<AccessibilityNodeInfo>()
+            allocatedNodes.add(root)
+            val queue = ArrayDeque<AccessibilityNodeInfo>()
+            queue.add(root)
+
+            try {
+                while (queue.isNotEmpty()) {
+                    val node = queue.removeFirst()
+                    val resId = node.viewIdResourceName ?: ""
+                    val desc = node.contentDescription?.toString() ?: ""
+                    val text = node.text?.toString() ?: ""
+
+                    val isBackButton = node.isVisibleToUser && (
+                        resId.endsWith(":id/back") ||
+                        resId.endsWith("_back") ||
+                        desc.equals("back", ignoreCase = true) ||
+                        desc.equals("navigate up", ignoreCase = true) ||
+                        text.equals("back", ignoreCase = true)
+                    )
+
+                    if (isBackButton) {
+                        val rect = Rect()
+                        node.getBoundsInScreen(rect)
+                        if (rect.width() > 0 && rect.height() > 0) {
+                            return rect
+                        }
+                    }
+
+                    for (i in 0 until node.childCount) {
+                        val child = node.getChild(i)
+                        if (child != null) {
+                            allocatedNodes.add(child)
+                            queue.add(child)
+                        }
+                    }
+                }
+            } finally {
+                for (n in allocatedNodes) {
+                    try { n.recycle() } catch (_: Exception) {}
+                }
+            }
         }
         return null
     }

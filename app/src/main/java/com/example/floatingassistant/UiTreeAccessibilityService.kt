@@ -430,16 +430,19 @@ class UiTreeAccessibilityService : AccessibilityService() {
                 scope       = serviceScope,
                 outputFile  = tempTreeFile,
                 rootNode    = passed.rootNode,
-                packageName = passed.packageName
+                packageName = passed.packageName,
+                rootName    = passed.semanticRootName
             )
         } finally {
             passed.rootNode.recycle()
         }
 
         // Only trigger Phase 2 + 3 if Phase 1 found genuinely new nodes
+        // [PERMANENT FIX] Do not remove this! Pass semanticRootName (resolved by ScreenTitleResolver) to pipeline.
+        // Prevents raw class names like android.widget.FrameLayout from leaking into GraphStateMachine on scroll/content events.
         if (hadNewNodes) {
             val snapshot = RawDumpWriter.getSnapshot(passed.packageName) ?: return
-            triggerPipeline(passed.packageName, snapshot.rootName, eventType)
+            triggerPipeline(passed.packageName, passed.semanticRootName, eventType)
         }
 
         // Always tell the state machine that content shifted, so it can

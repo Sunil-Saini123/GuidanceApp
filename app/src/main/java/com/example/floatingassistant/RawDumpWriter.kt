@@ -63,7 +63,7 @@ object RawDumpWriter {
     data class Snapshot(val nodes: List<JSONObject>, val rootName: String)
 
     private data class PackageState(
-        val rootName: String,
+        var rootName: String,
         val seenKeys: HashSet<String>    = HashSet(),
         val nodes:    MutableList<JSONObject> = mutableListOf()
     )
@@ -110,15 +110,22 @@ object RawDumpWriter {
      * Must be called on the main thread with [rootNode] still valid.
      * Does NOT recycle [rootNode] — caller owns lifecycle.
      */
+    // [PERMANENT FIX] Do not remove this! Semantic Root Name Preservation in Scroll Events.
+    // Synchronizes state.rootName with passed.semanticRootName (e.g. "Menu", "Chats") so scroll events
+    // never revert the screen name to raw Android class names like android.widget.FrameLayout.
     fun onScroll(
         scope:       CoroutineScope,
         outputFile:  File,
         rootNode:    AccessibilityNodeInfo,
-        packageName: String
+        packageName: String,
+        rootName:    String = ""
     ): Boolean {
         val state = stateMap.getOrPut(packageName) {
             // First event for this package (no navigation seen yet) — treat as navigation
-            PackageState(rootName = packageName.substringAfterLast('.'))
+            PackageState(rootName = rootName.ifBlank { packageName.substringAfterLast('.') })
+        }
+        if (rootName.isNotBlank()) {
+            state.rootName = rootName
         }
 
         val newNodes = mutableListOf<JSONObject>()
@@ -321,12 +328,17 @@ object RawDumpWriter {
         val cls  = node.className?.toString()?.trim()           ?: ""
 
         return when {
-            // Use resource_id only when it is UNIQUE (app-specific IDs, named
-            // elements).  Skip generic Android system IDs that are reused across
-            // many rows in the same screen — those fall through to text keying.
-            rid.isNotEmpty() && rid !in GENERIC_SYSTEM_IDS -> "rid:$rid"
+            // [PERMANENT FIX] Do not remove this! Text-First Node Keying.
+            // In list views, recycler views, and messaging apps (e.g. WhatsApp, Contacts, Telegram),
+            // adapter row elements (contact names, message snippets) share the exact same resource ID
+            // across all rows (e.g. "com.whatsapp:id/conversations_row_contact_name"). Keying by resource ID
+            // causes every row after the first to be silently dropped as a duplicate!
+            // When user-visible text or contentDescription is present, ALWAYS prioritize text-based keying.
             text.isNotEmpty() -> "txt:$text|$cls"
             cd.isNotEmpty()   -> "cd:$cd|$cls"
+            // Use resource_id only when it is UNIQUE (app-specific IDs, named elements without text).
+            // Skip generic Android system IDs that are reused across many rows in the same screen.
+            rid.isNotEmpty() && rid !in GENERIC_SYSTEM_IDS -> "rid:$rid"
             node.isClickable || node.isScrollable -> {
                 // Interactive but unnamed: key by screen position (fixed elements like FAB)
                 val rect = Rect()

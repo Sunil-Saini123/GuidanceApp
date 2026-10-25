@@ -58,7 +58,7 @@ public class PromptBuilder {
             sb.append("- Model: ").append(devInfo.optString("model", "Unknown")).append("\n");
             sb.append("- Android Version: ").append(devInfo.optString("android_version", "Unknown")).append("\n");
             int sdkInt = devInfo.optInt("sdk_int", 0);
-            if (sdkInt > 0) sb.append("- SDK: ").append(sdkInt).append("\n");
+            if (sdkInt > 0) sb.append("- Android SDK/API Level: ").append(sdkInt).append("\n");
             String customOs = devInfo.optString("custom_os", "stock");
             if (!"stock".equalsIgnoreCase(customOs)) {
                 sb.append("- Custom OS: ").append(customOs)
@@ -72,7 +72,7 @@ public class PromptBuilder {
             sb.append("Nav Graph Context:\n").append(graph.toString()).append("\n\n");
         }
 
-        sb.append("Generate the ordered navigation path. Verify consistency before responding.");
+        sb.append("Generate the ordered navigation path. Treat the provided intent and parameters as candidate classification results. Verify consistency before responding.");
         return sb.toString();
     }
 
@@ -94,11 +94,32 @@ public class PromptBuilder {
             JSONObject deviceInfo,
             boolean isOnTargetApp,
             String failedPath) {
+        return buildGeminiDrivenPrompt(targetApp, exactTask, cleanPageContent, deviceInfo, isOnTargetApp, failedPath, null, null);
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Full-Context Reroute Prompt Generator.
+     * Injects exact live screen title, local SQLite graph database knowledge (.db), and generic button
+     * disambiguation rules so AI never confuses duplicate controls (e.g. 3-dots on root vs 3-dots in a chat).
+     */
+    public static String buildGeminiDrivenPrompt(
+            String targetApp,
+            String exactTask,
+            String cleanPageContent,
+            JSONObject deviceInfo,
+            boolean isOnTargetApp,
+            String failedPath,
+            String currentScreenTitle,
+            JSONObject navGraphContext) {
 
         StringBuilder sb = new StringBuilder();
 
         sb.append("Target App: ").append(targetApp).append("\n");
-        sb.append("Task to accomplish: ").append(exactTask).append("\n\n");
+        sb.append("Task to accomplish: ").append(exactTask).append("\n");
+        if (currentScreenTitle != null && !currentScreenTitle.trim().isEmpty()) {
+            sb.append("Current Screen Title: \"").append(currentScreenTitle).append("\"\n");
+        }
+        sb.append("\n");
 
         if (deviceInfo != null && deviceInfo.length() > 0) {
             sb.append("Device Context:\n");
@@ -106,13 +127,17 @@ public class PromptBuilder {
             sb.append("- Model: ").append(deviceInfo.optString("model", "Unknown")).append("\n");
             sb.append("- Android Version: ").append(deviceInfo.optString("android_version", "Unknown")).append("\n");
             int sdkInt = deviceInfo.optInt("sdk_int", 0);
-            if (sdkInt > 0) sb.append("- SDK: ").append(sdkInt).append("\n");
+            if (sdkInt > 0) sb.append("- Android SDK/API Level: ").append(sdkInt).append("\n");
             String customOs = deviceInfo.optString("custom_os", "stock");
             if (!"stock".equalsIgnoreCase(customOs)) {
                 sb.append("- Custom OS: ").append(customOs)
                         .append(" ").append(deviceInfo.optString("custom_os_version", "")).append("\n");
             }
             sb.append("\n");
+        }
+
+        if (navGraphContext != null && navGraphContext.length() > 0) {
+            sb.append("Verified Local App Navigation Graph (.db):\n").append(navGraphContext.toString()).append("\n\n");
         }
 
         // [PERMANENT FIX] Do not remove this! Format screen elements concisely so the AI sees all elements on screen without truncation.
@@ -143,7 +168,8 @@ public class PromptBuilder {
         sb.append("   - AOSP/Pixel: 'About phone'  |  ColorOS/Realme/OPPO: 'About device'  |  Samsung OneUI: 'About phone'  |  MIUI/Xiaomi: 'About phone'\n");
         sb.append("   - AOSP: 'Display'  |  ColorOS: 'Display & brightness'\n");
         sb.append("   Check the Device Context above to determine the correct OEM naming.\n");
-        sb.append("5. Generate the exact ordered navigation path to accomplish the task.\n");
+        sb.append("5. Disambiguate Generic & Ambiguous Controls: Generic buttons like 'More options' (3 dots), 'Search', 'Menu', or 'Settings' exist on multiple different screens with totally different functions. You MUST make sure each step realistically belongs to the CURRENT screen. If the user is on the wrong screen (e.g. inside a wrong chat or wrong sub-page), output 'Back' first to return to the parent screen before proceeding.\n");
+        sb.append("6. Generate the exact ordered navigation path to accomplish the task.\n");
         return sb.toString();
     }
 

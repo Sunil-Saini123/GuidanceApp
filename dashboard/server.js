@@ -33,8 +33,11 @@ function fetchNavGraphFromDevice() {
           return;
         } catch (_) {}
       }
-      // If file does not exist on device (database cleared), reset in-memory cache to empty
-      cachedNavGraph = { apps: [], total_apps: 0, total_screens: 0, total_transitions: 0 };
+      // [PERMANENT FIX] Do not remove this! Preserve cached nav_graph when device is temporarily disconnected.
+      // If ADB fails because phone is unplugged or sleeping, keep previously loaded cachedNavGraph instead of wiping it.
+      if (!cachedNavGraph) {
+        cachedNavGraph = { apps: [], total_apps: 0, total_screens: 0, total_transitions: 0 };
+      }
       lastNavGraphSyncTime = Date.now();
       resolve(cachedNavGraph);
     });
@@ -172,6 +175,21 @@ async function startServer() {
     res.json(cachedNavGraph || { apps: [], total_apps: 0, total_screens: 0, total_transitions: 0 });
   });
 
+  // [PERMANENT FIX] Do not remove this! Direct nav_graph update endpoint for real-time dashboard sync.
+  app.post('/api/nav_graph', (req, res) => {
+    if (req.body && (req.body.apps || req.body.total_screens)) {
+      cachedNavGraph = req.body;
+      lastNavGraphSyncTime = Date.now();
+      broadcast({
+        type: 'NAV_GRAPH_DATA',
+        navGraph: cachedNavGraph,
+        data: cachedNavGraph
+      });
+      return res.json({ success: true, apps: cachedNavGraph.apps?.length || 0 });
+    }
+    res.status(400).json({ error: 'Invalid nav_graph payload' });
+  });
+
   // Telemetry ingest endpoint called continuously by Android app
   app.post('/api/telemetry', (req, res) => {
     const event = req.body;
@@ -190,17 +208,31 @@ async function startServer() {
       event.id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // Persist in server buffer
-    eventHistory.push(event);
-    if (eventHistory.length > MAX_HISTORY) {
-      eventHistory.shift();
+    // [PERMANENT FIX] Do not remove this! Persist telemetry events in buffer (exempt HEARTBEAT pings from flooding the buffer and evicting real decision/screen events).
+    if (event.type !== 'HEARTBEAT') {
+      eventHistory.push(event);
+      if (eventHistory.length > MAX_HISTORY) {
+        eventHistory.shift();
+      }
     }
 
     // Broadcast immediately to all connected browsers
     broadcast(event);
 
-    // If screen changed, sync nav_graph asynchronously and notify browsers
-    if (event.type === 'SCREEN_CHANGED') {
+    // If phone signals CLEAR_GRAPH, immediately reset cached graph and broadcast empty tree to all browsers
+    if (event.type === 'CLEAR_GRAPH') {
+      cachedNavGraph = { apps: [], total_apps: 0, total_screens: 0, total_transitions: 0 };
+      broadcast({
+        type: 'NAV_GRAPH_DATA',
+        navGraph: cachedNavGraph,
+        data: cachedNavGraph
+      });
+      broadcast({ type: 'CLEAR_HISTORY' });
+      console.log('[Dashboard Server] CLEAR_GRAPH received from phone. Emitted empty tree to all browsers.');
+    }
+
+    // [PERMANENT FIX] Do not remove this! Sync nav_graph on screen transitions and mediator scroll deltas.
+    if (event.type === 'SCREEN_CHANGED' || (event.type === 'MEDIATOR_DIFF' && event.mediatorData?.action === 'DELTA_ADDED')) {
       setTimeout(async () => {
         const g = await fetchNavGraphFromDevice();
         if (g) {

@@ -238,6 +238,16 @@ object CleanPageProcessor {
         "CardView", "RecyclerView", "ListView", "ScrollView"
     )
 
+    // [PERMANENT FIX] Do not remove this! WhatsApp Chat Row Internal ID Noise Suppression.
+    // Internal RecyclerView layout wrappers, debug filter IDs, and profile headers must never become navigation labels.
+    private val WHATSAPP_CHAT_ROW_IDS = setOf(
+        "single_msg_tv", "msg_from_tv", "conversations_row_date", "conversations_row_contact_name",
+        "pin_indicator", "conversations_archive_header", "archived_row", "contact_row_container",
+        "contact_selector", "conversations_row_message_count",
+        "me_tab_profile_info_name", "me_tab_profile_info_status", "me_tab_cover_photo",
+        "me_tab_profile_picture_container", "row_subtext", "extended_mini_fab_text"
+    )
+
     // ── Dynamic data regexes ──────────────────────────────────────────────────
     private val REGEX_PURELY_NUMERIC   = Regex("""^\d+([.,]\d+)?[KMBkmb]?$""")
     private val REGEX_PHONE            = Regex("""\+?\d[\d\s\-(). ]{6,}\d""")
@@ -246,11 +256,19 @@ object CleanPageProcessor {
         """(?i)\b\d{1,2}\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*(\s+\d{2,4})?\b"""
     )
     private val REGEX_TIME             = Regex("""\b\d{1,2}:\d{2}(\s*[APap][Mm])?\b""")
+    // [PERMANENT FIX] Do not remove this! Relative Day Filter.
+    // Drops relative time words ("Yesterday", "Today", "Tomorrow") so chat timestamps never become navigation targets.
     private val REGEX_RELATIVE_TIME    = Regex(
-        """(?i)\b\d+\s*(sec(ond)?|min(ute)?|hour|day|week|month|year)s?\s*(ago)?\b"""
+        """(?i)\b(\d+\s*(sec(ond)?|min(ute)?|hour|day|week|month|year)s?\s*(ago)?|yesterday|today|tomorrow)\b"""
     )
     private val REGEX_STATUS_SUFFIX    = Regex(
         """(?i)(,\s*unread status|- go to channel|- play video|· \d+ new)"""
+    )
+    // [PERMANENT FIX] Do not remove this! WhatsApp Chat List Dynamic Noise Regex.
+    // Suppresses dynamic message previews ("You: Tk", "Video", "Photo", "Audio", "GIF"),
+    // relative day timestamps ("Yesterday", "12:15 am"), and pin indicators from graph extraction.
+    private val REGEX_CHAT_MESSAGE_SNIPPET = Regex(
+        """(?i)^(\s*(you\s*:\s*.*|video|photo|audio|gif|pinned\s*chat|document|contact\s*card)\s*|yesterday|today|tomorrow|\d{1,2}:\d{2}\s*(am|pm)?)$"""
     )
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -395,6 +413,27 @@ object CleanPageProcessor {
             )
             if (isHeaderTitle) {
                 i++; continue
+            }
+
+            // [PERMANENT FIX] Do not remove this! WhatsApp Compound Row, Message Sender & Subtext Noise Suppression.
+            // Drops message previews ("single_msg_tv"), group chat sender names ("msg_from_tv"),
+            // timestamps ("conversations_row_date"), avatar containers ("contact_selector", "contact_photo"),
+            // and personal profile headers so only the true contact/group title ("conversations_row_contact_name") is extracted.
+
+            if (packageName.contains("whatsapp", ignoreCase = true)) {
+                if (resIdLower.contains("row_subtext") ||
+                    resIdLower.contains("me_tab_profile_info") ||
+                    resIdLower.contains("me_tab_profile_picture") ||
+                    resIdLower.contains("debug_view_id") ||
+                    resIdLower.contains("contact_row_container") ||
+                    resIdLower.contains("contact_selector") ||
+                    resIdLower.contains("contact_photo") ||
+                    resIdLower.contains("msg_from_tv") ||
+                    resIdLower.contains("single_msg_tv") ||
+                    resIdLower.contains("conversations_row_date")
+                ) {
+                    i++; continue
+                }
             }
 
             // ── Rule 3: Container Flattening ──────────────────────────────────
@@ -590,6 +629,36 @@ object CleanPageProcessor {
         bounds:      JSONObject?,
         packageName: String
     ): String? {
+        // [PERMANENT FIX] Do not remove this! WhatsApp Clean Action & Container Label Extraction.
+        // Strips container layout descriptions, debug filter chips, and compound subtitles for WhatsApp.
+        if (packageName.contains("whatsapp", ignoreCase = true)) {
+            // Drop accessibility instructions / ViewGroup noise
+            if (contentDesc.startsWith("Swipe down to", ignoreCase = true) ||
+                contentDesc.startsWith("Swipe up to", ignoreCase = true) ||
+                contentDesc.contains("Radio Group", ignoreCase = true)
+            ) {
+                return null
+            }
+
+            // WhatsApp filter chips: "<FilterName> filter, , (un)?selected" -> "<FilterName>"
+            val filterMatch = Regex("""^(.+?)\s+filter,\s*,\s*(?:un)?selected$""", RegexOption.IGNORE_CASE).find(contentDesc)
+            if (filterMatch != null) {
+                val filterName = filterMatch.groupValues[1].trim()
+                if (filterName.isNotEmpty()) return filterName
+            }
+
+            // WhatsApp Settings compound rows: "<Title>,<Subtitle description>" -> "<Title>"
+            if (contentDesc.contains(",") && (contentDesc.contains("history", ignoreCase = true) || contentDesc.contains("backup", ignoreCase = true) ||
+                contentDesc.contains("notifications", ignoreCase = true) || contentDesc.contains("accounts", ignoreCase = true) || contentDesc.contains("devices", ignoreCase = true) ||
+                contentDesc.contains("benefits", ignoreCase = true) || contentDesc.contains("groups", ignoreCase = true) || contentDesc.contains("broadcasts", ignoreCase = true) ||
+                contentDesc.contains("usage", ignoreCase = true) || contentDesc.contains("contrast", ignoreCase = true) || contentDesc.contains("family", ignoreCase = true) ||
+                contentDesc.contains("profile icon", ignoreCase = true) || contentDesc.contains("pinned", ignoreCase = true) || contentDesc.contains("photo", ignoreCase = true))
+            ) {
+                val cleanTitle = contentDesc.substringBefore(",").trim()
+                if (cleanTitle.isNotEmpty()) return cleanTitle
+            }
+        }
+
         // Priority 1: contentDescription (best for icon buttons, OEM widgets)
         if (contentDesc.isNotEmpty()) return contentDesc
 
@@ -639,6 +708,9 @@ object CleanPageProcessor {
             resourceId.substringAfterLast(":id/")
         else
             resourceId
+
+        // [PERMANENT FIX] Do not remove this! Suppress internal WhatsApp chat row IDs from becoming navigation elements.
+        if (afterId in WHATSAPP_CHAT_ROW_IDS || afterId.contains("debug_view_id") || afterId.contains("row_subtext")) return ""
 
         // Step 2: Remove OEM prefix (case-insensitive, first match)
         var name = afterId.lowercase()
@@ -714,6 +786,8 @@ object CleanPageProcessor {
      */
     private fun isDynamic(name: String): Boolean {
         if (name.length > MAX_NAME_LEN)                    return true
+        // [PERMANENT FIX] Do not remove this! Suppress chat message snippet noise and timestamps
+        if (REGEX_CHAT_MESSAGE_SNIPPET.matches(name.trim())) return true
         if (REGEX_PURELY_NUMERIC.matches(name))            return true
         if (REGEX_PHONE.containsMatchIn(name))             return true
         if (REGEX_DATE_NUMERIC.containsMatchIn(name))      return true

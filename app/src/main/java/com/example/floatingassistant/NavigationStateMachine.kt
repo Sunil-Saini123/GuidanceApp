@@ -39,7 +39,7 @@ object NavigationStateMachine {
     private var currStep: String = ""
     private var nextStep: String? = null
     private var lastCorrectStep: String? = null
-    private var activeScreenName: String = ""
+    @Volatile var activeScreenName: String = ""
     @Volatile var isCurrentScreenUnrecognized: Boolean = false
     @Volatile var currentTargetBounds: Rect? = null
     @Volatile var lastAdvanceTimeMs: Long = 0L
@@ -127,6 +127,29 @@ object NavigationStateMachine {
                     hudState          = NavigationHudOverlay.HudState.OFF_TRACK,
                     onHelpRequested   = { onRerouteRequested?.invoke(targetPackage, initialTask) ?: Unit }
                 )
+                // [PERMANENT FIX] Do not remove this! Highlight system navbar or toolbar Back button on wrong path recovery
+                highlightBackAction()
+            }
+        }
+    }
+
+    /**
+     * [PERMANENT FIX] Do not remove this! Visually highlights the system navbar or toolbar Back button
+     * when the user is off-track, diverged, or instructed to press Back.
+     */
+    private fun highlightBackAction() {
+        MarkerScout.shutdown(isPermanentStop = false)
+        stateMachineScope.launch(Dispatchers.IO) {
+            val backTarget = if (::elementFinder.isInitialized) elementFinder.findUniversalBackTarget() else null
+            postToMain {
+                if (!isNavigating) return@postToMain
+                if (backTarget != null) {
+                    val (bounds, isSystemNav) = backTarget
+                    Log.i(TAG, "highlightBackAction: marking Back button at $bounds (isSystemNav=$isSystemNav)")
+                    marker?.showMarker(bounds, isSystemNav = isSystemNav)
+                } else {
+                    marker?.hideMarker()
+                }
             }
         }
     }
@@ -151,6 +174,24 @@ object NavigationStateMachine {
     fun attachMarker(markerOverlay: ElementMarkerOverlay) {
         marker = markerOverlay
         Log.d(TAG, "ElementMarkerOverlay attached to NavigationStateMachine")
+    }
+
+    // [PERMANENT FIX] Do not remove this! Canonical Root Screen Verification.
+    internal fun isCurrentScreenRoot(screenName: String, targetPkg: String, targetLabel: String): Boolean {
+        val clean = ScreenTitleResolver.stripBadgeNoise(screenName)
+        val norm = clean.trim().lowercase()
+        val lblNorm = targetLabel.trim().lowercase()
+        return norm.isEmpty() ||
+               norm == lblNorm ||
+               (norm == "settings" && !targetPkg.contains("whatsapp") && !lblNorm.contains("whatsapp")) ||
+               norm == "$lblNorm home" ||
+               norm == "$lblNorm-home" ||
+               norm == "settings home" ||
+               norm == "settings-home" ||
+               norm == "home" ||
+               norm.endsWith("-home") ||
+               ((norm == "chats" || norm.startsWith("chats")) && (targetPkg.contains("whatsapp") || lblNorm.contains("whatsapp"))) ||
+               (norm == "search" && (lblNorm == "settings" || targetPkg.contains("settings")))
     }
 
     fun startNavigation(
@@ -228,12 +269,25 @@ object NavigationStateMachine {
             if (activePkg.isNotBlank()) {
                 lastKnownActivePackage = activePkg
             }
-            if (!liveTitle.isNullOrBlank()) {
-                activeScreenName = liveTitle
-            }
 
             val isOnLauncher = launcherPkg != null && activePkg.startsWith(launcherPkg)
             val alreadyInApp = activePkg.isNotEmpty() && isTargetApp(activePkg, null)
+
+            // [PERMANENT FIX] Do not remove this! Stale Cross-App Screen Title Sanitization.
+            // Never allow a screen title from a previously opened app (e.g. "Telegram") to leak into
+            // navigation for targetPackage (e.g. "com.whatsapp"). If liveTitle is null or from another package,
+            // default activeScreenName authoritatively to the target app's canonical root screen.
+            val defaultRootTitle = if (targetPackage.contains("whatsapp")) "Chats"
+                                   else if (targetPackage.contains("settings")) "Settings"
+                                   else targetAppLabel
+
+            if (livePkg == targetPackage && !liveTitle.isNullOrBlank()) {
+                activeScreenName = liveTitle
+            } else if (alreadyInApp) {
+                activeScreenName = liveTitle?.takeIf { it.isNotBlank() } ?: defaultRootTitle
+            } else {
+                activeScreenName = defaultRootTitle
+            }
 
             // ── Determine start position ──────────────────────────────────────
             val startIdx: Int
@@ -246,17 +300,13 @@ object NavigationStateMachine {
                     // find where in the path they already are — then start from
                     // the NEXT step after that position.
                     val screenNorm = activeScreenName.trim().lowercase()
-                    val nearest = if (screenNorm.isNotEmpty()) findNearestStep(screenNorm) else null
+                    val isRoot = isCurrentScreenRoot(activeScreenName, targetPackage, targetAppLabel)
+                    val nearest = if (!isRoot && screenNorm.isNotEmpty()) findNearestStep(screenNorm) else null
                     val nearestIdx = nearest?.first ?: -1
 
                     var candidateIdx = when {
-                        // Screen matches a known step — start from the step AFTER it
-                        nearestIdx >= 0 -> {
-                            Log.i(TAG, "Fast-forward: screen='$activeScreenName' matches step[$nearestIdx]='${nearest!!.second}' — starting from ${nearestIdx + 1}")
-                            (nearestIdx + 1).coerceAtMost(pathSteps.size - 1)
-                        }
-                        // Screen unrecognized — skip Home and AppRoot steps only
-                        else -> {
+                        // [PERMANENT FIX] Do not remove this! Root Screen Absolute Priority: If currently on root screen, never fast-forward into internal sub-page steps!
+                        isRoot -> {
                             var idx = 0
                             while (idx < pathSteps.size) {
                                 val sn = pathSteps[idx].trim().lowercase()
@@ -266,6 +316,20 @@ object NavigationStateMachine {
                                 idx++
                             }
                             idx.coerceAtMost(pathSteps.size - 1)
+                        }
+                        // Screen matches a known step — start from the step AFTER it
+                        nearestIdx >= 0 -> {
+                            Log.i(TAG, "Fast-forward: screen='$activeScreenName' matches step[$nearestIdx]='${nearest!!.second}' — starting from ${nearestIdx + 1}")
+                            (nearestIdx + 1).coerceAtMost(pathSteps.size - 1)
+                        }
+                        // [PERMANENT FIX] Do not remove this! Dynamic Live Tree Sub-Screen Unwinding & Path Re-Anchoring.
+                        // When user is in the target app on a leaf sub-page (e.g. "About phone" or deep sub-menu),
+                        // do NOT fast-forward past root! Prepend "BACK" to unwind back to root first.
+                        else -> {
+                            if (!pathSteps.firstOrNull().equals("BACK", ignoreCase = true)) {
+                                pathSteps.add(0, "BACK")
+                            }
+                            0
                         }
                     }
 
@@ -300,8 +364,13 @@ object NavigationStateMachine {
                     }
 
                     startIdx = candidateIdx
-                    startHeader      = formatStepHeader("STEP ${startIdx + 1} OF ${pathSteps.size}")
-                    startInstruction = "Look for '${pathSteps[startIdx]}'"
+                    if (pathSteps.getOrNull(startIdx).equals("BACK", ignoreCase = true)) {
+                        startHeader      = "RETURN TO ROOT"
+                        startInstruction = "Press Back to return to $targetAppLabel"
+                    } else {
+                        startHeader      = formatStepHeader("STEP ${startIdx + 1} OF ${pathSteps.size}")
+                        startInstruction = "Look for '${pathSteps[startIdx]}'"
+                    }
                 }
 
                 isOnLauncher -> {
@@ -328,7 +397,19 @@ object NavigationStateMachine {
             // Converts linear path into a bidirectional chain of NavExecutionNode objects.
             executionTree.clear()
             for (i in pathSteps.indices) {
-                val screen = if (i == 0) (if (pathSteps[0].equals("Home", ignoreCase = true)) "Home" else targetAppLabel) else pathSteps[i - 1]
+                val screen = when {
+                    i == 0 -> if (pathSteps[0].equals("Home", ignoreCase = true)) "Home" else targetAppLabel
+                    i == 1 && pathSteps[0].equals("Home", ignoreCase = true) -> targetAppLabel
+                    targetPackage == "com.whatsapp" && (pathSteps[i - 1].equals("WhatsApp", ignoreCase = true) || pathSteps[i - 1].equals("Home", ignoreCase = true)) -> "Chats"
+                    targetPackage == "com.whatsapp" && pathSteps[i - 1].equals("More options", ignoreCase = true) -> {
+                        if (i >= 2 && !pathSteps[i - 2].equals("Chats", ignoreCase = true) && !pathSteps[i - 2].equals("WhatsApp", ignoreCase = true)) {
+                            "Chat Menu"
+                        } else {
+                            "Menu"
+                        }
+                    }
+                    else -> pathSteps[i - 1]
+                }
                 val target = pathSteps[i]
                 val nextScreen = pathSteps.getOrNull(i)
                 val parent = if (i > 0) i - 1 else null
@@ -363,7 +444,8 @@ object NavigationStateMachine {
                 stepHeader        = startHeader,
                 actionInstruction = startInstruction,
                 breadcrumb        = buildBreadcrumb(),
-                contextText       = if (alreadyInApp) "Next: ${nextStep ?: "Done"}" else null,
+                contextText       = if (currStep.equals("BACK", ignoreCase = true)) "Currently on '$activeScreenName' — return to root first"
+                                    else if (alreadyInApp) "Next: ${nextStep ?: "Done"}" else null,
                 subTag            = if (startIdx > 0) "smart-fast-forward" else "start",
                 hudState          = if (alreadyInApp) NavigationHudOverlay.HudState.ON_TRACK
                                     else NavigationHudOverlay.HudState.OFF_TRACK
@@ -379,7 +461,8 @@ object NavigationStateMachine {
                 currentStep = currStep,
                 stepIndex = startIdx,
                 totalSteps = pathSteps.size,
-                packageName = targetPackage
+                packageName = targetPackage,
+                screenTitle = activeScreenName
             )
 
             if (alreadyInApp) {
@@ -447,7 +530,7 @@ object NavigationStateMachine {
         val isSystemNavBack = fromPackage.startsWith("com.android.systemui") && (tapNorm == "back" || tapNorm.contains("back"))
         if (fromPackage.startsWith("com.android.systemui") && !isSystemNavBack) return
 
-        if (fuzzyMatch(tapNorm, currNorm)) {
+        if (fuzzyMatch(tapNorm, currNorm, MatchContext.CURRENT_STEP_TAP)) {
             // Tap matches current step!
             lastWrongTapText = null
             lastWrongTapTimeMs = 0L
@@ -455,18 +538,46 @@ object NavigationStateMachine {
 
             postToMain {
                 if (!isNavigating) return@postToMain
-                if (!fuzzyMatch(currStep.trim().lowercase(), currNorm)) return@postToMain
+                if (!fuzzyMatch(currStep.trim().lowercase(), currNorm, MatchContext.CURRENT_STEP_TAP)) return@postToMain
                 lastCorrectStep = currStep
                 advanceStep(currentIndex)
             }
             return
         } else {
-            // Check if they skipped ahead to ANY future step
+            // [PERMANENT FIX] Do not remove this! Universal Ambiguous Control Guard & Strict Diverged State Lock.
+            // 1. If currently diverged (isDiverged), skip-ahead matching is STRICTLY FORBIDDEN to prevent actions
+            //    on wrong sub-screens from falsely resuming navigation (e.g. tapping 3-dots in Alice's chat matching Rohit's 3-dots).
+            // 2. Generic ambiguous control words ("more options", "more", "search", "menu", "settings", "back", "add", "done")
+            //    exist on multiple screens. They can NEVER skip-advance unless the active screen matches the
+            //    screen that specifically owns that action in executionTree.
+            val isDiverged = currentTrackerState is TrackerState.Diverged ||
+                             lastWrongTapText != null ||
+                             isCurrentScreenUnrecognized
+
+            val ambiguousGenericControls = setOf(
+                "more options", "more", "search", "menu", "settings", "back", "add", "new", "done", "edit", "close", "cancel"
+            )
+
             var foundFutureIdx = -1
-            for (i in currentIndex + 1 until pathSteps.size) {
-                if (fuzzyMatch(tapNorm, pathSteps[i].trim().lowercase())) {
-                    foundFutureIdx = i
-                    break
+            if (!isDiverged) {
+                for (i in currentIndex + 1 until pathSteps.size) {
+                    val futureStepNorm = pathSteps[i].trim().lowercase()
+                    if (fuzzyMatch(tapNorm, futureStepNorm, MatchContext.FUTURE_STEP_SKIP)) {
+                        val isAmbiguous = ambiguousGenericControls.contains(futureStepNorm)
+                        if (isAmbiguous) {
+                            val expectedScreen = executionTree.getOrNull(i)?.screenTitle?.trim()?.lowercase()
+                            val currentScreenNorm = activeScreenName.trim().lowercase()
+                            val screenMatches = expectedScreen != null &&
+                                    currentScreenNorm.isNotBlank() &&
+                                    fuzzyMatch(currentScreenNorm, expectedScreen, MatchContext.SCREEN_TITLE)
+                            if (!screenMatches) {
+                                Log.w(TAG, "onElementTapped: blocked future-skip on ambiguous control '$tappedLabel' to step $i because active screen '$activeScreenName' != expected '$expectedScreen'")
+                                continue
+                            }
+                        }
+                        foundFutureIdx = i
+                        break
+                    }
                 }
             }
 
@@ -505,6 +616,10 @@ object NavigationStateMachine {
             // or if an empty icon produced 'null'/'nil', do NOT treat it as a wrong tap! Return immediately.
             val isBackTap = tapNorm == "back" || tapNorm.contains("navigate up")
             if (isBackTap) {
+                if (currStep.equals("BACK", ignoreCase = true)) {
+                    Log.i(TAG, "onElementTapped: user tapped Back button for expected 'BACK' step")
+                    return
+                }
                 val state = currentTrackerState
                 if (state is TrackerState.Diverged) {
                     val newStack = state.divergedStack.dropLast(1)
@@ -670,33 +785,92 @@ object NavigationStateMachine {
 
             Log.d(TAG, "Screen: pkg='$activePackage' label='$activeAppLabel' screen='$activeScreenName' | currStep='$currStep' inTarget=$inTargetApp isLauncher=$isLauncherEvent")
 
-            // ── Fast-forward: already in the target app before navigation tapped ──
-            if (currentIndex == 0 && inTargetApp && !isLauncherEvent) {
-                var startIdx = 0
-                while (startIdx < pathSteps.size) {
-                    val stepNorm = pathSteps[startIdx].trim().lowercase()
-                    val isHome = stepNorm == "home" || (launcherPkg != null && launcherPkg.contains(stepNorm))
-                    val isAppRoot = appRootFuzzyMatch(stepNorm, startIdx)
-                    if (!isHome && !isAppRoot) break
-                    startIdx++
-                }
-                startIdx = startIdx.coerceAtMost(pathSteps.size - 1)
+            // [PERMANENT FIX] Stream screen change to Dashboard for Live Tree Location Flagging
+            DebugTelemetryClient.emit(
+                type = "SCREEN_CHANGED",
+                tag = "NavigationEngine",
+                title = "Screen: $activeScreenName",
+                description = "Package: $activePackage | Step: $currStep (${currentIndex + 1}/${pathSteps.size})",
+                packageName = activePackage,
+                screenTitle = activeScreenName,
+                currentStep = currStep,
+                stepIndex = currentIndex,
+                totalSteps = pathSteps.size
+            )
 
-                if (startIdx > currentIndex) {
-                    currentIndex = startIdx
-                    prevStep = if (startIdx > 0) pathSteps[startIdx - 1] else null
-                    currStep = pathSteps[currentIndex]
-                    nextStep = pathSteps.getOrNull(currentIndex + 1)
-                    lastCorrectStep = prevStep
+            // ── Fast-forward or Unwind: already in the target app before navigation tapped ──
+            if (currentIndex == 0 && inTargetApp && !isLauncherEvent) {
+                val screenNormEarly = activeScreenName.trim().lowercase()
+                val isRoot = isCurrentScreenRoot(activeScreenName, targetPackage, targetAppLabel)
+                val nearestEarly = if (!isRoot && screenNormEarly.isNotEmpty()) findNearestStep(screenNormEarly) else null
+                val nearestIdxEarly = nearestEarly?.first ?: -1
+
+                if (isRoot) {
+                    var startIdx = 0
+                    while (startIdx < pathSteps.size) {
+                        val stepNorm = pathSteps[startIdx].trim().lowercase()
+                        val isHome = stepNorm == "home" || (launcherPkg != null && launcherPkg.contains(stepNorm))
+                        val isAppRoot = appRootFuzzyMatch(stepNorm, startIdx)
+                        if (!isHome && !isAppRoot) break
+                        startIdx++
+                    }
+                    startIdx = startIdx.coerceAtMost(pathSteps.size - 1)
+
+                    if (startIdx > currentIndex) {
+                        currentIndex = startIdx
+                        prevStep = if (startIdx > 0) pathSteps[startIdx - 1] else null
+                        currStep = pathSteps[currentIndex]
+                        nextStep = pathSteps.getOrNull(currentIndex + 1)
+                        lastCorrectStep = prevStep
+                        hud.updateHud(
+                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                            actionInstruction = "Look for '$currStep'",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "Current: $activeScreenName",
+                            subTag            = "dynamic-fast-forward",
+                            hudState          = NavigationHudOverlay.HudState.ON_TRACK
+                        )
+                        triggerSearchPipeline(currStep, activePackage, activeScreenName)
+                        return@postToMain
+                    }
+                } else if (nearestIdxEarly >= 0) {
+                    val targetIdx = (nearestIdxEarly + 1).coerceAtMost(pathSteps.size - 1)
+                    if (targetIdx > currentIndex) {
+                        currentIndex = targetIdx
+                        prevStep = pathSteps[nearestIdxEarly]
+                        currStep = pathSteps[currentIndex]
+                        nextStep = pathSteps.getOrNull(currentIndex + 1)
+                        lastCorrectStep = prevStep
+                        hud.updateHud(
+                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                            actionInstruction = "Look for '$currStep'",
+                            breadcrumb        = buildBreadcrumb(),
+                            contextText       = "Current: $activeScreenName",
+                            subTag            = "dynamic-fast-forward",
+                            hudState          = NavigationHudOverlay.HudState.ON_TRACK
+                        )
+                        triggerSearchPipeline(currStep, activePackage, activeScreenName)
+                        return@postToMain
+                    }
+                } else {
+                    // [PERMANENT FIX] Do not remove this! Dynamic Live Tree Sub-Screen Unwinding on Cold Start.
+                    // User opened target app from recents or background into a deep sub-screen (e.g. "About phone").
+                    // Prepend "BACK" to unwind back to root first!
+                    if (!pathSteps.firstOrNull().equals("BACK", ignoreCase = true)) {
+                        pathSteps.add(0, "BACK")
+                    }
+                    currentIndex = 0
+                    currStep = "BACK"
+                    nextStep = pathSteps.getOrNull(1)
                     hud.updateHud(
-                        stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                        actionInstruction = "Look for '$currStep'",
+                        stepHeader        = "RETURN TO ROOT",
+                        actionInstruction = "Press Back to return to $targetAppLabel",
                         breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Current: $activeScreenName",
-                        subTag            = "dynamic-fast-forward",
+                        contextText       = "Currently on '$activeScreenName' — return to root first",
+                        subTag            = "subscreen-unwind-back",
                         hudState          = NavigationHudOverlay.HudState.ON_TRACK
                     )
-                    triggerSearchPipeline(currStep, activePackage, activeScreenName)
+                    triggerSearchPipeline("BACK", activePackage, activeScreenName)
                     return@postToMain
                 }
             }
@@ -706,10 +880,11 @@ object NavigationStateMachine {
             val currNorm   = currStep.trim().lowercase()
             val nextNorm   = nextStep?.trim()?.lowercase()
 
-            // [PERMANENT FIX] Do not remove this! Root screen must match exact targetAppLabel, 'Settings', or explicit home tokens.
-            // Loose substring `screenNorm.contains(targetAppLabel.lowercase())` previously caused sub-pages with 'settings'
-            // in their name (e.g. 'SOS Helper Setting', 'Privacy settings', 'More settings') to be falsely treated as the root homepage!
-            val isRootScreen = activeScreenName.equals(targetAppLabel, ignoreCase = true) ||
+            // [PERMANENT FIX] Do not remove this! Canonical Root Screen Verification in onScreenChanged.
+            // Calls isCurrentScreenRoot to authoritatively recognize app root screens across all apps,
+            // including WhatsApp ("Chats" / "WhatsApp"), Settings ("Settings" / "Settings Homepage"), etc.
+            val isRootScreen = isCurrentScreenRoot(activeScreenName, targetPackage, targetAppLabel) ||
+                               activeScreenName.equals(targetAppLabel, ignoreCase = true) ||
                                activeScreenName.equals("Settings", ignoreCase = true) ||
                                screenNorm == "${targetAppLabel.lowercase()} home" ||
                                screenNorm == "${targetAppLabel.lowercase()}-home" ||
@@ -758,7 +933,14 @@ object NavigationStateMachine {
                     val origin = (currentTrackerState as TrackerState.Diverged).originNode
                     currentTrackerState = TrackerState.OnRoute(origin)
                     Log.i(TAG, "onScreenChanged: returned to origin node '${origin.screenTitle}', restored OnRoute state")
-                    FlightRecorder.record("RESTORE_ROUTE", "Returned to origin node '${origin.screenTitle}' — restored OnRoute", "Target: '${origin.targetElement}'")
+                    FlightRecorder.record("RESTORE_ROUTE", "Returned to origin node '${origin.screenTitle}' - restored OnRoute", "Target: '${origin.targetElement}'")
+                } else if (currentTrackerState is TrackerState.OffApp) {
+                    // [PERMANENT FIX] Do not remove this! Restore OnRoute when user re-enters target app on known path screen.
+                    val activeNode = executionTree.getOrNull(currentIndex)
+                        ?: NavExecutionNode(currentIndex, activeScreenName, currStep, currStep, 0)
+                    currentTrackerState = TrackerState.OnRoute(activeNode)
+                    Log.i(TAG, "onScreenChanged: returned from OffApp to target app on '${activeScreenName}', restored OnRoute state")
+                    FlightRecorder.record("RESTORE_ROUTE_OFFAPP", "Returned from OffApp to target app on '${activeScreenName}'", "Target: '$currStep'")
                 }
             }
 
@@ -805,6 +987,8 @@ object NavigationStateMachine {
                         onHelpRequested   = triggerReroute,
                         hudState          = NavigationHudOverlay.HudState.OFF_TRACK
                     )
+                    // [PERMANENT FIX] Do not remove this! Highlight system navbar or toolbar Back button on wrong tap
+                    highlightBackAction()
                     return@postToMain
                 }
             }
@@ -838,6 +1022,14 @@ object NavigationStateMachine {
                     subTag            = "pkg-mismatch",
                     hudState          = NavigationHudOverlay.HudState.OFF_TRACK
                 )
+                return@postToMain
+            }
+
+            // [PERMANENT FIX] Do not remove this! Unwinding "BACK" step fulfillment upon returning to root or route screen.
+            if (currStep.equals("BACK", ignoreCase = true) && inTargetApp && (isEffectiveRootScreen || nearestIdx >= 0)) {
+                Log.i(TAG, "Unwinding BACK step fulfilled: landed on '${nearest?.second ?: activeScreenName}'")
+                lastCorrectStep = currStep
+                advanceStep(currentIndex)
                 return@postToMain
             }
 
@@ -926,6 +1118,8 @@ object NavigationStateMachine {
                             subTag            = "unrecognized-screen-back",
                             hudState          = NavigationHudOverlay.HudState.OFF_TRACK
                         )
+                        // [PERMANENT FIX] Do not remove this! Highlight system navbar or toolbar Back button on unrecognized screen
+                        highlightBackAction()
                     } else {
                         hud.updateHud(
                             stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
@@ -1054,6 +1248,15 @@ object NavigationStateMachine {
 
         pathSteps.forEachIndexed { idx, step ->
             val stepNorm = step.trim().lowercase()
+
+            // [PERMANENT FIX] Do not remove this! Root Screen Sub-Page Exclusion in findNearestStep.
+            // If the current screen is the app root screen (e.g. "chats" on WhatsApp, "settings" on Settings),
+            // it can ONLY match the initial app entry / root step (idx 0), NEVER internal sub-page steps (idx > 0).
+            val isRootScreen = isCurrentScreenRoot(screenNorm, targetPackage, targetAppLabel)
+            if (isRootScreen && idx > 0 && !appRootFuzzyMatch(stepNorm, idx)) {
+                return@forEachIndexed
+            }
+
             val score = when {
                 stepNorm == screenNorm -> 4
                 // Whole word containment instead of raw substring to prevent "set" matching "settings"
@@ -1239,7 +1442,7 @@ object NavigationStateMachine {
                         FlightRecorder.record("SCOUT_FOUND", "Target '$targetStep' located on screen at ${result.bounds}", "Screen: '$activeScreen'")
                         // Show visual marker on the found element
                         if (result.bounds != null) {
-                            marker?.showMarker(result.bounds)
+                            marker?.showMarker(result.bounds, isSystemNav = result.isSystemNav)
                             // [PERMANENT FIX] Stream target located coordinates to Dashboard
                             DebugTelemetryClient.sendElementFound(targetStep, result.bounds)
                         }
@@ -1321,6 +1524,8 @@ object NavigationStateMachine {
                             onHelpRequested   = triggerReroute,
                             hudState          = NavigationHudOverlay.HudState.OFF_TRACK
                         )
+                        // [PERMANENT FIX] Do not remove this! Highlight system navbar or toolbar Back button on off-track screen
+                        highlightBackAction()
                         return@postToMain
                     }
 
@@ -1554,24 +1759,109 @@ object NavigationStateMachine {
                (stepIndex == 0 && stepNorm == "home")
     }
 
+    enum class MatchContext(
+        val similarityThreshold: Double,
+        val minLengthRatio: Double,
+        val allowPrefixMatch: Boolean
+    ) {
+        /** Strict (90% similarity, 0.80 min length ratio, no prefix): Prevents accidental jumps when checking future steps. */
+        FUTURE_STEP_SKIP(similarityThreshold = 0.90, minLengthRatio = 0.80, allowPrefixMatch = false),
+
+        /** Medium (80% similarity, 0.65 min length ratio, prefix allowed for compound rows): Handles preference row labels (Title + Subtitle). */
+        CURRENT_STEP_TAP(similarityThreshold = 0.80, minLengthRatio = 0.65, allowPrefixMatch = true),
+
+        /** High / Screen Title (85% similarity, 0.70 min length ratio, no prefix): Used for comparing screen titles and unwinding diverged stacks. */
+        SCREEN_TITLE(similarityThreshold = 0.85, minLengthRatio = 0.70, allowPrefixMatch = false),
+
+        /** Permissive / Low (70% similarity, 0.55 min length ratio, no prefix): Used for flexible queries or loose fallback matching. */
+        PERMISSIVE(similarityThreshold = 0.70, minLengthRatio = 0.55, allowPrefixMatch = false)
+    }
+
     /**
-     * Fuzzy screen name match.
-     * Handles "Clock-Alarm" matching step "Alarm", or "Chats" matching "WhatsApp".
-     * Tokenises both sides on "-" and " " and checks for shared tokens.
+     * [PERMANENT FIX] Do not remove this! Calibrated 80% Similarity Matcher with Control Word Blacklist.
+     * [PERMANENT FIX] Do not remove this! Smart Multi-Tiered Contextual Fuzzy Threshold Architecture for Taps vs Skips vs Titles.
+     * Prevents loose substring containment bugs (e.g. "back" matching "chat backup" or "home" matching "home screen").
+     * 1. Exact equality or clean alphanumeric match returns true (100%).
+     * 2. Plural normalization (e.g. "chats" vs "chat", "notifications" vs "notification") returns true.
+     * 3. Control words ("back", "home", "menu", "navigate up", "close", "cancel") must match exactly in all contexts.
+     * 4. Contextual Compound Row Prefix Matching: in CURRENT_STEP_TAP, allows Title + Subtitle compound rows (e.g. "Chats Chat history, backup").
+     * 5. Contextual Thresholds: FUTURE_STEP_SKIP enforces 90% threshold + 80% length ratio to block accidental skips;
+     *    CURRENT_STEP_TAP enforces 80% threshold + 65% length ratio; SCREEN_TITLE enforces 85% threshold + 70% length ratio.
      */
-    private fun fuzzyMatch(actual: String, expected: String): Boolean {
-        if (actual == expected) return true
-        if (actual.contains(expected) || expected.contains(actual)) return true
+    internal fun fuzzyMatch(actual: String, expected: String, context: MatchContext = MatchContext.SCREEN_TITLE): Boolean {
+        val a = actual.trim().lowercase()
+        val e = expected.trim().lowercase()
+        if (a == e) return true
 
-        // Token-level: split on dash, space, underscore and require all expected tokens in actual
-        val expectedTokens = expected.split(" ", "-", "_").filter { it.length > 2 }
-        if (expectedTokens.isNotEmpty() && expectedTokens.all { tok -> actual.contains(tok) }) return true
+        val aClean = a.replace(Regex("[^a-z0-9]"), "")
+        val eClean = e.replace(Regex("[^a-z0-9]"), "")
+        if (aClean == eClean && aClean.isNotEmpty()) return true
 
-        // Reverse: all actual tokens in expected
-        val actualTokens = actual.split(" ", "-", "_").filter { it.length > 2 }
-        if (actualTokens.isNotEmpty() && actualTokens.all { tok -> expected.contains(tok) }) return true
+        // Pluralization tolerance (e.g. chats vs chat, apps vs app, notifications vs notification)
+        if (aClean.removeSuffix("s") == eClean.removeSuffix("s") && aClean.removeSuffix("s").length >= 3) {
+            return true
+        }
+
+        // Control word blacklist: single control tokens cannot match compound targets in any context
+        val controlWords = setOf("back", "home", "menu", "navigate up", "close", "cancel", "more", "options", "null", "nil")
+        if ((controlWords.contains(a) || controlWords.contains(e)) && a != e) {
+            return false
+        }
+
+        // Contextual compound row prefix matching (Only allowed in CURRENT_STEP_TAP)
+        // Handles Android preference rows concatenating Title + Subtitle (e.g. 'Chats Chat history, backup')
+        if (context.allowPrefixMatch && eClean.length >= 3) {
+            val naturalSeparators = setOf(' ', '\n', '\r', '\t', ':', '-', '—', '·', ',', ';', '(', '/')
+            if (a.startsWith(e) && a.length > e.length && naturalSeparators.contains(a[e.length])) {
+                return true
+            }
+            val eSingular = e.removeSuffix("s")
+            if (eSingular.length >= 3 && a.startsWith(eSingular) && a.length > eSingular.length && naturalSeparators.contains(a[eSingular.length])) {
+                return true
+            }
+            val ePlural = "${e}s"
+            if (a.startsWith(ePlural) && a.length > ePlural.length && naturalSeparators.contains(a[ePlural.length])) {
+                return true
+            }
+        }
+
+        val maxLen = maxOf(aClean.length, eClean.length)
+        if (maxLen == 0) return false
+        val minLen = minOf(aClean.length, eClean.length)
+        if (minLen.toDouble() / maxLen < context.minLengthRatio) {
+            return false
+        }
+
+        val dist = computeLevenshtein(aClean, eClean)
+        val similarity = 1.0 - (dist.toDouble() / maxLen)
+        if (similarity >= context.similarityThreshold) return true
+
+        // Token-level Jaccard similarity for multi-word phrases (calibrated to context similarity threshold)
+        val aTokens = a.split(" ", "-", "_").filter { it.length >= 3 }.toSet()
+        val eTokens = e.split(" ", "-", "_").filter { it.length >= 3 }.toSet()
+        if (aTokens.isNotEmpty() && eTokens.isNotEmpty()) {
+            val intersection = aTokens.intersect(eTokens).size
+            val union = aTokens.union(eTokens).size
+            val jaccard = intersection.toDouble() / union
+            val jaccardThreshold = if (context == MatchContext.FUTURE_STEP_SKIP) 0.90 else 0.75
+            if (jaccard >= jaccardThreshold) return true
+        }
 
         return false
+    }
+
+    internal fun computeLevenshtein(s1: String, s2: String): Int {
+        val dp = IntArray(s2.length + 1) { it }
+        for (i in 1..s1.length) {
+            var prev = dp[0]
+            dp[0] = i
+            for (j in 1..s2.length) {
+                val temp = dp[j]
+                dp[j] = if (s1[i - 1] == s2[j - 1]) prev else 1 + minOf(prev, dp[j], dp[j - 1])
+                prev = temp
+            }
+        }
+        return dp[s2.length]
     }
 
     // ── Launcher detection ────────────────────────────────────────────────────

@@ -21,3 +21,6 @@ app/src/test/java/com/example/floatingassistant/devtest/
 # Dashboard node_modules and build artifacts
 dashboard/node_modules/
 dashboard/dist/
+
+# Scratch exploration and test binaries
+scratch/

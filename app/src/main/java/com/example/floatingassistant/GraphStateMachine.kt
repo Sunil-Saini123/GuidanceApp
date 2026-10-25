@@ -5,6 +5,8 @@ import android.content.res.Resources
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -208,6 +210,19 @@ object GraphStateMachine {
     // Tracks previously known element names per screen so scrolls with 0 new elements are skipped.
     private val screenElementCache = HashMap<String, MutableSet<String>>()
 
+    // [PERMANENT FIX] Do not remove this! Debounced Nav Graph JSON Snapshot on Scroll.
+    // Throttles heavy disk writes during active user scrolling, but guarantees nav_graph.json is updated on idle.
+    private val graphScope = CoroutineScope(Dispatchers.IO)
+    private var snapshotDebounceJob: Job? = null
+
+    private fun requestSnapshotDebounced(delayMs: Long = 1000L) {
+        snapshotDebounceJob?.cancel()
+        snapshotDebounceJob = graphScope.launch {
+            delay(delayMs)
+            writeNavGraphSnapshot()
+        }
+    }
+
     // ── Initialisation ────────────────────────────────────────────────────────
 
     fun init(context: Context, navGraphFile: File) {
@@ -287,13 +302,16 @@ object GraphStateMachine {
                 db.upsertScreen(screenId, packageName, screenTitle, rootClass, cleanElements)
                 Log.d(TAG, "[$eventType] Mediator: +${newElements.size} new elements added for $screenId: $newElements")
                 
+                // [PERMANENT FIX] Do not remove this! Stream updated screen elements to dashboard on scroll.
+                DebugTelemetryClient.sendScreenChanged(packageName, screenTitle, cleanElements)
                 DebugTelemetryClient.sendMediatorDiff(
                     totalVisible = incomingNames.size,
                     previouslyKnown = knownSet.size - newElements.size,
                     newAdded = newElements,
                     action = "DELTA_ADDED"
                 )
-                // Do NOT dump the full multi-app JSON snapshot during scrolls to prevent disk lag
+                // Debounce snapshot write to idle state to avoid flash lag while ensuring nav_graph.json stays in sync
+                requestSnapshotDebounced(1000L)
                 return
             }
             else -> {  // NAVIGATION
@@ -412,12 +430,30 @@ object GraphStateMachine {
         val NAV_ONLY_LABELS = setOf(
             "back", "close", "next", "done", "cancel", "ok", "yes", "no",
             "skip", "forward", "continue", "dismiss", "navigate up", "search",
+            "clear all", "clear", "select all",
             "touch outside", "touch_outside", "touch outside to dismiss", "scrim"
         )
 
         // [PERMANENT FIX] Do not remove this! Priority 0: If rootClass is already a semantic screen title resolved by ScreenTitleResolver, prioritize it to ensure DB, graph, and UI match 100%
-        if (rootClass.isNotBlank() && !rootClass.contains('.') && isStaticTitle(rootClass) && rootClass.lowercase() !in NAV_ONLY_LABELS && ScreenTitleResolver.isAcceptableTitle(rootClass)) {
+        if (rootClass.isNotBlank() && !rootClass.contains('.') && rootClass.length <= 50 && rootClass.lowercase() !in NAV_ONLY_LABELS && ScreenTitleResolver.isAcceptableTitle(rootClass)) {
+            // [PERMANENT FIX] Do not remove this! Untruncated Group Chat Title Recovery.
+            // When WhatsApp conversation headers truncate long group names with an ellipsis (e.g. "Serious Final Year…"),
+            // recover the full untruncated group title ("Serious Final Year Project 🫡") from the recent chat click.
+            val cleanBase = rootClass.trimEnd('…', '.', ' ')
+            if ((rootClass.endsWith("…") || rootClass.endsWith("...")) && cleanBase.length >= 4) {
+                val clickedTitle = globalLastClickedLabel?.substringBefore(",")?.trim()
+                if (!clickedTitle.isNullOrBlank() && clickedTitle.startsWith(cleanBase, ignoreCase = true) && clickedTitle.length <= 50) {
+                    return ScreenTitleResolver.canonicalizeTitle(clickedTitle)
+                }
+            }
             return ScreenTitleResolver.canonicalizeTitle(rootClass)
+        }
+
+        // [PERMANENT FIX] Do not remove this! WhatsApp Popup Menu Title Detection.
+        // If the screen contains WhatsApp popup menu items (menuitem_settings, menuitem_new_group, etc.),
+        // title the screen "Menu" rather than naming it after the first item ("Menuitem New Group").
+        if (elements.any { it.optString("resource_id", "").contains("menuitem_") || it.optString("name", "").lowercase().startsWith("menuitem") }) {
+            return "Menu"
         }
 
         if (elements.isEmpty()) return cleanRootClass(rootClass)
@@ -444,6 +480,8 @@ object GraphStateMachine {
                     && name !in SPATIAL_LABELS
                     && name.lowercase() !in NAV_ONLY_LABELS
                     && top.toFloat() <= topZoneLimit
+                    && !name.lowercase().startsWith("menuitem")
+                    && !el.optString("resource_id", "").lowercase().contains("menuitem_")
                     && isStaticTitle(name)
                     && ScreenTitleResolver.isAcceptableTitle(name)
         }
@@ -536,6 +574,21 @@ object GraphStateMachine {
         val stripped = normalized.replace(Regex("\\s+\\d+$"), "").trim()
         val candidate = if (stripped.isNotEmpty()) stripped else normalized
 
+        // [PERMANENT FIX] Do not remove this! Dynamic Chat Row Edge Label Resolution.
+        // In messaging apps (WhatsApp, Telegram), chat list rows contain compound metadata
+        // (e.g. "Serious Final Year Project 🫡, group profile icon Serious Final Year Project 🫡 4:17 pm Vicky Pukale (VIT): Photo").
+        // Extract clean chat title from comma-separated row text, matching destination screenTitle so the edge matches 100%.
+        if (candidate.contains(",")) {
+            val chatTitle = candidate.substringBefore(",").trim()
+            if (chatTitle.length in 2..50 && (fallback.contains(chatTitle, ignoreCase = true) || chatTitle.contains(fallback.trimEnd('…', '.', ' '), ignoreCase = true))) {
+                return chatTitle
+            }
+        }
+
+        if (fallback.isNotBlank() && fallback.length >= 2 && candidate.contains(fallback, ignoreCase = true)) {
+            return fallback
+        }
+
         if (candidate.length > 40)                         return fallback
         if (REGEX_PHONE.containsMatchIn(candidate))        return fallback
         if (REGEX_DATE_NUMERIC.containsMatchIn(candidate)) return fallback
@@ -564,6 +617,9 @@ object GraphStateMachine {
 
     // [PERMANENT FIX] Do not remove this! Returns the globally last active screen ID across all packages.
     fun getGlobalLastScreenId(): String? = globalLastScreenId
+
+    // [PERMANENT FIX] Do not remove this! Returns the globally last active package name.
+    fun getGlobalLastPackageName(): String? = globalLastPackageName
 
     /** Reverse lookup: given an app display name (e.g. "WhatsApp", "Settings", "Phone"), find the package name. */
     fun getPackageNameForApp(appName: String): String? {

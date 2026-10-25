@@ -50,6 +50,19 @@ object SearchPathEngine {
      * @param targetElement  Optional specific element to click on the final destination screen.
      * @param message        Human-readable diagnostic summary (logged and displayed in UI).
      */
+    // [PERMANENT FIX] Do not remove this! Multi-path data model for candidate routes suggested by local graph.
+    data class DiscoveredPath(
+        val pathString: String,
+        val steps: List<String>,
+        val cost: Double,
+        val startScreen: String,
+        val destinationScreen: String,
+        val targetElement: String?,
+        val isShortest: Boolean = false,
+        val score: Int = 0,
+        val description: String = ""
+    )
+
     data class PathSearchResult(
         val found: Boolean,
         val pathString: String?,
@@ -57,13 +70,15 @@ object SearchPathEngine {
         val fromScreenId: String?,
         val toScreenId: String?,
         val targetElement: String?,
-        val message: String
+        val message: String,
+        val allDiscoveredPaths: List<DiscoveredPath> = emptyList()
     ) {
         companion object {
             fun notFound(
                 fromScreenId: String? = null,
                 toScreenId: String? = null,
-                message: String
+                message: String,
+                allDiscoveredPaths: List<DiscoveredPath> = emptyList()
             ) = PathSearchResult(
                 found = false,
                 pathString = null,
@@ -71,7 +86,8 @@ object SearchPathEngine {
                 fromScreenId = fromScreenId,
                 toScreenId = toScreenId,
                 targetElement = null,
-                message = message
+                message = message,
+                allDiscoveredPaths = allDiscoveredPaths
             )
 
             fun found(
@@ -80,7 +96,8 @@ object SearchPathEngine {
                 fromScreenId: String,
                 toScreenId: String,
                 targetElement: String? = null,
-                message: String = "Path resolved successfully in local graph"
+                message: String = "Path resolved successfully in local graph",
+                allDiscoveredPaths: List<DiscoveredPath> = emptyList()
             ) = PathSearchResult(
                 found = true,
                 pathString = pathString,
@@ -88,7 +105,8 @@ object SearchPathEngine {
                 fromScreenId = fromScreenId,
                 toScreenId = toScreenId,
                 targetElement = targetElement,
-                message = message
+                message = message,
+                allDiscoveredPaths = allDiscoveredPaths
             )
         }
     }
@@ -154,9 +172,23 @@ object SearchPathEngine {
             )
         }
 
-        val activeScreenId = currentScreenId
-            ?: GraphStateMachine.currentScreenId(packageName)
-            ?: GraphStateMachine.getGlobalLastScreenId()
+        // [PERMANENT FIX] Do not remove this! Live Foreground App Resolution for Dijkstra Start Screen.
+        // If the user initiates navigation from outside the target app (e.g. from GuidanceApp panel or Launcher),
+        // we must NEVER assume the user is still on a deep background sub-page from a previous session.
+        // In that case, activeScreenId must be null so Dijkstra starts from the app's canonical root home screen.
+        val globalLastPkg = GraphStateMachine.getGlobalLastPackageName()
+        val isTargetAppInForeground = globalLastPkg != null && (
+            globalLastPkg.equals(packageName, true) ||
+            screens.any { it.packageName.equals(globalLastPkg, true) }
+        )
+
+        val activeScreenId = if (currentScreenId != null) {
+            currentScreenId
+        } else if (isTargetAppInForeground) {
+            GraphStateMachine.currentScreenId(packageName) ?: GraphStateMachine.getGlobalLastScreenId()
+        } else {
+            null // User is outside the app -> start from the app root screen!
+        }
 
         val result = findPathInGraph(
             screens = screens,
@@ -236,27 +268,63 @@ object SearchPathEngine {
         var bestMissMessage: String? = null
         var bestMissTargetId: String? = null
 
+        // [PERMANENT FIX] Do not remove this! Multi-Path Collection & Evaluation.
+        // Instead of halting on the very first path, evaluates all candidates and start screens,
+        // collecting all navigable routes into allDiscoveredPaths and selecting the optimal shortest route.
+        val allDiscoveredPaths = mutableListOf<DiscoveredPath>()
+        var bestFoundResult: PathSearchResult? = null
+
         for ((startScreen, startDescription) in searchStarts) {
             for (candidate in targetCandidates) {
                 val targetScreen = candidate.screen
                 val targetElement = candidate.elementName
 
-                // If start IS the target screen, just return the element
+                val isRoot = startScreen.id == rootScreen?.id ||
+                             startScreen.screenTitle.equals(appDisplayName, ignoreCase = true) ||
+                             setOf("chats", "settings", "home", "main", "conversations").contains(startScreen.screenTitle.lowercase().trim())
+                val hasSpecificTask = !exactTask.isNullOrBlank()
+                val isSubpageDestination = destinationScreen.isNotBlank() &&
+                                           !destinationScreen.equals(startScreen.screenTitle, ignoreCase = true) &&
+                                           !destinationScreen.equals(appDisplayName, ignoreCase = true) &&
+                                           !destinationScreen.equals("home", ignoreCase = true) &&
+                                           !destinationScreen.equals("main", ignoreCase = true)
+                val cannotShortCircuitOnRoot = isRoot && (hasSpecificTask || isSubpageDestination)
+
+                if (cannotShortCircuitOnRoot && targetScreen.id == startScreen.id) {
+                    continue
+                }
+
                 if (startScreen.id == targetScreen.id) {
                     val steps = mutableListOf<String>()
                     if (!targetElement.isNullOrEmpty()) steps.add(targetElement)
                     else steps.add(targetScreen.screenTitle)
-                    return PathSearchResult.found(
-                        pathString = steps.joinToString(" -> "),
+                    val pStr = steps.joinToString(" -> ")
+                    val disc = DiscoveredPath(
+                        pathString = pStr,
                         steps = steps,
-                        fromScreenId = startScreen.id,
-                        toScreenId = targetScreen.id,
+                        cost = 0.0,
+                        startScreen = startScreen.screenTitle,
+                        destinationScreen = targetScreen.screenTitle,
                         targetElement = targetElement,
-                        message = "Target is on the $startDescription"
+                        score = candidate.score,
+                        description = "Target is on $startDescription"
                     )
+                    if (allDiscoveredPaths.none { it.pathString == pStr }) {
+                        allDiscoveredPaths.add(disc)
+                    }
+                    if (bestFoundResult == null) {
+                        bestFoundResult = PathSearchResult.found(
+                            pathString = pStr,
+                            steps = steps,
+                            fromScreenId = startScreen.id,
+                            toScreenId = targetScreen.id,
+                            targetElement = targetElement,
+                            message = "Target is on the $startDescription"
+                        )
+                    }
+                    continue
                 }
 
-                // Otherwise run Dijkstra
                 val shortestPathEdges = dijkstra(
                     startId = startScreen.id,
                     targetId = targetScreen.id,
@@ -264,10 +332,13 @@ object SearchPathEngine {
                 )
 
                 if (shortestPathEdges != null) {
-                    // Reconstruct Step Sequence
                     val steps = mutableListOf<String>()
+                    var pathCost = 0.0
                     for (edge in shortestPathEdges) {
-                        if (edge.actionLabel.isNotBlank() && edge.actionLabel != "BACK") {
+                        pathCost += edge.weight
+                        if (edge.actionLabel.equals("BACK", ignoreCase = true)) {
+                            steps.add("BACK")
+                        } else if (edge.actionLabel.isNotBlank()) {
                             steps.add(edge.actionLabel)
                         } else {
                             val toTitle = edge.toScreenId.substringAfter("::")
@@ -275,23 +346,36 @@ object SearchPathEngine {
                         }
                     }
                     
-                    // If target element is present and not redundant, append as final action
                     if (!targetElement.isNullOrEmpty() && (steps.isEmpty() || !steps.last().equals(targetElement, ignoreCase = true))) {
                         steps.add(targetElement)
                     }
 
                     val pathString = steps.joinToString(" -> ")
-
-                    return PathSearchResult.found(
+                    val disc = DiscoveredPath(
                         pathString = pathString,
                         steps = steps,
-                        fromScreenId = startScreen.id,
-                        toScreenId = targetScreen.id,
+                        cost = pathCost,
+                        startScreen = startScreen.screenTitle,
+                        destinationScreen = targetScreen.screenTitle,
                         targetElement = targetElement,
-                        message = "Path found in local graph (${steps.size} steps from $startDescription)"
+                        score = candidate.score,
+                        description = "${steps.size} steps from $startDescription"
                     )
+                    if (allDiscoveredPaths.none { it.pathString == pathString }) {
+                        allDiscoveredPaths.add(disc)
+                    }
+
+                    if (bestFoundResult == null) {
+                        bestFoundResult = PathSearchResult.found(
+                            pathString = pathString,
+                            steps = steps,
+                            fromScreenId = startScreen.id,
+                            toScreenId = targetScreen.id,
+                            targetElement = targetElement,
+                            message = "Path found in local graph (${steps.size} steps from $startDescription)"
+                        )
+                    }
                 } else {
-                    // Track miss for the highest scoring candidate (first one)
                     if (bestMissMessage == null) {
                         bestMissMessage = "No navigable path from '${startScreen.screenTitle}' to '${targetScreen.screenTitle}' in local graph"
                         bestMissTargetId = targetScreen.id
@@ -300,11 +384,19 @@ object SearchPathEngine {
             }
         }
 
-        // If we reach here, NO target candidate was reachable
+        if (bestFoundResult != null) {
+            val sorted = allDiscoveredPaths.sortedWith(compareBy({ it.steps.size }, { it.cost }))
+            val marked = sorted.mapIndexed { idx, p ->
+                if (idx == 0 || p.pathString == bestFoundResult.pathString) p.copy(isShortest = true) else p
+            }
+            return bestFoundResult.copy(allDiscoveredPaths = marked)
+        }
+
         return PathSearchResult.notFound(
             fromScreenId = primaryStart.id,
             toScreenId = bestMissTargetId,
-            message = bestMissMessage ?: "No reachable target found"
+            message = bestMissMessage ?: "No reachable target found",
+            allDiscoveredPaths = allDiscoveredPaths
         )
     }
 
@@ -387,6 +479,14 @@ object SearchPathEngine {
         val queryNorm = normalizeText(query)
 
         if (candidateNorm.isBlank() || queryNorm.isBlank()) {
+            return MatchResult(false, 0)
+        }
+
+        // [PERMANENT FIX] Do not remove this! Ignore Generic Navigation Controls as Target Elements.
+        // Common navigation controls ("Back", "Cancel", "Close", "OK", "Done") must never be matched
+        // as user targets for tasks like "backup" or "chats".
+        val ignoredTargetControls = setOf("back", "cancel", "close", "done", "ok", "navigate up")
+        if (candidateNorm in ignoredTargetControls && queryNorm !in ignoredTargetControls) {
             return MatchResult(false, 0)
         }
 
@@ -629,7 +729,7 @@ object SearchPathEngine {
         }
 
         // Priority 3: Look for root screen (common entry points like "Settings", "Home", "WhatsApp")
-        val knownEntryTitles = setOf("settings", "home", "whatsapp", "main", "conversations", "dialer", "camera")
+        val knownEntryTitles = setOf("settings", "home", "whatsapp", "chats", "main", "conversations", "dialer", "camera")
         validScreens.firstOrNull { it.screenTitle.lowercase() in knownEntryTitles }?.let { return it }
 
         // Priority 4: Screen with 0 in-degree in recorded transitions (true graph entry node)
@@ -658,7 +758,7 @@ object SearchPathEngine {
         }
 
         // 2. Known entry titles
-        val knownEntryTitles = setOf("settings", "home", "whatsapp", "main", "conversations", "dialer", "camera")
+        val knownEntryTitles = setOf("settings", "home", "whatsapp", "chats", "main", "conversations", "dialer", "camera")
         validScreens.firstOrNull { it.screenTitle.lowercase() in knownEntryTitles }?.let { return it }
 
         // 3. Zero in-degree (true graph root)

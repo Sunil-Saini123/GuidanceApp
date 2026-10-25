@@ -80,9 +80,10 @@ class ElementMarkerOverlay(private val context: Context) {
      * Shows the marker highlight at the given screen coordinates.
      * If a marker is already visible, it moves to the new position.
      * [PERMANENT FIX] Do not remove this! Clamps bounds to the visible screen area
-     * above the phone's 3-button navigation bar so it never draws over system navigation controls.
+     * above the phone's 3-button navigation bar so it never draws over system navigation controls,
+     * while allowing unclipped display when targeting system navigation bar buttons (isSystemNav == true).
      */
-    fun showMarker(bounds: Rect) {
+    fun showMarker(bounds: Rect, isSystemNav: Boolean = false) {
         if (isDestroyed) return
 
         postToMain {
@@ -92,21 +93,23 @@ class ElementMarkerOverlay(private val context: Context) {
             val rawTop = (bounds.top - pad).toFloat()
             val rawBottom = (bounds.bottom + pad).toFloat()
 
-            // If the element is pushed completely behind the navigation bar or status bar, hide marker
-            if (rawTop >= bottomLimit - dpToPx(8) || rawBottom <= topLimit + dpToPx(8)) {
+            // If the element is normal app content pushed completely behind the navigation bar or status bar, hide marker.
+            // Bypassed when isSystemNav == true because system navigation controls naturally live in the navbar area.
+            if (!isSystemNav && (rawTop >= bottomLimit - dpToPx(8) || rawBottom <= topLimit + dpToPx(8))) {
                 hideMarker()
                 return@postToMain
             }
 
-            // Clamp bounds strictly to visible content area
-            val clampedLeft = (bounds.left - pad).toFloat()
-            val clampedTop = rawTop.coerceAtLeast(topLimit)
-            val clampedRight = (bounds.right + pad).toFloat()
-            val clampedBottom = rawBottom.coerceAtMost(bottomLimit)
+            // Clamp bounds strictly to visible content area (or allow full screen bounds for system nav)
+            val clampedLeft = (bounds.left - pad).toFloat().coerceAtLeast(0f)
+            val clampedTop = if (isSystemNav) rawTop else rawTop.coerceAtLeast(topLimit)
+            val clampedRight = (bounds.right + pad).toFloat().coerceAtMost(context.resources.displayMetrics.widthPixels.toFloat())
+            val clampedBottom = if (isSystemNav) rawBottom else rawBottom.coerceAtMost(bottomLimit)
 
             markerView.arrowDirection = null
-            markerView.topLimit = topLimit
-            markerView.bottomLimit = bottomLimit
+            markerView.isSystemNav = isSystemNav
+            markerView.topLimit = if (isSystemNav) 0f else topLimit
+            markerView.bottomLimit = if (isSystemNav) Float.MAX_VALUE else bottomLimit
             markerView.targetBounds = RectF(
                 clampedLeft,
                 clampedTop,
@@ -155,6 +158,7 @@ class ElementMarkerOverlay(private val context: Context) {
             mainHandler.removeCallbacks(autoHideRunnable)
             markerView.targetBounds = null
             markerView.arrowDirection = null
+            markerView.isSystemNav = false
             detachIfNeeded()
         }
     }
@@ -291,6 +295,7 @@ class ElementMarkerOverlay(private val context: Context) {
         var arrowDirection: ScrollDirection? = null
         var topLimit: Float = 0f
         var bottomLimit: Float = Float.MAX_VALUE
+        var isSystemNav: Boolean = false
 
         private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -342,9 +347,10 @@ class ElementMarkerOverlay(private val context: Context) {
             super.onDraw(canvas)
 
             // [PERMANENT FIX] Do not remove this! Canvas clip ensures the marker rectangle
-            // and semi-transparent fill never bleed over the phone's 3-button system navigation bar or status bar.
+            // and semi-transparent fill never bleed over the phone's 3-button system navigation bar or status bar,
+            // while allowing system navigation controls to be drawn when isSystemNav is true.
             canvas.save()
-            if (bottomLimit < Float.MAX_VALUE || topLimit > 0f) {
+            if (!isSystemNav && (bottomLimit < Float.MAX_VALUE || topLimit > 0f)) {
                 canvas.clipRect(0f, topLimit, width.toFloat(), bottomLimit)
             }
 

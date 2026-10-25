@@ -317,4 +317,87 @@ class SearchPathEngineTest {
         assertEquals(listOf("Connected devices", "Bluetooth"), result.steps)
         assertEquals(sRoot.id, result.fromScreenId)
     }
+
+    @Test
+    fun testWhatsApp4StepChatBackupPath() {
+        val sChats = createScreen("com.whatsapp::Chats", pkg = "com.whatsapp", title = "Chats", elements = listOf("More options", "Camera", "Search", "Chats", "Updates"))
+        val sMenu = createScreen("com.whatsapp::Menu", pkg = "com.whatsapp", title = "Menu", elements = listOf("New group", "Settings"))
+        val sSettings = createScreen("com.whatsapp::Settings", pkg = "com.whatsapp", title = "Settings", elements = listOf("Account", "Privacy", "Chats", "Notifications"))
+        val sChatsSettings = createScreen("com.whatsapp::Chats Settings", pkg = "com.whatsapp", title = "Chats Settings", elements = listOf("Theme", "Wallpaper", "Chat backup", "Chat history"))
+        val sBackup = createScreen("com.whatsapp::Chat backup", pkg = "com.whatsapp", title = "Chat backup", elements = listOf("BACK UP", "Google Account"))
+
+        val t1 = createTransition(sChats.id, sMenu.id, "More options")
+        val t2 = createTransition(sMenu.id, sSettings.id, "Settings")
+        val t3 = createTransition(sSettings.id, sChatsSettings.id, "Chats")
+        val t4 = createTransition(sChatsSettings.id, sBackup.id, "Chat backup")
+
+        val result = SearchPathEngine.findPathInGraph(
+            screens = listOf(sChats, sMenu, sSettings, sChatsSettings, sBackup),
+            transitions = listOf(t1, t2, t3, t4),
+            currentScreenId = sChats.id,
+            destinationScreen = "chats_settings",
+            exactTask = "chat_backup",
+            appDisplayName = "WhatsApp",
+            packageName = "com.whatsapp"
+        )
+
+        assertTrue("WhatsApp 4-step chat backup path should be found", result.found)
+        assertEquals("More options -> Settings -> Chats -> Chat backup", result.pathString)
+        assertEquals(listOf("More options", "Settings", "Chats", "Chat backup"), result.steps)
+    }
+
+    @Test
+    fun testRootScreenDeepTargetShortCircuitGuard() {
+        // Even if sChats was corrupted with 'Chat backup' in its elements, the guard must reject a 1-step shortcut
+        // and find the full multi-hop traversal to the dedicated sub-screen!
+        val sChatsCorrupted = createScreen("com.whatsapp::Chats", pkg = "com.whatsapp", title = "Chats", elements = listOf("More options", "Chat backup"))
+        val sMenu = createScreen("com.whatsapp::Menu", pkg = "com.whatsapp", title = "Menu", elements = listOf("Settings"))
+        val sSettings = createScreen("com.whatsapp::Settings", pkg = "com.whatsapp", title = "Settings", elements = listOf("Chats"))
+        val sChatsSettings = createScreen("com.whatsapp::Chats Settings", pkg = "com.whatsapp", title = "Chats Settings", elements = listOf("Chat backup"))
+
+        val t1 = createTransition(sChatsCorrupted.id, sMenu.id, "More options")
+        val t2 = createTransition(sMenu.id, sSettings.id, "Settings")
+        val t3 = createTransition(sSettings.id, sChatsSettings.id, "Chats")
+
+        val result = SearchPathEngine.findPathInGraph(
+            screens = listOf(sChatsCorrupted, sMenu, sSettings, sChatsSettings),
+            transitions = listOf(t1, t2, t3),
+            currentScreenId = sChatsCorrupted.id,
+            destinationScreen = "chats_settings",
+            exactTask = "chat_backup",
+            appDisplayName = "WhatsApp",
+            packageName = "com.whatsapp"
+        )
+
+        assertTrue("Should route via 3-step hierarchy rather than collapsing onto root screen", result.found)
+        assertEquals("More options -> Settings -> Chats -> Chat backup", result.pathString)
+        assertEquals(listOf("More options", "Settings", "Chats", "Chat backup"), result.steps)
+    }
+
+    // [PERMANENT FIX] Verify Dijkstra unwinds from a sub-screen using BACK transition to reach destination
+    @Test
+    fun testSubScreenBackUnwindingToTargetDestination() {
+        val sRoot = createScreen("com.android.settings::Settings", title = "Settings", elements = listOf("About phone", "Display & brightness"))
+        val sAbout = createScreen("com.android.settings::About phone", title = "About phone", elements = listOf("Device name", "Status"))
+        val sDisplay = createScreen("com.android.settings::Display & brightness", title = "Display & brightness", elements = listOf("Screen refresh rate", "Eye comfort"))
+
+        val tForwardAbout = createTransition(sRoot.id, sAbout.id, "About phone")
+        val tReturnAbout = createTransition(sAbout.id, sRoot.id, "BACK")
+        val tForwardDisplay = createTransition(sRoot.id, sDisplay.id, "Display & brightness")
+
+        val result = SearchPathEngine.findPathInGraph(
+            screens = listOf(sRoot, sAbout, sDisplay),
+            transitions = listOf(tForwardAbout, tReturnAbout, tForwardDisplay),
+            currentScreenId = sAbout.id,
+            destinationScreen = "display_and_brightness",
+            exactTask = "screen_refresh_rate",
+            appDisplayName = "Settings",
+            packageName = "com.android.settings"
+        )
+
+        assertTrue("Path starting from sub-screen with BACK unwinding should be found", result.found)
+        assertEquals("BACK -> Display & brightness -> Screen refresh rate", result.pathString)
+        assertEquals(listOf("BACK", "Display & brightness", "Screen refresh rate"), result.steps)
+        assertEquals(sAbout.id, result.fromScreenId)
+    }
 }

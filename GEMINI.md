@@ -36,8 +36,11 @@ These rules are strictly enforced across all code changes, architecture decision
 7. **Compulsory Chained Feature & Non-Regression Invariant ($N-1$ Rule):**
    - **Strict Cumulative Preservation:** All features and bug fixes operate in an unbroken, cumulative chain. When working on feature or issue $N$, all previous $1, 2, \dots, N-1$ features, architectural contracts, and bug fixes MUST remain 100% active, functional, and intact.
    - **Zero Regression Tolerance:** Implementing a new capability or fixing a bug must NEVER break, simplify, bypass, or degrade any prior functionality.
+   - **Pre-Proposal Invariant Audit (Never Propose an N-1 Violation):** BEFORE proposing, explaining, or presenting any fix idea to the user, the agent MUST explicitly cross-check the proposed approach against all $1, 2, \dots, N-1$ features and established architectural contracts. If the proposed fix would delete, replace, bypass, or degrade ANY existing feature (e.g. attempting to remove relative element order index comparison, weakening directional scrolling, or breaking Settings routing), the agent MUST IMMEDIATELY REJECT that approach. The agent must revise and formulate a solution that strictly preserves the $N-1$ capability intact before presenting the proposal to the user.
    - **Pre-Change Invariant Verification:** Before touching any code, cross-check against the entire chain of established behaviors (live tree supremacy, active node lock, zero-flicker back unwinding, binder recycling, directional scrolling, flight recording) to guarantee that the change harmonizes without introducing regressions.
    - **Cumulative Contract:** If a new requirement appears to conflict with an existing ($N-1$) behavior, you must explicitly highlight the conflict and ask the user for direction before making changes.
+   - **Dynamic Live Count Enforcement ($N$):** The exact number $N$ of active `[PERMANENT FIX]` blocks across the codebase MUST be dynamically counted using a tool/script after EVERY single fix. The agent must NEVER guess, approximate, or repeat a stale/hardcoded count (e.g. "143+").
+   - **Monotonic Chain Increment:** Every bug fix or feature implementation must increment the total count ($N 	o N+1$). After every fix, the agent must report the newly incremented live count and verify that all $1 \dots N-1$ blocks remain completely intact.
 
 ---
 
@@ -90,7 +93,7 @@ These rules are strictly enforced across all code changes, architecture decision
 9. **System Navigation Bar & Visible Viewport Clamping:**
    - In `ElementMarkerOverlay`, visual highlight bounds must be clamped strictly above the phone's 3-button system navigation bar (Back, Home, Recents) and below the status bar (`WindowInsets.Type.systemBars()`).
    - If a target element is pushed behind the navigation bar (e.g. at the bottom edge of a scroll view), the marker hides to prevent phantom boxes.
-   - `MarkerView.onDraw()` enforces canvas clipping (`canvas.clipRect`) to guarantee the green rectangle and fill never draw over the phone's system navigation buttons.
+   - `MarkerView.onDraw()` enforces canvas clipping (`canvas.clipRect`) to guarantee the green rectangle and fill never draw over the phone's system navigation buttons, while permitting unclipped highlight display when specifically targeting system navigation bar controls (`isSystemNav == true`).
 
 ---
 
@@ -208,6 +211,27 @@ These rules are strictly enforced across all code changes, architecture decision
     - **Divergent Tap Marker Invalidation:** In `NavigationStateMachine.onElementTapped()`, when the user taps an interactive menu option that does not match `currStep` or any future step, guidance markers MUST be hidden immediately (`marker?.hideMarker()`), in-flight searches cancelled (`MarkerScout.shutdown()`), and `currentTrackerState` transitioned into `TrackerState.Diverged`. Checking whether `currStep` is momentarily lingering in the accessibility tree during the tap window causes the marker to stay visible and freeze across screen transitions, painting phantom boxes on unrelated elements (e.g. "Review settings").
     - **Cross-Package Scroll Transition Dispatch:** In `UiTreeAccessibilityService.handleScroll()`, if `actualPackage != expectedPackage` during the debounce window (such as launching an APEX module or sub-activity like `com.google.android.permissioncontroller`), the event must NOT be dropped as a `Debounce skip`. Instead, it extracts `screenTitle` via `ScreenTitleResolver` and immediately dispatches `NavigationStateMachine.onScreenChanged()`.
     - **Settings Satellite Suite Recognition:** In `NavigationStateMachine.isTargetApp()`, `com.google.android.permissioncontroller` and `com.android.permissioncontroller` are recognized as components of the Settings app ecosystem, allowing the state machine to evaluate sub-screen deviations and display precise recovery guidance.
+23. **Smart Multi-Tiered Contextual Fuzzy Threshold Architecture:**
+    - To eliminate asymmetric matching between finder and state machine and handle compound UI labels (e.g. Android preference rows concatenating Title + Subtitle like `'Chats Chat history, backup'`), fuzzy matching is strictly segregated by operational context:
+      - **Current Step Tap (`MatchContext.CURRENT_STEP_TAP`):** Medium 80% similarity threshold, min length ratio 0.65, with compound row prefix matching. If the tapped element begins with the expected step name followed by natural delimiters (`' '`, `'\n'`, `':'`, `'-'`, `','`, etc.), it is accepted as a valid step advancement.
+      - **Future Step Skip (`MatchContext.FUTURE_STEP_SKIP`):** Strict 90% similarity threshold, min length ratio 0.80, and compound prefix matching is STRICTLY FORBIDDEN. Prevents user taps on compound labels (e.g. `'Chats Chat history, backup'`) from accidentally skipping ahead to subsequent steps like `'Chat backup'`, and prevents control words (`'Back'`) from matching compound phrases.
+      - **Screen Title / Unwinding (`MatchContext.SCREEN_TITLE`):** High 85% threshold, min length ratio 0.70, no prefix matching, ensuring reliable screen recognition and stack unwinding without false root claims.
+      - **Control Word Isolation:** System control words (`'back'`, `'home'`, `'menu'`, `'navigate up'`, `'close'`, `'cancel'`, `'null'`, `'nil'`) are strictly blacklisted from matching compound phrases across all contexts.
+24. **Universal Ambiguous Control Guard, Strict Diverged State Lock & Full-Context Reroute:**
+    - **Strict Diverged State Lock:** While diverged (`currentTrackerState is TrackerState.Diverged || lastWrongTapText != null || isCurrentScreenUnrecognized`), future-step skip-ahead matching is STRICTLY FORBIDDEN. Prevents user actions on wrong sub-screens (e.g. tapping 3-dots in Alice's chat) from falsely matching a future step on the intended route (e.g. 3-dots in Rohit's chat) and wiping out the `WRONG PATH` alert.
+    - **Universal Ambiguous Control Guard:** Generic controls that exist across multiple screens (`"more options"`, `"more"`, `"search"`, `"menu"`, `"settings"`, `"back"`, `"add"`, `"done"`) can NEVER skip-advance unless the active screen title matches the expected parent screen for that step in `executionTree`.
+    - **Full-Context AI Reroute (.db + Screen Title):** When Reroute is clicked, `FloatingOverlayService` and `PromptBuilder` inject the active screen title and local SQLite graph database structure (`connectedScreens`, `connectedTransitions`). This gives the AI full architectural knowledge of the app, ensuring it knows the user's exact screen position and disambiguates generic controls across different screen scopes.
+    - **WhatsApp Chat Popup Menu Disambiguation:** In `ScreenTitleResolver`, popup menus inside conversation screens are authoritatively resolved as `"Chat Menu"`, keeping them completely segregated from the root `"Menu"` (`New group`, `Settings`).
+25. **Dynamic Live Tree Sub-Screen Unwinding & Live Location Dashboard Flagging:**
+    - **Mid-App Cold Start / Recents Launch Unwinding:** When navigation is initiated while the target app is already running on an off-route leaf sub-screen (e.g. `About phone` / `About device` in Settings), or when the user resumes the app from Recents / background during navigation:
+      - The state machine inspects the live accessibility tree via `AppWindowResolver` and `ScreenTitleResolver`.
+      - If the active screen is NOT the app root (`!isEffectiveRootScreen`) and does NOT match any step in the path (`nearestIdx == -1`), the state machine does NOT skip the root step.
+      - Instead, it dynamically prepends `"BACK"` to `pathSteps` (`pathSteps.add(0, "BACK")`), displays `RETURN TO ROOT: Press Back to return to <App>`, and prompts `Currently on '<screen>' — return to root first`.
+      - `ElementFinderEngine` discovers Back buttons across both the system navigation bar (3-button navbar via `com.android.systemui:id/back`) and on-screen toolbar Back arrows (gesture navigation fallback via `contentDescription = "Navigate up"` or `"Back"`), locking the visual green marker directly onto the Back button.
+      - **Wrong-Path Visual Back Guidance:** Whenever the user enters an unrecognized screen, diverged state, or `WRONG PATH` alert, `NavigationStateMachine.highlightBackAction()` actively locates and highlights the system navbar or toolbar Back button with the green marker instead of leaving the screen unguided.
+      - Once the user taps Back (or system Back) and lands on root (or a valid route screen), the `"BACK"` step is authoritatively fulfilled, advancing smoothly to the forward target (`Display & brightness`).
+    - **Reconstructed Dijkstra Shortest Path BACK Label Preservation:** In `SearchPathEngine.findPathInGraph()`, when Dijkstra traverses an inverse return edge (`actionLabel == "BACK"`), the action label `"BACK"` is preserved as the step string instead of being replaced by the parent screen's title. This allows multi-hop unwinding paths to instruct Back actions rather than looking for non-existent root titles on sub-screens.
+    - **Live Phone Location Dashboard Flagging:** `NavigationStateMachine` streams real-time `SCREEN_CHANGED` and `STEP_ADVANCED` telemetry events containing `screenTitle`, `packageName`, and `currentStep`. `TreeExplorerTab.tsx` identifies the active screen and displays a prominent, pulsing `📍 PHONE HERE NOW` badge on that screen node across both Nav Graph and Live Tree modes, surfaces a top-level Live Phone Location status banner, and marks the active target element with `🎯 TARGET STEP`.
 
 ---
 
@@ -228,7 +252,96 @@ These rules are strictly enforced across all code changes, architecture decision
 
 ---
 
-## 7. Anti-Hallucination & Code Edit Protocol
+## 7. WhatsApp & Multi-App Navigation Rules
+
+1. **Canonical Package Normalization (`GraphStateMachine.getPackageNameForApp`):**
+   - All components (`FloatingOverlayService`, `NavigationStateMachine`, `NavGraphDatabase`, `SearchPathEngine`) MUST resolve shorthand app names (`"whatsapp"`, `"settings"`) to full canonical Android package names (`"com.whatsapp"`, `"com.android.settings"`).
+   - Prevents split-brain package duplicates in SQLite and dashboard app dropdowns.
+   - `NavGraphDatabase.mergeDuplicatePackagesAndCleanScreens()` auto-heals pre-existing duplicate entries on startup.
+2. **WhatsApp Profile Name Suppression & Settings Resolution (`ScreenTitleResolver`):**
+   - On WhatsApp Settings, the user's personal profile card (e.g. `"Rohit Thatikonda"`, `"You"`) appears at the top without a static `"Settings"` toolbar title.
+   - Screen resolution must detect characteristic settings rows (`Account`, `Privacy`, `Chats`, `Notifications`, `Storage and data`) and resolve the screen title strictly as **`"Settings"`**, never the user's personal profile name.
+3. **WhatsApp Sub-Page Disambiguation (`Chats` vs `Chats Settings`):**
+   - In WhatsApp, the root conversations tab is titled `"Chats"` (has NO back button).
+   - The settings sub-page containing Chat backup and wallpaper is ALSO headered `"Chats"` (has a back button).
+   - `ScreenTitleResolver` resolves sub-screens with a back button as **`"Chats Settings"`**, preventing it from colliding with or overwriting the root conversation list.
+4. **Target App Root Disambiguation (`isRootScreen`):**
+   - In `NavigationStateMachine`, `isRootScreen` must evaluate root status relative to `targetPackage`:
+     - For `com.android.settings`: Root is `"Settings"`.
+     - For `com.whatsapp`: Root is `"Chats"` or `"WhatsApp"`. WhatsApp's `"Settings"` is a sub-page, never a root screen.
+5. **Direct Intent Fast-Path for Chat Backup:**
+   - User queries containing `"chat"` and (`"backup"` or `"back up"`) bypass LLM ambiguity and directly resolve to `targetApp = "com.whatsapp"`, `destinationScreen = "chats_settings"`, `exactTask = "chat_backup"`.
+6. **Compulsory Settings & Multi-App Non-Regression Invariant:**
+   - When developing or refining features for WhatsApp or other third-party apps, all established Settings navigation contracts (active node lock, multi-source directional scroll intelligence, zero-flicker back unwinding, satellite cluster routing, flight recording) MUST remain 100% active, preserved, and regression-free.
+7. **WhatsApp 3-Dots Popup Window Disambiguation (`Menu`):**
+   - The 3-dots overflow popup window has no Toolbar or Back button.
+   - It contains `menuitem_settings`, `menuitem_new_group`, `menuitem_payments`, etc.
+   - It is authoritatively resolved as **`"Menu"`**, preventing circular transitions (`WhatsApp opens WhatsApp`) and duplicate app entries.
+8. **WhatsApp Chat List Noise & Message Snippet Suppression:**
+   - Ephemeral chat row timestamps (`Yesterday`, `Today`, `\d{1,2}:\d{2}\s*(am|pm)`), message previews (`You:`, `Video`, `Photo`, `Audio`), and internal view IDs (`single_msg_tv`, `conversations_row_date`, `pin_indicator`, `conversations_archive_header`, `contact_row_container`) are filtered out of graph extraction.
+9. **WhatsApp Strict Hierarchy & Swallowed Screen Healing:**
+   - WhatsApp navigation to Chat Backup has 3 distinct levels:
+     - Level 1: `com.whatsapp::Settings` (Main Settings)
+     - Level 2: `com.whatsapp::Chats Settings` (Chats sub-page)
+     - Level 3: `com.whatsapp::Chat backup` (Chat backup leaf screen)
+   - Elements from these screens must never be swallowed or lumped together into a single screen ID.
+   - `NavGraphDatabase.mergeDuplicatePackagesAndCleanScreens()` automatically separates pre-existing swallowed elements and re-establishes clean bidirectional transitions.
+10. **Foreground-Aware Dijkstra Start Screen Resolution:**
+    - If the user initiates navigation from outside the target app (e.g. from GuidanceApp search panel or Home Launcher), `SearchPathEngine` must NEVER use a stale background sub-page from `GraphStateMachine.currentScreenId()`.
+    - `activeScreenId` is set to `null` so Dijkstra authoritatively routes from the canonical root home screen (`Chats` or `Settings`), preventing 1-step phantom shortcuts and false scroll alerts.
+11. **Generic Control Button Exclusion in Target Scoring:**
+    - Common navigation control buttons (`"Back"`, `"Cancel"`, `"Close"`, `"OK"`, `"Done"`) are barred from matching task action strings in `calculateMatchScore`, preventing `"Back"` from falsely matching `"chat_backup"` due to partial substring overlap.
+12. **Pure App-Specific Graph Reset (`resetWhatsAppGraphOnce`):**
+    - Wipes corrupt legacy screens exclusively for `com.whatsapp` (`DELETE FROM screens WHERE package_name = 'com.whatsapp'`), seeding verified canonical screens and bidirectional edges while leaving 100% of Settings records, satellite packages, and features completely intact ($N-1$ Invariant).
+13. **Root Screen Absolute Priority, Sub-Page Exclusion & Code-Editor Tree Nesting:**
+    - When the user is on the canonical Root Screen of an app (e.g. "Chats" on WhatsApp or "Settings" on Settings), `isCurrentScreenRoot` takes absolute precedence over `nearestIdx >= 0` in `startNavigation`.
+    - `findNearestStep()` is strictly forbidden from matching internal sub-page steps (idx > 0) when the active screen is a root screen, preventing false fast-forward over initial actions (e.g. 3-dots "More options" and "Settings").
+    - In `ElementFinderEngine`, prefix matching where target extends element (`cleanTarget.startsWith(cleanEl)`) strictly requires at least 70% length coverage ratio, preventing short single-word tabs (like "Chats") from matching long compound sub-page targets (like "Chats Chat history, backup").
+    - On the web dashboard (`TreeExplorerTab.tsx`), active phone location uses high-contrast glowing beacon styling (`bg-gradient-to-r from-emerald-950/90`, `border-2 border-emerald-400`, `shadow-[0_0_24px]`) and code-editor style continuous nested guide lines (`├──`, `└──`, vertical guide borders) to mirror IDE nested block syntax.
+14. **Canonical Root Screen Verification in `onScreenChanged` & Dashboard Alias Flagging:**
+    - In `NavigationStateMachine.onScreenChanged`, `isRootScreen` MUST call `isCurrentScreenRoot(activeScreenName, targetPackage, targetAppLabel)` so that app home screens (such as "Chats" on WhatsApp) are recognized as true root screens rather than foreign wrong-path screens.
+    - When `inTargetApp && isEffectiveRootScreen` is true, wrong-path tracking is cleared and the system is strictly barred from instructing the user to "Press Back to return to <App>".
+    - On the web dashboard (`TreeExplorerTab.tsx`), `isCurrentLiveScreen` matches canonical root aliases (e.g. live toolbar "WhatsApp" vs tree root "Chats"), rendering a high-contrast glowing card with `📍 CURRENT ON THIS PAGE HERE`.
+15. **Stale Cross-App Title Sanitization & WhatsApp Root Canonicalization:**
+    - In `NavigationStateMachine.startNavigation()`, `activeScreenName` is authoritatively initialized to the target app's canonical root title (`"Chats"` for WhatsApp, `"Settings"` for Settings) whenever `liveTitle` is null or from an unmatching package. This strictly prevents stale screen titles from previously opened apps (such as "Telegram") from leaking into WhatsApp navigation and triggering false "BACK" step prepends.
+    - In `ScreenTitleResolver.canonicalizeTitle()`, "WhatsApp" on root is canonicalized to "Chats" for `com.whatsapp`, guaranteeing 100% synchronization between live accessibility titles and the SQLite navigation graph.
+16. **Multi-Path Collection, Ranking & Web Dashboard Telemetry:**
+    - In `SearchPathEngine.findPathInGraph()`, the engine does NOT halt on the very first path found. Instead, it systematically evaluates all start screens and candidate destinations, collecting all reachable routes into `allDiscoveredPaths`.
+    - Routes are sorted by hop count and cost (shortest first), with the optimal route marked as `isShortest = true`.
+    - `FloatingOverlayService` streams the entire multi-route array via `DebugTelemetryClient` (`INTENT_PARSED` payload with `allPaths`), allowing the web dashboard (`TreeExplorerTab.tsx`) to render a dedicated "All Local Query Paths" section with rank badges (`⭐ BEST ROUTE (ACTIVE)` vs `ALTERNATIVE ROUTE`), step breadcrumbs, hop counts, and Dijkstra costs.
+17. **Name + Position Verification Guard & Notification Badge Stripping:**
+    - In `ScreenTitleResolver.stripBadgeNoise()`, notification badges and unread message counters (e.g. `", \d+ new notification[s]?"`, `", \d+ unread"`, `"(\d+)"`) are stripped from tab labels and window titles before canonicalization, preventing `"Chats, 1 new notification"` from failing root screen recognition.
+    - In `NavigationStateMachine.onScreenChanged()`, returning from `TrackerState.OffApp` back into the target app on a known root screen immediately restores `currentTrackerState = TrackerState.OnRoute`, keeping Active Node Lock engaged.
+    - In `ElementFinderEngine.findElementBoundsInLiveTree()`, elements are verified by BOTH label and screen position:
+      - WhatsApp "More options" (Three Dots ⋮) must reside in the top action bar area (`bounds.top <= 400 && bounds.right >= screenWidth * 0.60f`).
+      - WhatsApp "Chats" inside Settings must be a list preference row (`bounds.top > 200 && bounds.bottom < screenHeight - 200`), strictly rejecting bottom navigation bar tabs (`bounds.top > screenHeight - 300`).
+      - On WhatsApp root screen ("Chats"), the bottom navigation tab "Chats" is strictly prevented from matching as a navigation action.
+18. **DevTools Graph & JSON Clear Synchronization with Web Dashboard:**
+    - In `FloatingOverlayService.kt`, `btnClearJson` deletes `nav_graph.json` along with `clean_page.json` and `temp_tree.json`, and emits a `CLEAR_GRAPH` telemetry event.
+    - `btnClearGraph` deletes both `nav_graph.db` and exported `nav_graph.json` from `context.filesDir`, emitting a `CLEAR_GRAPH` event.
+    - In `dashboard/server.js`, receiving `CLEAR_GRAPH` resets in-memory `cachedNavGraph` to empty and broadcasts `CLEAR_HISTORY` and `NAV_GRAPH_DATA` to all connected browser clients, ensuring the website tree immediately clears in real-time.
+19. **WhatsApp Conversation Screen & Compound Chat Row Transition Preservation:**
+    - In `ScreenTitleResolver`, never blindly coerce WhatsApp contact names or conversation titles containing "rohit" or "you" to "Settings". Genuine WhatsApp Settings is detected hierarchically via `isWhatsAppSettingsScreen(root)`.
+    - Conversation screens retain their true contact name (e.g. "Rohit Thatikonda (You)").
+    - In `GraphStateMachine.sanitizeEdgeLabel`, compound chat row metadata (e.g. "You Rohit Thatikonda (You) Yesterday Video Pinned chat") containing the destination screen title resolves directly to the clean contact name so the transition edge (`Chats -["Rohit Thatikonda (You)"]-> Rohit Thatikonda (You)`) matches the screen element 100%.
+    - In `NavGraphDatabase.sanitizeCorruptedRootTransitions()`, chat conversation screens mistakenly saved as `com.whatsapp::Settings` are automatically purged on startup.
+    - On the web dashboard (`TreeExplorerTab.tsx`), matching transitions renders an expandable link (`🔗 opens <ContactName>`) with code-style nested block indentation, and live phone location highlights the active conversation screen with `📍 CURRENT ON THIS PAGE HERE`.
+20. **Text-First Node Keying, Sender Preview Suppression & Untruncated Group Title Recovery:**
+    - In `RawDumpWriter.computeKey(node)`: Text and contentDescription are prioritized over `resource_id` (`txt:$text|$cls`, `cd:$cd|$cls`). WhatsApp and other list layouts use the identical resource ID (`conversations_row_contact_name`) for all rows; keying on resource ID caused every contact row after the first one to be dropped as a duplicate! Text-first keying guarantees every chat contact row is preserved.
+    - In `CleanPageProcessor.extractCleanElements`: Message sender name previews (`msg_from_tv`, e.g. `"Vicky Pukale (VIT):"`), date labels (`conversations_row_date`), and message preview lines (`single_msg_tv`) are strictly dropped from extraction, ensuring group chats are never falsely named after the sender of the last message.
+    - In `ScreenTitleResolver` & `GraphStateMachine`: Action buttons like `"Clear all"` or `"Select all"` are treated as non-navigable noise words so they never become screen titles. Long conversation titles truncated with ellipses (`…`) in the action bar are automatically recovered using the clean clicked contact row name.
+    - In `TreeExplorerTab.tsx`: Typographic, emoji, and ellipsis differences are normalized before label matching so group chat names match their transition edges seamlessly.
+21. **App-Aware Tree Root Determination & Universal Screen Visibility Guard:**
+    - In `TreeExplorerTab.tsx`, `rootScreen` prioritizes app-specific canonical entry screens: for `com.whatsapp`, the root is ALWAYS `Chats` (or `WhatsApp`), NEVER `Settings`. For `com.android.settings`, the root is `Settings`.
+    - Uses topological zero in-degree (`forwardTargets`) so that the true entry point of any graph is identified as the root trunk.
+    - **Universal Screen Visibility Guard:** Any screens in `activeApp.screens` that are not reached in the root tree are rendered in a dedicated *"Additional / Standalone Screens"* section so no screen or conversation branch can ever vanish from the user's view.
+    - **Direct Navigation Shortcuts:** Unmapped forward `CLICK` transitions on any screen are rendered as expandable shortcuts, ensuring sub-pages reached via menu options or intent links can always be expanded.
+    - In `UiTreeAccessibilityService.kt` and `RawDumpWriter.kt`, `passed.semanticRootName` is passed through scroll and pipeline triggers so popup menus retain their clean title (`"Menu"`) instead of falling back to raw class names (`android.widget.FrameLayout`) or guessing titles from popup menu items (`"Menuitem New Group"`).
+    - In `dashboard/server.js`, `cachedNavGraph` is preserved across temporary USB disconnections or screen locks instead of being cleared to 0 apps.
+
+---
+
+## 8. Anti-Hallucination & Code Edit Protocol
 
 1. **Inspect Before Changing:**
    - Always read the actual target file and surrounding context using tools before making any modification.
@@ -238,6 +351,13 @@ These rules are strictly enforced across all code changes, architecture decision
    - Verify changes immediately after editing.
 3. **Continuous Updating:**
    - As new bugs, OEM edge cases, or architectural patterns are discovered, this `GEMINI.md` document must be updated to keep all rules active and persistent.
-4. **Chained Regression Verification ($N-1$ Invariant):**
-   - Every edit must be explicitly evaluated against all existing features, architectures, and bug fixes ($1 \dots N-1$).
+4. **Pre-Proposal $N-1$ Gate & Chained Regression Verification:**
+   - **Pre-Proposal Audit:** Never present a fix idea to the user that replaces, removes, or degrades an existing $1 \dots N-1$ capability. The agent must verify $N-1$ harmony during the ideation phase, discarding regressive approaches before proposing.
+   - **Pre-Execution Check:** Every edit must be explicitly evaluated against all existing features, architectures, and bug fixes ($1 \dots N-1$).
    - A step is incomplete if any previously working behavior is broken, reverted, or bypassed.
+5. **Mandatory Post-Fix Check & Live Count Reporting:**
+   - After EVERY single code edit, the agent MUST:
+     1. Execute a live scan of all `[PERMANENT FIX]` occurrences across `app/src/main/java`.
+     2. Report the exact, updated total count $N$ and its distribution.
+     3. Verify zero previous `[PERMANENT FIX]` blocks were deleted, renamed, or simplified.
+     4. Verify compilation with `./gradlew compileDebugKotlin`.

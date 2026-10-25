@@ -21,6 +21,8 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import org.json.JSONArray
+import org.json.JSONObject
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
@@ -478,14 +480,24 @@ class FloatingOverlayService : Service() {
             setTextColor(Color.parseColor("#FFFFFF"))
             background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(8).toFloat())
             setOnClickListener {
+                // [PERMANENT FIX] Do not remove this! Include nav_graph.json in Clear JSONs dev action and notify web dashboard.
                 val filesDir = applicationContext.filesDir
-                val deleted = listOf("clean_page.json", "temp_tree.json").map { name ->
+                val deleted = listOf("clean_page.json", "temp_tree.json", "nav_graph.json").map { name ->
                     val f = java.io.File(filesDir, name)
                     if (f.exists()) { f.delete(); name } else null
                 }.filterNotNull()
                 statusText.text = if (deleted.isEmpty()) "No JSON files found"
                                   else "Deleted: ${deleted.joinToString(", ")}"
                 Log.i("[DevTools]", "Cleared JSONs: $deleted")
+
+                if (deleted.contains("nav_graph.json")) {
+                    DebugTelemetryClient.emit(
+                        type = "CLEAR_GRAPH",
+                        tag = "DevTools",
+                        title = "JSON Files Cleared",
+                        description = "Deleted ${deleted.joinToString(", ")}"
+                    )
+                }
             }
         }
 
@@ -497,7 +509,8 @@ class FloatingOverlayService : Service() {
             background = roundedRectDrawable(Color.parseColor("#2A2A2A"), dp(8).toFloat())
             setOnClickListener {
                 try {
-                    // Close the singleton, then delete the DB file
+                    // [PERMANENT FIX] Do not remove this! Universal Graph Clear with Dashboard Real-Time Reset.
+                    // Deletes both nav_graph.db and exported nav_graph.json, and streams CLEAR_GRAPH event to web dashboard.
                     val db = NavGraphDatabase.getInstance(applicationContext)
                     db.close()
                     NavGraphDatabase::class.java.getDeclaredField("INSTANCE").apply {
@@ -505,9 +518,20 @@ class FloatingOverlayService : Service() {
                         set(null, null)
                     }
                     val dbFile = applicationContext.getDatabasePath("nav_graph.db")
-                    val deleted = dbFile.delete()
-                    statusText.text = if (deleted) "Graph DB cleared" else "Graph DB not found"
-                    Log.i("[DevTools]", "nav_graph.db deleted=$deleted")
+                    val dbDeleted = dbFile.delete()
+
+                    val jsonFile = java.io.File(applicationContext.filesDir, "nav_graph.json")
+                    val jsonDeleted = if (jsonFile.exists()) jsonFile.delete() else false
+
+                    statusText.text = if (dbDeleted || jsonDeleted) "Graph DB + JSON cleared" else "Graph DB not found"
+                    Log.i("[DevTools]", "nav_graph.db deleted=$dbDeleted, nav_graph.json deleted=$jsonDeleted")
+
+                    DebugTelemetryClient.emit(
+                        type = "CLEAR_GRAPH",
+                        tag = "DevTools",
+                        title = "Graph Database Cleared",
+                        description = "nav_graph.db and nav_graph.json wiped by user"
+                    )
                 } catch (e: Exception) {
                     statusText.text = "Error clearing graph: ${e.message}"
                     Log.e("[DevTools]", "Graph clear failed", e)
@@ -653,26 +677,73 @@ class FloatingOverlayService : Service() {
                 "destinationScreen=\"${parsed.destinationScreen}\" | " +
                 "exactTask=\"${parsed.exactTask}\"")
 
+            val rawApp = parsed.targetApp.trim()
+            val targetPkg = GraphStateMachine.getPackageNameForApp(rawApp)
+                ?: if (rawApp.contains(".")) rawApp.lowercase() else GraphStateMachine.getPackageNameForApp(rawApp.lowercase()) ?: rawApp
+
             // ── PHASE 2 (Tier 1 — Local Graph Search) ─────────────────────────
+            // [PERMANENT FIX] Do not remove this! Live foreground screen detection for Dijkstra start screen resolution.
+            val liveScreenId = withContext(Dispatchers.Main) {
+                val uiTree = UiTreeAccessibilityService.instance
+                if (uiTree != null) {
+                    val root = AppWindowResolver.getUnderlyingAppRoot(uiTree, packageName)
+                    if (root != null) {
+                        val livePkg = root.packageName?.toString()
+                        val isTarget = livePkg != null && NavigationStateMachine.isTargetApp(livePkg, null)
+                        val title = if (isTarget) {
+                            ScreenTitleResolver.resolveTitle(root, parsed.targetApp, livePkg ?: targetPkg)
+                        } else null
+                        try { root.recycle() } catch (_: Exception) {}
+                        if (!title.isNullOrBlank()) "$targetPkg::$title" else null
+                    } else null
+                } else null
+            }
+
             val searchResult = withContext(Dispatchers.IO) {
                 SearchPathEngine.findPath(
                     context = applicationContext,
-                    targetApp = parsed.targetApp,
+                    targetApp = targetPkg,
                     destinationScreen = parsed.destinationScreen,
-                    exactTask = parsed.exactTask
+                    exactTask = parsed.exactTask,
+                    currentScreenId = liveScreenId
                 )
             }
 
             if (searchResult.found) {
                 Log.i(TAG, "Local search matched: ${searchResult.pathString}")
 
-                // [PERMANENT FIX] Stream Tier 1 hit to Dashboard
+                // [PERMANENT FIX] Do not remove this! Stream Tier 1 hit and all candidate paths to Dashboard
+                val allPathsArr = JSONArray()
+                searchResult.allDiscoveredPaths.forEach { p ->
+                    val pObj = JSONObject().apply {
+                        put("pathString", p.pathString)
+                        val stepsArr = JSONArray()
+                        p.steps.forEach { stepsArr.put(it) }
+                        put("steps", stepsArr)
+                        put("cost", p.cost)
+                        put("startScreen", p.startScreen)
+                        put("destinationScreen", p.destinationScreen)
+                        put("targetElement", p.targetElement ?: "")
+                        put("isShortest", p.isShortest)
+                        put("score", p.score)
+                        put("description", p.description)
+                    }
+                    allPathsArr.put(pObj)
+                }
+                val payloadObj = JSONObject().apply {
+                    put("pathString", searchResult.pathString ?: "")
+                    val stepsArr = JSONArray()
+                    searchResult.steps.forEach { stepsArr.put(it) }
+                    put("steps", stepsArr)
+                    put("allPaths", allPathsArr)
+                }
+
                 DebugTelemetryClient.emit(
                     type = "INTENT_PARSED",
                     tag = "PathFinder",
-                    title = "Tier 1 Local DB: Hit",
+                    title = "Tier 1 Local DB: Hit (${searchResult.allDiscoveredPaths.size} routes found)",
                     description = "Found path: ${searchResult.pathString}",
-                    payload = searchResult.pathString
+                    payload = payloadObj
                 )
 
                 // ── BUG-2: Collapse panel so HUD can be the sole guide UI ─────
@@ -681,20 +752,20 @@ class FloatingOverlayService : Service() {
                 // ── BUG-3 / Stage 2: Hand path to central state machine ────────
                 val pathStr = searchResult.pathString.orEmpty()
                 val steps   = pathStr.split("->").map { it.trim() }.filter { it.isNotEmpty() }
-                Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${steps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(steps, parsed.targetApp, parsed.exactTask, source = "local")
+                Log.i("[NavigationEngine]", "Tier 1 → startNavigation(${steps.size} steps, pkg='$targetPkg')")
+                NavigationStateMachine.startNavigation(steps, targetPkg, parsed.exactTask, source = "local")
                 // HUD is now controlled by NavigationStateMachine; no direct hud calls here.
 
                 return@launch
             }
 
             // ── PHASE 3 (Tier 2 — Firestore) ─────────────────────────────────
-            Log.d("[PathFinder]", "Phase 3 — Tier 2 Firestore lookup (app=${parsed.targetApp}, task=${parsed.exactTask})")
+            Log.d("[PathFinder]", "Phase 3 — Tier 2 Firestore lookup (app=$targetPkg, task=${parsed.exactTask})")
             statusText.text = "Searching cloud database…"
 
             val cloudPath = withContext(Dispatchers.IO) {
                 CloudPathDatabase.lookup(
-                    targetApp = parsed.targetApp,
+                    targetApp = targetPkg,
                     exactTask = parsed.exactTask
                 )
             }
@@ -716,14 +787,14 @@ class FloatingOverlayService : Service() {
 
                 // ── BUG-3 / Stage 2: Hand path to central state machine ────────
                 val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
-                Log.i("[NavigationEngine]", "Tier 2 → startNavigation(${cloudSteps.size} steps, pkg='${parsed.targetApp}')")
-                NavigationStateMachine.startNavigation(cloudSteps, parsed.targetApp, parsed.exactTask, source = "db")
+                Log.i("[NavigationEngine]", "Tier 2 → startNavigation(${cloudSteps.size} steps, pkg='$targetPkg')")
+                NavigationStateMachine.startNavigation(cloudSteps, targetPkg, parsed.exactTask, source = "db")
 
                 return@launch
             }
 
             Log.w("[PathFinder]", "Tier 2 Firestore: Miss — falling through to Tier 3 (Groq)")
-            executeTier3Groq(parsed.targetApp, parsed.exactTask, statusText)
+            executeTier3Groq(targetPkg, parsed.exactTask, statusText)
         }
     }
 
@@ -761,11 +832,17 @@ class FloatingOverlayService : Service() {
             try {
                 // 1. Force a live dump of the current screen to ensure we use fresh data
                 var cleanPageContent = ""
+                var liveScreenTitle: String? = null
                 val uiTree = UiTreeAccessibilityService.instance
                 val rootNode = if (uiTree != null) AppWindowResolver.getUnderlyingAppRoot(uiTree, this@FloatingOverlayService.packageName) else null
                 
                 if (rootNode != null) {
                     val pkg = rootNode.packageName?.toString() ?: targetApp
+                    try {
+                        liveScreenTitle = ScreenTitleResolver.resolveTitle(rootNode, targetApp, pkg)
+                    } catch (e: Exception) {
+                        Log.w("[PathFinder]", "resolveTitle error: ${e.message}")
+                    }
                     // [PERMANENT FIX] Do not remove this! Use internal memory filesDir for all dump files
                     val tempFile = File(filesDir, "temp_reroute.json")
                     RawDumpWriter.onNavigation(this@FloatingOverlayService.serviceScope, tempFile, rootNode, pkg, "Reroute")
@@ -800,6 +877,9 @@ class FloatingOverlayService : Service() {
                     rootNode.recycle()
                     Log.i("[PathFinder]", "Forced live screen dump for Reroute!")
                 }
+                if (liveScreenTitle.isNullOrBlank()) {
+                    liveScreenTitle = NavigationStateMachine.activeScreenName.takeIf { it.isNotBlank() }
+                }
 
                 // Fallback to disk if live extraction failed
                 if (cleanPageContent.isEmpty()) {
@@ -825,6 +905,41 @@ class FloatingOverlayService : Service() {
                 // 3. Gather device info
                 val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
 
+                // [PERMANENT FIX] Do not remove this! Extract connected SQLite Graph DB Context for Reroute.
+                // Gives the AI full knowledge of the verified local graph structure (.db) to prevent hallucinated
+                // or collided generic button steps (e.g. 3-dots on root vs 3-dots in a chat).
+                val navGraphContext = try {
+                    val db = NavGraphDatabase.getInstance(this@FloatingOverlayService)
+                    val canonicalPkg = GraphStateMachine.getPackageNameForApp(targetApp) ?: targetApp
+                    val connectedScreens = db.getConnectedScreens(canonicalPkg)
+                    val connectedTransitions = db.getConnectedTransitions(canonicalPkg)
+
+                    if (connectedScreens.isNotEmpty()) {
+                        val gObj = org.json.JSONObject()
+                        val sArr = org.json.JSONArray()
+                        connectedScreens.take(15).forEach { s ->
+                            sArr.put(s.screenTitle)
+                        }
+                        gObj.put("known_screens", sArr)
+
+                        val tArr = org.json.JSONArray()
+                        connectedTransitions.take(20).forEach { t ->
+                            val fromTitle = connectedScreens.find { it.id == t.fromScreenId }?.screenTitle ?: t.fromScreenId.substringAfterLast("::")
+                            val toTitle = connectedScreens.find { it.id == t.toScreenId }?.screenTitle ?: t.toScreenId.substringAfterLast("::")
+                            val tObj = org.json.JSONObject()
+                            tObj.put("from", fromTitle)
+                            tObj.put("to", toTitle)
+                            tObj.put("action", t.actionLabel)
+                            tArr.put(tObj)
+                        }
+                        gObj.put("known_transitions", tArr)
+                        gObj
+                    } else null
+                } catch (e: Exception) {
+                    Log.w("[PathFinder]", "Failed to extract graph context: ${e.message}")
+                    null
+                }
+
                 // 4. Build prompt and call Groq
                 val userPrompt = PromptBuilder.buildGeminiDrivenPrompt(
                     targetApp,
@@ -832,7 +947,9 @@ class FloatingOverlayService : Service() {
                     cleanPageContent,
                     deviceInfo,
                     isOnTargetApp,
-                    failedPath
+                    failedPath,
+                    liveScreenTitle,
+                    navGraphContext
                 )
                 Log.d("[PathFinder]", "Sending to Groq proxy… isOnTargetApp=$isOnTargetApp")
                 val rawResponse = GroqProxyClient().sendDirectRequest(
