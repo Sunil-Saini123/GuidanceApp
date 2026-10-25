@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FloatingAssistant"
+rootProject.name = "GuidanceApp"
 include(":app")

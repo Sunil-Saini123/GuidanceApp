@@ -211,7 +211,7 @@ private fun AppRoot(
 
             // ── Header ───────────────────────────────────────────────────────
             Text(
-                text = "Floating Assistant",
+                text = "GuidanceApp",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -314,7 +314,7 @@ private fun SetupBanner(onGrant: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Floating Assistant needs Accessibility access to read on-screen elements before it can guide you.",
+            text = "GuidanceApp needs Accessibility access to read on-screen elements before it can guide you.",
             fontSize = 13.sp,
             color = TextAmberBd,
             lineHeight = 19.sp

@@ -229,13 +229,13 @@ class FloatingOverlayService : Service() {
     private fun buildNotification(): android.app.Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID, "Floating Assistant", NotificationManager.IMPORTANCE_MIN
-            ).apply { description = "Keeps the floating assistant bubble active" }
+                CHANNEL_ID, "GuidanceApp", NotificationManager.IMPORTANCE_MIN
+            ).apply { description = "Keeps the GuidanceApp floating bubble active" }
             val nm = getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(channel)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Floating Assistant")
+            .setContentTitle("GuidanceApp")
             .setContentText("Tap the floating icon to ask for help")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
             .setPriority(NotificationCompat.PRIORITY_MIN)
@@ -285,13 +285,12 @@ class FloatingOverlayService : Service() {
         val sizePx = dp(56)
 
         bubbleView = FrameLayout(this).apply {
-            background = circleDrawable(Color.parseColor("#00D4C0"))
+            background = circleDrawable(Color.parseColor("#0D1F6E"))  // deep navy matches app logo gradient
             addView(
-                TextView(this@FloatingOverlayService).apply {
-                    text = "⚡"
-                    textSize = 22f
-                    gravity = Gravity.CENTER
-                    setTextColor(Color.parseColor("#001412"))
+                android.widget.ImageView(this@FloatingOverlayService).apply {
+                    setImageResource(R.drawable.ic_navvy_bubble)
+                    scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                    setPadding(dp(10), dp(10), dp(10), dp(10))
                 },
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,

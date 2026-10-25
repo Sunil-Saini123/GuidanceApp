@@ -735,7 +735,7 @@ class NavGraphDatabase private constructor(context: Context)
      */
     fun pruneOverlayScreens() {
         val overlayTitles = listOf(
-            "Floating Assistant", "FloatingAssistant",
+            "Floating Assistant", "FloatingAssistant", "GuidanceApp", "Guidance App",
             "No recent tasks",   // Android task-switcher captured under the last app's package
             "Frame Layout",      // Generic unnamed container — FrameLayout with no real toolbar title
             "AD",                // Ad dialog captured as a screen
