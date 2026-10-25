@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Folder,
   FileCode,
@@ -112,6 +112,27 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
   const [copiedItemIdx, setCopiedItemIdx] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Element type filter in Live mode: 'all' | 'clickable' | 'scrollable'
+  const [elementFilter, setElementFilter] = useState<'all' | 'clickable' | 'scrollable'>('all');
+
+  // Search text yellow highlight helper
+  const highlightMatch = (content: string, query: string) => {
+    if (!query.trim()) return content;
+    const q = query.trim().toLowerCase();
+    const idx = content.toLowerCase().indexOf(q);
+    if (idx === -1) return content;
+    return (
+      <>
+        {content.slice(0, idx)}
+        <mark className="bg-amber-200 text-amber-950 px-1 py-0.5 rounded font-bold shadow-xs">
+          {content.slice(idx, idx + q.length)}
+        </mark>
+        {content.slice(idx + q.length)}
+      </>
+    );
+  };
 
   // ── Screen Evaluation & Quality Labeling State ─────────────────────────────
   const [evaluations, setEvaluations] = useState<Record<string, ScreenEvaluationRecord>>(() => {
@@ -122,6 +143,28 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
       return {};
     }
   });
+
+  // Keyboard shortcuts: Esc to close modal/drawer or clear search, / to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedElement) {
+          setSelectedElement(null);
+        } else if (searchQuery) {
+          setSearchQuery('');
+        }
+      } else if (
+        (e.key === '/' || (e.ctrlKey && e.key === 'k')) &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElement, searchQuery]);
 
   // Save evaluations persistently in browser storage
   useEffect(() => {
@@ -965,7 +1008,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                               : 'text-slate-800 font-medium'
                           }`}
                         >
-                          {elemName}
+                          {highlightMatch(elemName, searchQuery)}
                         </span>
 
                         {isTargetStep && (
@@ -1230,8 +1273,9 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
           <div className="relative min-w-[220px] max-w-xs">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search elements in graph..."
+              placeholder="Search elements in graph... (Press '/' to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-slate-200/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
@@ -1379,12 +1423,48 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             </div>
           </div>
 
+          {/* Element Type Filter Pills */}
+          <div className="flex items-center space-x-1.5 pt-1 border-t border-slate-100 flex-wrap gap-y-1">
+            <span className="text-[11px] text-slate-500 font-semibold mr-1">Show Elements:</span>
+            <button
+              onClick={() => setElementFilter('all')}
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                elementFilter === 'all'
+                  ? 'bg-slate-200 text-slate-800 font-bold'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+              }`}
+            >
+              All Elements
+            </button>
+            <button
+              onClick={() => setElementFilter('clickable')}
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                elementFilter === 'clickable'
+                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold'
+                  : 'text-slate-500 hover:text-indigo-700 hover:bg-indigo-50'
+              }`}
+            >
+              Clickable Only
+            </button>
+            <button
+              onClick={() => setElementFilter('scrollable')}
+              className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                elementFilter === 'scrollable'
+                  ? 'bg-sky-100 text-sky-700 border border-sky-200 font-bold'
+                  : 'text-slate-500 hover:text-sky-700 hover:bg-sky-50'
+              }`}
+            >
+              Scrollable Only
+            </button>
+          </div>
+
           {/* Search bar inside Live mode */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Filter live screens by title, package, elements, or notes..."
+              placeholder="Filter live screens by title, package, elements, or notes... (Press '/' to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
@@ -1662,7 +1742,13 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                           <div className="py-2 text-xs text-slate-400 text-center font-medium">0 elements captured</div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {screen.elements.map((el, elIdx) => (
+                            {screen.elements
+                              .filter((el) => {
+                                if (elementFilter === 'clickable') return el.is_clickable;
+                                if (elementFilter === 'scrollable') return el.is_scrollable;
+                                return true;
+                              })
+                              .map((el, elIdx) => (
                               <div
                                 key={el.id || `live_el_${elIdx}`}
                                 onClick={() =>
@@ -1677,7 +1763,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                                 <div className="flex items-center space-x-2 truncate mr-2">
                                   <FileCode className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                   <span className="text-xs font-semibold text-slate-800 truncate">
-                                    {el.name}
+                                    {highlightMatch(el.name, searchQuery)}
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-1.5 shrink-0">
@@ -1736,104 +1822,117 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         )}
       </div>
 
-      {/* Info Modal for Single Element */}
+      {/* Side Inspector Drawer for Single Element (Non-blocking, Tree stays visible!) */}
       {selectedElement && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center space-x-2">
-                <FileCode className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-900 truncate">
+        <aside className="fixed top-0 right-0 bottom-0 w-84 md:w-96 bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-200 ease-out">
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/80 bg-slate-50/60">
+            <div className="flex items-center space-x-2.5 truncate mr-2">
+              <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-xs shrink-0">
+                <FileCode className="w-4 h-4" />
+              </div>
+              <div className="truncate">
+                <h3 className="text-xs font-bold text-slate-900 truncate">
                   {selectedElement.element.name}
                 </h3>
-              </div>
-              <button
-                onClick={() => setSelectedElement(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-2.5 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500 font-semibold">Screen:</span>
-                <span className="text-slate-800 font-mono font-medium truncate ml-2">
-                  {selectedElement.screenTitle}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500 font-semibold">Package:</span>
-                <span className="text-slate-800 font-mono font-medium truncate ml-2">
-                  {selectedElement.packageName}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500 font-semibold">Resource ID:</span>
-                <span className="text-slate-800 font-mono truncate ml-2">
-                  {selectedElement.element.resource_id || 'none'}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500 font-semibold">Class Name:</span>
-                <span className="text-slate-800 font-mono truncate ml-2">
-                  {selectedElement.element.class_name || 'none'}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500 font-semibold">Bounds:</span>
-                <span className="text-slate-800 font-mono ml-2">
-                  {selectedElement.element.bounds || 'none'}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500 font-semibold">Clickable:</span>
-                <span
-                  className={`font-semibold font-mono ${
-                    selectedElement.element.is_clickable ? 'text-emerald-600' : 'text-slate-400'
-                  }`}
-                >
-                  {selectedElement.element.is_clickable ? 'YES' : 'NO'}
-                </span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-500 font-semibold">Scrollable:</span>
-                <span
-                  className={`font-semibold font-mono ${
-                    selectedElement.element.is_scrollable ? 'text-sky-600' : 'text-slate-400'
-                  }`}
-                >
-                  {selectedElement.element.is_scrollable ? 'YES' : 'NO'}
-                </span>
+                <span className="text-[10px] font-mono text-slate-400">Element Inspector</span>
               </div>
             </div>
+            <button
+              onClick={() => setSelectedElement(null)}
+              className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-200/60 transition-colors"
+              title="Close inspector (Esc)"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-              <button
-                onClick={() => handleCopy(selectedElement.element, 'element_modal')}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
-              >
-                {copiedItemIdx === 'element_modal' ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-emerald-600">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Copy JSON</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setSelectedElement(null)}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
-              >
-                Close
-              </button>
+          {/* Drawer Body: Properties */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="space-y-2 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1">
+                <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">Screen Context</span>
+                <div className="font-bold text-slate-900 text-xs">{selectedElement.screenTitle}</div>
+                <div className="text-[10px] font-mono text-slate-500 truncate">{selectedElement.packageName}</div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex flex-col py-1.5 border-b border-slate-100">
+                  <span className="text-[11px] text-slate-500 font-semibold">Resource ID:</span>
+                  <span className="text-slate-800 font-mono text-xs break-all mt-0.5">
+                    {selectedElement.element.resource_id || '(none)'}
+                  </span>
+                </div>
+
+                <div className="flex flex-col py-1.5 border-b border-slate-100">
+                  <span className="text-[11px] text-slate-500 font-semibold">Class Name:</span>
+                  <span className="text-slate-800 font-mono text-xs break-all mt-0.5">
+                    {selectedElement.element.class_name || '(none)'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2 border-b border-slate-100 items-center">
+                  <span className="text-[11px] text-slate-500 font-semibold">Bounds:</span>
+                  <span className="text-slate-800 font-mono text-xs bg-slate-100 px-2 py-0.5 rounded-md">
+                    {selectedElement.element.bounds || '(none)'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2 border-b border-slate-100 items-center">
+                  <span className="text-[11px] text-slate-500 font-semibold">Clickable:</span>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-md font-bold font-mono ${
+                      selectedElement.element.is_clickable
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {selectedElement.element.is_clickable ? 'YES (clickable)' : 'NO (static)'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between py-2 items-center">
+                  <span className="text-[11px] text-slate-500 font-semibold">Scrollable:</span>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-md font-bold font-mono ${
+                      selectedElement.element.is_scrollable
+                        ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {selectedElement.element.is_scrollable ? 'YES (scrollable)' : 'NO'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Drawer Footer */}
+          <div className="p-4 border-t border-slate-200/80 bg-slate-50/50 flex items-center justify-between">
+            <button
+              onClick={() => handleCopy(selectedElement.element, 'element_modal')}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 border border-slate-200 shadow-xs transition-colors"
+            >
+              {copiedItemIdx === 'element_modal' ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-600">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Copy JSON</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setSelectedElement(null)}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-xs font-semibold text-slate-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </aside>
       )}
 
       {/* Study & Analysis Modal for Wrong Screens (Nexus Light Theme) */}
