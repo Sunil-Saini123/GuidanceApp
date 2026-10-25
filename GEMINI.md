@@ -40,7 +40,11 @@ These rules are strictly enforced across all code changes, architecture decision
    - **Pre-Change Invariant Verification:** Before touching any code, cross-check against the entire chain of established behaviors (live tree supremacy, active node lock, zero-flicker back unwinding, binder recycling, directional scrolling, flight recording) to guarantee that the change harmonizes without introducing regressions.
    - **Cumulative Contract:** If a new requirement appears to conflict with an existing ($N-1$) behavior, you must explicitly highlight the conflict and ask the user for direction before making changes.
    - **Dynamic Live Count Enforcement ($N$):** The exact number $N$ of active `[PERMANENT FIX]` blocks across the codebase MUST be dynamically counted using a tool/script after EVERY single fix. The agent must NEVER guess, approximate, or repeat a stale/hardcoded count (e.g. "143+").
-   - **Monotonic Chain Increment:** Every bug fix or feature implementation must increment the total count ($N 	o N+1$). After every fix, the agent must report the newly incremented live count and verify that all $1 \dots N-1$ blocks remain completely intact.
+   - **Monotonic Chain Increment:** Every bug fix or feature implementation must increment the total count ($N \to N+1$). After every fix, the agent must report the newly incremented live count and verify that all $1 \dots N-1$ blocks remain completely intact.
+8. **Simple, Short & Plain English Communication:**
+   - Always explain things using **simple, plain words** and basic grammar so it is easy to read.
+   - Keep responses **short, concise, and direct**—avoid lengthy paragraphs or overwhelming technical jargon.
+   - Clearly state: 1) What broke, 2) Why (with a simple daily-life example), and 3) The quick fix.
 
 ---
 

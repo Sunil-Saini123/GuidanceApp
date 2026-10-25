@@ -175,7 +175,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   const liveScreens: ScreenGroup[] = useMemo(() => {
     const screensMap = new Map<string, ScreenGroup>();
 
-    events.forEach((ev) => {
+    (events || []).forEach((ev) => {
       if (ev.tag === 'CLEAN_PAGE' && ev.payload) {
         const p = ev.payload;
         const screenTitle = p.screen_title || p.title || 'Unknown Screen';
@@ -456,7 +456,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     const map = new Map<string, NavGraphScreen>();
     if (!navGraph || !navGraph.apps) return map;
     for (const app of navGraph.apps) {
-      for (const screen of app.screens) {
+      for (const screen of app.screens || []) {
         map.set(screen.id, screen);
       }
     }
@@ -471,7 +471,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
     const clusters = new Map<string, number>();
     for (const app of navGraph.apps) {
-      clusters.set(app.package_name, app.screens.length);
+      clusters.set(app.package_name, (app.screens || []).length);
     }
 
     const primary: NavGraphApp[] = [];
@@ -482,9 +482,9 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         app.package_name.startsWith('com.oplus.') ||
         app.package_name.startsWith('com.coloros.') ||
         app.package_name.startsWith('com.android.settings.') ||
-        (app.screens.length <= 2 && app.package_name.includes('settings'));
+        ((app.screens || []).length <= 2 && app.package_name.includes('settings'));
 
-      if (isSatellite && app.screens.length <= 5) {
+      if (isSatellite && (app.screens || []).length <= 5) {
         satellite.push(app);
       } else {
         primary.push(app);
@@ -494,17 +494,25 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     return { primaryApps: primary, satelliteApps: satellite, clusterCountMap: clusters };
   }, [navGraph]);
 
+  // [PERMANENT FIX] Do not remove this! Screen-level transition resolution and null-safe array traversal to prevent undefined forEach crashes.
+  const totalTransitionsCount = useMemo(() => {
+    if (!activeApp || !activeApp.screens) return 0;
+    return (activeApp.screens || []).reduce((acc, s) => acc + (s.transitions?.length || 0), 0);
+  }, [activeApp]);
+
   // [PERMANENT FIX] Do not remove this! App-Aware Root Resolution & Topological In-Degree Root Detection.
   const rootScreen = useMemo(() => {
-    if (!activeApp || activeApp.screens.length === 0) return undefined;
+    if (!activeApp || !activeApp.screens || activeApp.screens.length === 0) return undefined;
 
     const inDegree = new Map<string, number>();
-    activeApp.screens.forEach((s) => inDegree.set(s.id, 0));
+    (activeApp.screens || []).forEach((s) => inDegree.set(s.id, 0));
 
-    activeApp.transitions.forEach((t) => {
-      if (t.type === 'CLICK' && inDegree.has(t.to_id)) {
-        inDegree.set(t.to_id, (inDegree.get(t.to_id) || 0) + 1);
-      }
+    (activeApp.screens || []).forEach((s) => {
+      (s.transitions || []).forEach((t) => {
+        if (t.type === 'CLICK' && inDegree.has(t.to_id)) {
+          inDegree.set(t.to_id, (inDegree.get(t.to_id) || 0) + 1);
+        }
+      });
     });
 
     const isWhatsApp = activeApp.package_name.includes('whatsapp');
@@ -548,11 +556,11 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
     const toExpand: Record<string, boolean> = {};
 
-    activeApp.screens.forEach((parent) => {
-      parent.elements.forEach((elem, eIdx) => {
+    (activeApp.screens || []).forEach((parent) => {
+      (parent.elements || []).forEach((elem, eIdx) => {
         const transKey = `${parent.id}_to_${elem}_${eIdx}`;
-        const hasTransition = activeApp.transitions.some(
-          (t) => t.from_id === parent.id && t.to_id === targetScreen.id
+        const hasTransition = (parent.transitions || []).some(
+          (t) => t.to_id === targetScreen.id
         );
         if (hasTransition || normalizeLabel(elem) === targetTitleNorm) {
           toExpand[transKey] = true;
@@ -625,7 +633,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     const liveGroup = liveScreens.find(
       (ls) => ls.id === screen.id || (ls.packageName === screen.package_name && ls.screenTitle?.toLowerCase() === screen.title.toLowerCase())
     );
-    const combinedElements = [...screen.elements];
+    const combinedElements = [...(screen.elements || [])];
     if (liveGroup) {
       const existingNorms = new Set(combinedElements.map((e) => e.trim().toLowerCase()));
       for (const el of liveGroup.elements) {
@@ -735,7 +743,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
               </span>
             )}
             <span className="text-[11px] text-slate-400 font-mono">
-              ({screen.elements.length} elements, {screen.transitions.length} links)
+              ({(screen.elements || []).length} elements, {(screen.transitions || []).length} links)
             </span>
           </div>
 
@@ -791,7 +799,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 // Matches via forward CLICK transitions, or by matching element name to existing screen,
                 // or where another screen has a BACK transition returning to this screen (e.g. Rohit -> WhatsApp).
                 const normElem = normalizeLabel(elemName);
-                const transition = screen.transitions.find((t) => {
+                const transition = (screen.transitions || []).find((t) => {
                   if (t.type !== 'CLICK') return false;
                   const normAction = normalizeLabel(t.action);
                   const normToTitle = normalizeLabel(t.to_title);
@@ -942,7 +950,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 If this screen has outgoing transitions that were not matched to individual elements above,
                 render them here so the user can still unfold the navigation tree without missing screens! */}
             {(() => {
-              const directTransitions = screen.transitions.filter((t) => {
+              const directTransitions = (screen.transitions || []).filter((t) => {
                 if (t.type !== 'CLICK') return false;
                 const normAction = normalizeLabel(t.action);
                 const normToTitle = normalizeLabel(t.to_title);
@@ -1103,7 +1111,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
             {activeApp && (
               <span className="text-[11px] font-mono text-slate-400 font-medium">
-                {activeApp.screens.length} screens, {activeApp.transitions.length} transitions
+                {(activeApp.screens || []).length} screens, {totalTransitionsCount} transitions
               </span>
             )}
 
@@ -1372,7 +1380,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                     if (visited.has(scr.id)) return;
                     visited.add(scr.id);
                     renderedScreens.add(scr.id);
-                    scr.transitions.forEach((t) => {
+                    (scr.transitions || []).forEach((t) => {
                       const tgt = screensById.get(t.to_id);
                       if (tgt) collectRendered(tgt, visited);
                     });
