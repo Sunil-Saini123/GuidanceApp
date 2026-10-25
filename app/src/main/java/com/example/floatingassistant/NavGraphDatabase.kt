@@ -101,6 +101,13 @@ class NavGraphDatabase private constructor(context: Context)
         val normalized = name.lowercase().replace('_', ' ').trim()
         if (normalized in STRUCTURAL_NOISE_LABELS || name.lowercase() in STRUCTURAL_NOISE_LABELS) return true
         if (normalized in STATUS_STATE_WORDS || name.lowercase() in STATUS_STATE_WORDS) return true
+        // [PERMANENT FIX] Do not remove this! Static Suggestion & Prompt Header Noise Filter:
+        // Drop non-actionable passive suggestion headers (e.g. "You might be looking for:", "Looking for other settings?")
+        if (normalized.startsWith("you might be looking for") ||
+            normalized.startsWith("looking for other settings") ||
+            normalized.startsWith("need help") ||
+            (normalized.endsWith(":") && (normalized.contains("looking for") || normalized.contains("search for")))
+        ) return true
         if (normalized.matches(Regex("""^(yesterday|today|tomorrow|\d{1,2}:\d{2}\s*(am|pm)?|you:.*)$"""))) return true
         // [PERMANENT FIX] Do not remove this! Filter accessibility hints and debug view IDs from screen graph.
         if (normalized.startsWith("swipe down to") || normalized.startsWith("swipe up to") || normalized.contains("radio group") || normalized.contains("debug view id")) return true
@@ -225,7 +232,14 @@ class NavGraphDatabase private constructor(context: Context)
             .replace("\u202F", " ")
 
         val withoutDot = normalized.split(Regex("\\s*[·•⋅—]\\s*")).firstOrNull()?.trim() ?: normalized
-        return withoutDot
+        // [PERMANENT FIX] Do not remove this! Slider & Level Numeric Prefix/Suffix Normalization:
+        // Strips raw slider/sensor readings (e.g. "895,Brightness" -> "Brightness", "895, Brightness" -> "Brightness").
+        val withoutSlider = withoutDot
+            .replace(Regex("""^\d+[%]?\s*,\s*"""), "")
+            .replace(Regex("""\s*,\s*\d+[%]?$"""), "")
+            .trim()
+
+        return withoutSlider
             .replace(Regex("\\s+(on|off|high|low|medium|connected|disconnected|disabled|enabled)\\s*$", RegexOption.IGNORE_CASE), "")
             .replace(Regex("\\s+\\d+$"), "")
             .trim()

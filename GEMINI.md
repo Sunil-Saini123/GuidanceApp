@@ -50,6 +50,7 @@ These rules are strictly enforced across all code changes, architecture decision
    - **Permanent Right Data:** Data marked as `Right` represents verified ground truth and must NEVER be deleted by `CLEAR_GRAPH` or generic history clears. Only a dedicated user action (`Clear Right Data`) can clear it.
    - **Root Cause & Elimination of Wrong Data:** The primary engineering goal is to identify why bad data entered the tree, trace the root cause in `CleanPageProcessor` or `NavGraphDatabase`, and eliminate that category of bad data permanently so it never re-occurs.
    - **Physical Exploration Supremacy (No Fake Pre-Seeding):** Synthetic path pre-population (`seedRoute`) is forbidden. Screens and transitions must ONLY be added to the database when physically navigated in real time.
+   - **Intelligent Updating vs. Filtering (Read Comments First):** When an element is flagged Wrong, the agent MUST read the user's comment in evaluations.json. An item marked Wrong does NOT automatically mean deletion. If the comment indicates the item is a real, valid setting with dirty or raw data (e.g. '895,Brightness' -> *'can you change its name'*), the algorithm MUST **update, clean, and normalize the name** (strip raw slider numbers, dynamic prefixes/suffixes) rather than deleting the element. Pure non-actionable static junk (e.g. 'You might be looking for:') is filtered. Never blindly delete elements without reading comments!
 
 ---
 

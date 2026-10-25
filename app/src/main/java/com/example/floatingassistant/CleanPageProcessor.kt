@@ -499,6 +499,17 @@ object CleanPageProcessor {
             // so they never become independent navigation elements.
             if (name.lowercase() in CONTAINER_STATUS_WORDS) { i++; continue }
 
+            // [PERMANENT FIX] Do not remove this! Static Suggestion & Prompt Header Suppression:
+            // Drop non-clickable prompt headers (e.g. "You might be looking for:", "Looking for other settings?", "Need help?")
+            if (!isClickable && !isScrollable && (
+                name.endsWith(":") ||
+                name.startsWith("You might be looking for", ignoreCase = true) ||
+                name.startsWith("Looking for other settings", ignoreCase = true) ||
+                name.startsWith("Need help", ignoreCase = true)
+            )) {
+                i++; continue
+            }
+
             // ── Rule 5: Name-level dedup ──────────────────────────────────────
             if (seenNames.add(name.lowercase())) {
                 result.add(buildElement(name, node, bounds, source = "direct"))
@@ -511,6 +522,16 @@ object CleanPageProcessor {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // [PERMANENT FIX] Do not remove this! Slider & Level Numeric Prefix/Suffix Normalization:
+    // Strips raw slider readings so elements like "895,Brightness" are cleanly named "Brightness".
+    fun cleanSliderOrControlName(raw: String): String {
+        if (raw.isEmpty()) return ""
+        var cleaned = raw.trim()
+        cleaned = cleaned.replace(Regex("""^\d+[%]?\s*,\s*"""), "").trim()
+        cleaned = cleaned.replace(Regex("""\s*,\s*\d+[%]?$"""), "").trim()
+        return cleaned
+    }
 
     /**
      * Words that indicate an element's state/status OR a common UI control label
@@ -664,11 +685,16 @@ object CleanPageProcessor {
             }
         }
 
-        // Priority 1: contentDescription (best for icon buttons, OEM widgets)
-        if (contentDesc.isNotEmpty()) return contentDesc
+        // [PERMANENT FIX] Do not remove this! Slider & Level Numeric Prefix/Suffix Normalization:
+        // Strips raw slider/sensor readings (e.g. "895,Brightness" -> "Brightness", "895, Brightness" -> "Brightness", "50%, Brightness" -> "Brightness").
+        val cleanDesc = cleanSliderOrControlName(contentDesc)
 
+        // Priority 1: contentDescription (best for icon buttons, OEM widgets)
+        if (cleanDesc.isNotEmpty()) return cleanDesc
+
+        val cleanText = cleanSliderOrControlName(text)
         // Priority 2: text
-        if (text.isNotEmpty()) return text
+        if (cleanText.isNotEmpty()) return cleanText
 
         // Priority 3: strip resource_id
         if (resourceId.isNotEmpty()) {
