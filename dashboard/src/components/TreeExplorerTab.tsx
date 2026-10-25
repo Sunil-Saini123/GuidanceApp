@@ -78,42 +78,53 @@ export interface ScreenEvaluationRecord {
   updatedAt: number;
 }
 
-// [PERMANENT FIX] Do not remove this! Code-editor nested tree indentation and color palette.
+// [PERMANENT FIX] Do not remove this! Code-editor nested tree indentation and vibrant color palette.
+// [PERMANENT FIX] Do not remove this! High-contrast vibrant color palette, distinct element role badges, and sticky note styling for maximum readability.
 const getLayerStyle = (layer: number) => {
   switch (layer) {
     case 1:
       return {
-        bg: 'bg-indigo-50/70',
-        borderLeft: 'border-l-4 border-indigo-500',
-        badgeBg: 'bg-indigo-100 text-indigo-700',
+        bg: 'bg-gradient-to-r from-indigo-50 via-blue-50/60 to-white',
+        borderLeft: 'border-l-4 border-indigo-600',
+        badgeBg: 'bg-indigo-600 text-white shadow-xs',
+        borderColor: 'border-indigo-300',
+        titleColor: 'text-indigo-950',
         paddingLeft: 'pl-4'
       };
     case 2:
       return {
-        bg: 'bg-sky-50/70',
-        borderLeft: 'border-l-4 border-sky-500',
-        badgeBg: 'bg-sky-100 text-sky-700',
+        bg: 'bg-gradient-to-r from-sky-50 via-cyan-50/60 to-white',
+        borderLeft: 'border-l-4 border-sky-600',
+        badgeBg: 'bg-sky-600 text-white shadow-xs',
+        borderColor: 'border-sky-300',
+        titleColor: 'text-sky-950',
         paddingLeft: 'pl-8'
       };
     case 3:
       return {
-        bg: 'bg-emerald-50/70',
-        borderLeft: 'border-l-4 border-emerald-500',
-        badgeBg: 'bg-emerald-100 text-emerald-700',
+        bg: 'bg-gradient-to-r from-emerald-50 via-teal-50/60 to-white',
+        borderLeft: 'border-l-4 border-emerald-600',
+        badgeBg: 'bg-emerald-600 text-white shadow-xs',
+        borderColor: 'border-emerald-300',
+        titleColor: 'text-emerald-950',
         paddingLeft: 'pl-12'
       };
     case 4:
       return {
-        bg: 'bg-amber-50/70',
-        borderLeft: 'border-l-4 border-amber-500',
-        badgeBg: 'bg-amber-100 text-amber-700',
+        bg: 'bg-gradient-to-r from-amber-50 via-yellow-50/60 to-white',
+        borderLeft: 'border-l-4 border-amber-600',
+        badgeBg: 'bg-amber-600 text-white shadow-xs',
+        borderColor: 'border-amber-300',
+        titleColor: 'text-amber-950',
         paddingLeft: 'pl-16'
       };
     default:
       return {
-        bg: 'bg-purple-50/70',
-        borderLeft: 'border-l-4 border-purple-500',
-        badgeBg: 'bg-purple-100 text-purple-700',
+        bg: 'bg-gradient-to-r from-purple-50 via-fuchsia-50/60 to-white',
+        borderLeft: 'border-l-4 border-purple-600',
+        badgeBg: 'bg-purple-600 text-white shadow-xs',
+        borderColor: 'border-purple-300',
+        titleColor: 'text-purple-950',
         paddingLeft: 'pl-20'
       };
   }
@@ -220,7 +231,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     return (
       <>
         {content.slice(0, idx)}
-        <mark className="bg-amber-200 text-amber-950 px-1 py-0.5 rounded font-bold shadow-xs">
+        <mark className="bg-amber-300 text-amber-950 px-1 py-0.5 rounded-md font-black shadow-xs">
           {content.slice(idx, idx + q.length)}
         </mark>
         {content.slice(idx + q.length)}
@@ -895,49 +906,51 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
           </div>
         )}
 
-        {/* Screen Header - [PERMANENT FIX] High-contrast glowing live location marker box */}
+        {/* Screen Header - [PERMANENT FIX] High-contrast glowing live location marker box & vibrant color themes */}
         <div
-          className={`flex items-center justify-between px-4 py-2.5 rounded-2xl select-none transition-all duration-200 border ${
+          className={`flex items-center justify-between px-4 py-3 rounded-2xl select-none transition-all duration-200 border-2 ${
             isCurrentLiveScreen
-              ? 'bg-gradient-to-r from-emerald-50 via-emerald-100/50 to-teal-50 border-2 border-emerald-500 shadow-md ring-2 ring-emerald-400/20'
-              : `${style.bg} ${style.borderLeft} border-slate-200/80 shadow-xs`
+              ? 'bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-400/30'
+              : `${style.bg} ${style.borderLeft} ${style.borderColor} shadow-xs`
           } ${
             evalRecord?.status === 'correct'
-              ? 'ring-2 ring-emerald-300/40 border-emerald-300'
+              ? 'ring-2 ring-emerald-400/50 border-emerald-400'
               : evalRecord?.status === 'wrong'
-              ? 'ring-2 ring-rose-300/40 border-rose-300'
+              ? 'ring-2 ring-rose-400/50 border-rose-400'
               : ''
           }`}
         >
           <div className="flex items-center space-x-2.5">
-            <FolderOpen className={`w-4 h-4 ${isCurrentLiveScreen ? 'text-emerald-600 animate-pulse' : 'text-indigo-600'}`} />
-            <span className={`${textSize === 'large' ? 'text-base font-extrabold' : 'text-sm font-bold'} ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : 'text-slate-900'}`}>
+            <div className={`p-1.5 rounded-xl ${isCurrentLiveScreen ? 'bg-emerald-600 text-white animate-pulse' : 'bg-indigo-600 text-white'} shadow-xs`}>
+              <FolderOpen className="w-4 h-4" />
+            </div>
+            <span className={`${textSize === 'large' ? 'text-base font-black' : 'text-sm font-extrabold'} ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : style.titleColor}`}>
               {screen.title}
             </span>
             {isCurrentLiveScreen && (
-              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-600 text-white animate-pulse shadow-sm flex items-center space-x-1">
+              <span className="text-[10px] px-2.5 py-0.5 rounded-md font-mono font-bold bg-emerald-600 text-white animate-pulse shadow-sm flex items-center space-x-1">
                 <span>📍 ACTIVE PHONE SCREEN</span>
               </span>
             )}
             <span
-              className={`text-[9px] px-2 py-0.5 rounded-md font-mono font-bold ${style.badgeBg}`}
+              className={`text-[10px] px-2.5 py-0.5 rounded-md font-mono font-bold ${style.badgeBg}`}
             >
               Layer {depth}
             </span>
             {evalRecord?.status === 'correct' && (
-              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
-                <Check className="w-3 h-3 text-emerald-600" />
+              <span className="text-[10px] px-2.5 py-0.5 rounded-md font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center space-x-1 shadow-2xs">
+                <Check className="w-3 h-3 text-emerald-700 stroke-[3]" />
                 <span>Correct</span>
               </span>
             )}
             {evalRecord?.status === 'wrong' && (
-              <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-1">
-                <X className="w-3 h-3 text-rose-600" />
+              <span className="text-[10px] px-2.5 py-0.5 rounded-md font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center space-x-1 shadow-2xs">
+                <X className="w-3 h-3 text-rose-700 stroke-[3]" />
                 <span>Wrong</span>
               </span>
             )}
-            <span className="text-[11px] text-slate-400 font-mono">
-              ({(screen.elements || []).length} elements, {(screen.transitions || []).length} links)
+            <span className="text-[11px] font-mono font-bold text-slate-700 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+              {(screen.elements || []).length} elements · {(screen.transitions || []).length} links
             </span>
           </div>
 
@@ -946,32 +959,32 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => toggleNavGraphEvaluation(screen, 'correct')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all active:scale-[0.98] ${
                   evalRecord?.status === 'correct'
-                    ? 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
-                    : 'bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200/80'
+                    ? 'bg-emerald-600 text-white border border-emerald-600 shadow-sm'
+                    : 'bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs'
                 }`}
                 title="Mark this screen as Correct"
               >
-                <Check className="w-3 h-3" />
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Correct</span>
               </button>
 
               <button
                 onClick={() => toggleNavGraphEvaluation(screen, 'wrong')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] ${
+                className={`flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all active:scale-[0.98] ${
                   evalRecord?.status === 'wrong'
-                    ? 'bg-rose-500 text-white border border-rose-600 shadow-sm'
-                    : 'bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200/80'
+                    ? 'bg-rose-600 text-white border border-rose-600 shadow-sm'
+                    : 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs'
                 }`}
                 title="Mark this screen as Wrong for study"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Wrong</span>
               </button>
             </div>
 
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className="text-[10px] font-mono font-bold text-slate-700 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200">
               Visits: {screen.visit_count || 1}
             </span>
           </div>
@@ -1051,9 +1064,14 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 );
                 const isLastElem = eIdx === visibleElements.length - 1;
 
+                const elemEvalKey = `${screen.id}::${elemName}`;
+                const elemEval = elementEvaluations[elemEvalKey];
+                const isRight = elemEval?.status === 'right';
+                const isWrong = elemEval?.status === 'wrong';
+
                 return (
                   <div key={`${screen.id}_elem_${eIdx}`} className="py-0.5 first:pt-1">
-                    {/* Element Row - [PERMANENT FIX] High-contrast target step marker box & code nesting */}
+                    {/* Element Row - [PERMANENT FIX] High-contrast colorful target step marker box & status tinting */}
                     <div
                       onClick={() => {
                         if (hasTargetScreen) {
@@ -1062,10 +1080,14 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                       }}
                       className={`flex items-center justify-between pr-4 py-2.5 ${style.paddingLeft} rounded-xl select-none transition-all ${
                         isTargetStep
-                          ? 'bg-gradient-to-r from-amber-50 via-amber-100/50 to-orange-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
+                          ? 'bg-gradient-to-r from-amber-50 via-amber-100/60 to-orange-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
+                          : isRight
+                          ? 'bg-emerald-50/70 hover:bg-emerald-100/60 border border-emerald-300 text-emerald-950 shadow-2xs'
+                          : isWrong
+                          ? 'bg-rose-50/70 hover:bg-rose-100/60 border border-rose-300 text-rose-950 shadow-2xs'
                           : hasTargetScreen
-                          ? 'cursor-pointer hover:bg-indigo-50/60 border border-transparent'
-                          : 'hover:bg-slate-50 border border-transparent'
+                          ? 'bg-indigo-50/40 hover:bg-indigo-100/50 border border-indigo-200/70 cursor-pointer shadow-2xs'
+                          : 'bg-white hover:bg-slate-50/90 border border-slate-200 shadow-2xs'
                       }`}
                     >
                       {/* Left: Indicator, Name, Link Badge */}
@@ -1076,16 +1098,16 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                               e.stopPropagation();
                               toggleTransition(transKey);
                             }}
-                            className="p-1 rounded-md hover:bg-slate-200/60 text-slate-400 hover:text-slate-600 transition-colors"
+                            className="p-1 rounded-md hover:bg-indigo-100/80 text-indigo-600 transition-colors"
                           >
                             {isExpanded ? (
-                              <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
+                              <ChevronDown className="w-3.5 h-3.5 text-indigo-700 stroke-[2.5]" />
                             ) : (
-                              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                              <ChevronRight className="w-3.5 h-3.5 text-indigo-500 stroke-[2.5]" />
                             )}
                           </button>
                         ) : (
-                          <span className="text-slate-300 font-mono text-[11px] select-none shrink-0 w-5 text-center">
+                          <span className="text-indigo-400 font-mono font-bold text-[13px] select-none shrink-0 w-5 text-center">
                             {isLastElem ? '└' : '├'}
                           </span>
                         )}
@@ -1094,9 +1116,13 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                           className={`${textSize === 'large' ? 'text-[15px] font-bold' : 'text-sm font-semibold'} truncate ${
                             isTargetStep
                               ? 'text-amber-950 font-black'
+                              : isRight
+                              ? 'text-emerald-950 font-bold'
+                              : isWrong
+                              ? 'text-rose-950 font-bold line-through decoration-rose-400'
                               : hasTargetScreen
-                              ? 'text-indigo-700 font-bold hover:underline'
-                              : 'text-slate-800'
+                              ? 'text-indigo-900 font-bold hover:underline'
+                              : 'text-slate-900'
                           }`}
                         >
                           {highlightMatch(elemName, searchQuery)}
@@ -1109,7 +1135,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         )}
 
                         {hasTargetScreen && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/80 font-mono font-semibold shrink-0 flex items-center space-x-1">
+                          <span className="text-[11px] px-2.5 py-0.5 rounded-lg bg-sky-100 text-sky-800 border border-sky-300 font-mono font-bold shrink-0 flex items-center space-x-1 shadow-2xs">
                             <span>→ {targetScreen?.title}</span>
                           </span>
                         )}
@@ -1118,62 +1144,56 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                       {/* Right: Per-Element Evaluation (Right, Wrong, Comment) & Type */}
                       <div className="flex items-center space-x-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                         {/* Per-Element Right / Wrong Evaluation Buttons */}
-                        {(() => {
-                          const elemEvalKey = `${screen.id}::${elemName}`;
-                          const elemEval = elementEvaluations[elemEvalKey];
-                          return (
-                            <div className="flex items-center space-x-1">
-                              <button
-                                onClick={() => toggleElementStatus(screen.id, elemName, 'right')}
-                                className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
-                                  elemEval?.status === 'right'
-                                    ? 'bg-emerald-600 text-white border border-emerald-600 shadow-xs'
-                                    : 'bg-white hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200'
-                                }`}
-                                title="Mark element as Right"
-                              >
-                                <Check className="w-3 h-3" />
-                                <span>Right</span>
-                              </button>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => toggleElementStatus(screen.id, elemName, 'right')}
+                            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-[0.98] ${
+                              isRight
+                                ? 'bg-emerald-600 text-white border border-emerald-600 shadow-sm'
+                                : 'bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 hover:border-emerald-300 shadow-2xs'
+                            }`}
+                            title="Mark element as Right"
+                          >
+                            <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>Right</span>
+                          </button>
 
-                              <button
-                                onClick={() => toggleElementStatus(screen.id, elemName, 'wrong')}
-                                className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
-                                  elemEval?.status === 'wrong'
-                                    ? 'bg-rose-600 text-white border border-rose-600 shadow-xs'
-                                    : 'bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200'
-                                }`}
-                                title="Mark element as Wrong"
-                              >
-                                <X className="w-3 h-3" />
-                                <span>Wrong</span>
-                              </button>
+                          <button
+                            onClick={() => toggleElementStatus(screen.id, elemName, 'wrong')}
+                            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-[0.98] ${
+                              isWrong
+                                ? 'bg-rose-600 text-white border border-rose-600 shadow-sm'
+                                : 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 hover:border-rose-300 shadow-2xs'
+                            }`}
+                            title="Mark element as Wrong"
+                          >
+                            <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>Wrong</span>
+                          </button>
 
-                              <button
-                                onClick={() => setOpenCommentElemId(openCommentElemId === elemEvalKey ? null : elemEvalKey)}
-                                className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
-                                  elemEval?.comment
-                                    ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold'
-                                    : openCommentElemId === elemEvalKey
-                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
-                                    : 'bg-white hover:bg-slate-100 text-slate-500 border border-slate-200'
-                                }`}
-                                title="Add or edit persistent comment (never erased)"
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                                <span>{elemEval?.comment ? 'Note' : 'Comment'}</span>
-                              </button>
-                            </div>
-                          );
-                        })()}
+                          <button
+                            onClick={() => setOpenCommentElemId(openCommentElemId === elemEvalKey ? null : elemEvalKey)}
+                            className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all active:scale-[0.98] ${
+                              elemEval?.comment
+                                ? 'bg-amber-400 text-amber-950 border border-amber-500 shadow-xs'
+                                : openCommentElemId === elemEvalKey
+                                ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                                : 'bg-white hover:bg-amber-50 text-slate-700 border border-slate-300 shadow-2xs'
+                            }`}
+                            title="Add or edit persistent comment (never erased)"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>{elemEval?.comment ? '📝 Note' : 'Comment'}</span>
+                          </button>
+                        </div>
 
                         {hasTargetScreen ? (
-                          <span className="text-xs font-mono text-indigo-700 font-bold bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-200">
-                            SCREEN LINK
+                          <span className="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-lg border border-indigo-300 flex items-center space-x-1 shrink-0 shadow-2xs">
+                            <span>↗ SCREEN LINK</span>
                           </span>
                         ) : (
-                          <span className="text-xs font-mono text-slate-400">
-                            action
+                          <span className="text-[10px] font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200 flex items-center space-x-1 shrink-0">
+                            <span>👆 ACTION</span>
                           </span>
                         )}
                       </div>
@@ -1181,26 +1201,26 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
                     {/* Per-Element Persistent Comment Box (Never Erased!) */}
                     {(() => {
-                      const elemEvalKey = `${screen.id}::${elemName}`;
-                      const elemEval = elementEvaluations[elemEvalKey];
                       const isOpen = openCommentElemId === elemEvalKey;
                       if (!isOpen && !elemEval?.comment) return null;
 
                       return (
                         <div
-                          className="ml-8 mr-4 my-1.5 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center space-x-2 shadow-2xs"
+                          className="ml-8 mr-4 my-2 p-2.5 rounded-xl bg-amber-50/90 border-2 border-amber-300/80 text-xs flex items-center space-x-2 shadow-sm"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MessageSquare className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <div className="p-1 rounded-lg bg-amber-200 text-amber-900 shrink-0">
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </div>
                           <input
                             type="text"
                             value={elemEval?.comment || ''}
                             onChange={(e) => updateElementComment(screen.id, elemName, e.target.value)}
-                            placeholder="Type a permanent comment for this element (auto-saved)..."
-                            className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                            placeholder="Type a permanent note for this element (auto-saved)..."
+                            className="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
                           />
                           {elemEval?.comment && (
-                            <span className="text-[10px] font-mono text-emerald-600 font-bold shrink-0">
+                            <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-md font-bold shrink-0">
                               ✓ Saved
                             </span>
                           )}
@@ -2049,22 +2069,28 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                                     packageName: screen.packageName
                                   })
                                 }
-                                className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/80 border border-slate-200/60 cursor-pointer select-none transition-colors"
+                                className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer select-none transition-all shadow-2xs ${
+                                  el.is_clickable
+                                    ? 'bg-emerald-50/50 hover:bg-emerald-100/60 border-emerald-200/80'
+                                    : el.is_scrollable
+                                    ? 'bg-sky-50/50 hover:bg-sky-100/60 border-sky-200/80'
+                                    : 'bg-white hover:bg-slate-50 border-slate-200'
+                                }`}
                               >
                                 <div className="flex items-center space-x-2 truncate mr-2">
-                                  <FileCode className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                  <span className="text-xs font-semibold text-slate-800 truncate">
+                                  <FileCode className={`w-3.5 h-3.5 shrink-0 ${el.is_clickable ? 'text-emerald-600' : el.is_scrollable ? 'text-sky-600' : 'text-slate-400'}`} />
+                                  <span className="text-xs font-bold text-slate-900 truncate">
                                     {highlightMatch(el.name, searchQuery)}
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-1.5 shrink-0">
                                   {el.is_clickable && (
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-600 text-white shadow-2xs">
                                       tap
                                     </span>
                                   )}
                                   {el.is_scrollable && (
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                                    <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-sky-600 text-white shadow-2xs">
                                       scroll
                                     </span>
                                   )}
