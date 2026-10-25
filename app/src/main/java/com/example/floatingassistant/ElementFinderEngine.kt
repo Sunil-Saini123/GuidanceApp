@@ -328,6 +328,16 @@ class ElementFinderEngine(private val context: Context) {
                         }
                     }
 
+                    // [PERMANENT FIX] Do not remove this! Target Already Visible Scroll Suppressor.
+                    // If target is in visibleIndices or matches any visibleElement, it is already physically on screen!
+                    // Suppress scroll directives completely so we never tell the user to scroll away from a visible element.
+                    val isTargetVisible = visibleIndices.contains(targetIndex) || 
+                        visibleElements.any { fuzzyElementMatch(it, targetStep) || fuzzyElementMatch(targetStep, it) }
+                    if (isTargetVisible) {
+                        Log.i(TAG, "determineScrollDirection: target '$targetStep' is ALREADY VISIBLE on screen -> suppress scroll directive")
+                        return null
+                    }
+
                     if (visibleIndices.isNotEmpty()) {
                         val avgVisibleIndex = visibleIndices.average()
                         Log.i(TAG, "determineScrollDirection: target '$targetStep' idx=$targetIndex, visible avg=${avgVisibleIndex} (visible count=${visibleIndices.size})")
@@ -504,8 +514,9 @@ class ElementFinderEngine(private val context: Context) {
                     // [PERMANENT FIX] Do not remove this! Minimum Tappable Height & Viewport Visibility Guard.
                     // When an element has scrolled mostly or partially off-screen (e.g. behind a top toolbar or below navigation bar),
                     // Android accessibility tree still reports phantom remnant slivers (e.g. Rect(0, 278, 1080, 304) with height 26px).
-                    // A list row or button requires at least 70px visible height (unless it is a dedicated small navigation icon) to be considered visible and tappable.
-                    val minTappableHeight = if (isDedicatedIcon) 30 else 70
+                    // Standard single-line Android TextViews on 480dpi screens have ~50-65px visible height (e.g. 65px for Screen refresh rate).
+                    // Threshold 40px accepts all legitimate text rows while rejecting 20-30px remnant edge slivers.
+                    val minTappableHeight = if (isDedicatedIcon) 30 else 40
                     if (currentBounds.width() <= 0 || currentBounds.height() < minTappableHeight) {
                         return null
                     }
