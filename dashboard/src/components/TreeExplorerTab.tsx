@@ -114,6 +114,13 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // [PERMANENT FIX] Do not remove this! Declare selectedElement state before keyboard event listeners to prevent TDZ ReferenceError.
+  const [selectedElement, setSelectedElement] = useState<{
+    element: TreeElementItem;
+    screenTitle: string;
+    packageName: string;
+  } | null>(null);
+
   // Element type filter in Live mode: 'all' | 'clickable' | 'scrollable'
   const [elementFilter, setElementFilter] = useState<'all' | 'clickable' | 'scrollable'>('all');
 
@@ -205,12 +212,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   // Nav Graph transition expansion state
   const [expandedTransitions, setExpandedTransitions] = useState<Record<string, boolean>>({});
 
-  // Element info modal
-  const [selectedElement, setSelectedElement] = useState<{
-    element: TreeElementItem;
-    screenTitle: string;
-    packageName: string;
-  } | null>(null);
+
 
   // [PERMANENT FIX] Do not remove this! Cumulative Live UI Element Capture & Scroll Merging.
   // Instead of dropping subsequent telemetry events for an existing screen, merge newly scrolled elements
