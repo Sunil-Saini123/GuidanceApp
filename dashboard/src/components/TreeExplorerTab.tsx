@@ -21,7 +21,10 @@ import {
   Tag,
   FileText,
   Trash2,
-  Filter
+  Filter,
+  Maximize,
+  Minimize,
+  MessageSquare
 } from 'lucide-react';
 import { NavGraph, NavGraphApp, NavGraphScreen, NavGraphTransition } from '../types';
 
@@ -50,6 +53,17 @@ interface ScreenGroup {
 }
 
 export type ScreenEvaluationStatus = 'correct' | 'wrong';
+
+export type ElementEvaluationStatus = 'right' | 'wrong';
+
+export interface ElementEvaluationRecord {
+  id: string; // `${screenId}::${elementName}`
+  screenId: string;
+  elementName: string;
+  status?: ElementEvaluationStatus;
+  comment?: string;
+  updatedAt: number;
+}
 
 export interface ScreenEvaluationRecord {
   id: string; // `${packageName}::${screenTitle}`
@@ -113,6 +127,79 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   const [copiedItemIdx, setCopiedItemIdx] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Fullscreen toggle state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Text size switcher: 'normal' (14px) or 'large' (16px) - defaults to 'large'
+  const [textSize, setTextSize] = useState<'normal' | 'large'>('large');
+
+  // Currently open comment box for an element: `${screenId}::${elemName}`
+  const [openCommentElemId, setOpenCommentElemId] = useState<string | null>(null);
+
+  // [PERMANENT FIX] Do not remove this! Per-element Right/Wrong quality evaluation and persistent comment storage in localStorage.
+  const [elementEvaluations, setElementEvaluations] = useState<Record<string, ElementEvaluationRecord>>(() => {
+    try {
+      const saved = localStorage.getItem('guidance_element_evaluations');
+      return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+
+  // Save element evaluations permanently to localStorage on every change (NEVER ERASED!)
+  useEffect(() => {
+    try {
+      localStorage.setItem('guidance_element_evaluations', JSON.stringify(elementEvaluations));
+    } catch (_) {}
+  }, [elementEvaluations]);
+
+  const toggleElementStatus = (screenId: string, elementName: string, targetStatus: ElementEvaluationStatus) => {
+    const key = `${screenId}::${elementName}`;
+    setElementEvaluations((prev) => {
+      const existing = prev[key];
+      if (existing?.status === targetStatus) {
+        // Toggle off status, but keep comments intact!
+        return {
+          ...prev,
+          [key]: {
+            ...existing,
+            status: undefined,
+            updatedAt: Date.now()
+          }
+        };
+      }
+      return {
+        ...prev,
+        [key]: {
+          id: key,
+          screenId,
+          elementName,
+          status: targetStatus,
+          comment: existing?.comment || '',
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
+
+  const updateElementComment = (screenId: string, elementName: string, comment: string) => {
+    const key = `${screenId}::${elementName}`;
+    setElementEvaluations((prev) => {
+      const existing = prev[key];
+      return {
+        ...prev,
+        [key]: {
+          id: key,
+          screenId,
+          elementName,
+          status: existing?.status,
+          comment,
+          updatedAt: Date.now()
+        }
+      };
+    });
+  };
 
   // [PERMANENT FIX] Do not remove this! Declare selectedElement state before keyboard event listeners to prevent TDZ ReferenceError.
   const [selectedElement, setSelectedElement] = useState<{
@@ -822,7 +909,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         >
           <div className="flex items-center space-x-2.5">
             <FolderOpen className={`w-4 h-4 ${isCurrentLiveScreen ? 'text-emerald-600 animate-pulse' : 'text-indigo-600'}`} />
-            <span className={`text-[13px] font-bold ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : 'text-slate-900'}`}>
+            <span className={`${textSize === 'large' ? 'text-base font-extrabold' : 'text-sm font-bold'} ${isCurrentLiveScreen ? 'text-emerald-950 font-black' : 'text-slate-900'}`}>
               {screen.title}
             </span>
             {isCurrentLiveScreen && (
@@ -1002,12 +1089,12 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         )}
 
                         <span
-                          className={`text-[13px] truncate ${
+                          className={`${textSize === 'large' ? 'text-[15px] font-bold' : 'text-sm font-semibold'} truncate ${
                             isTargetStep
                               ? 'text-amber-950 font-black'
                               : hasTargetScreen
                               ? 'text-indigo-700 font-bold hover:underline'
-                              : 'text-slate-800 font-medium'
+                              : 'text-slate-800'
                           }`}
                         >
                           {highlightMatch(elemName, searchQuery)}
@@ -1026,19 +1113,98 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         )}
                       </div>
 
-                      {/* Right: Action or Type */}
-                      <div className="flex items-center space-x-2 shrink-0">
+                      {/* Right: Per-Element Evaluation (Right, Wrong, Comment) & Type */}
+                      <div className="flex items-center space-x-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {/* Per-Element Right / Wrong Evaluation Buttons */}
+                        {(() => {
+                          const elemEvalKey = `${screen.id}::${elemName}`;
+                          const elemEval = elementEvaluations[elemEvalKey];
+                          return (
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => toggleElementStatus(screen.id, elemName, 'right')}
+                                className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                                  elemEval?.status === 'right'
+                                    ? 'bg-emerald-600 text-white border border-emerald-600 shadow-xs'
+                                    : 'bg-white hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 border border-slate-200'
+                                }`}
+                                title="Mark element as Right"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>Right</span>
+                              </button>
+
+                              <button
+                                onClick={() => toggleElementStatus(screen.id, elemName, 'wrong')}
+                                className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                                  elemEval?.status === 'wrong'
+                                    ? 'bg-rose-600 text-white border border-rose-600 shadow-xs'
+                                    : 'bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200'
+                                }`}
+                                title="Mark element as Wrong"
+                              >
+                                <X className="w-3 h-3" />
+                                <span>Wrong</span>
+                              </button>
+
+                              <button
+                                onClick={() => setOpenCommentElemId(openCommentElemId === elemEvalKey ? null : elemEvalKey)}
+                                className={`flex items-center space-x-1 px-2 py-0.5 rounded-lg text-xs font-semibold transition-all ${
+                                  elemEval?.comment
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-300 font-bold'
+                                    : openCommentElemId === elemEvalKey
+                                    ? 'bg-indigo-100 text-indigo-700 border border-indigo-300'
+                                    : 'bg-white hover:bg-slate-100 text-slate-500 border border-slate-200'
+                                }`}
+                                title="Add or edit persistent comment (never erased)"
+                              >
+                                <MessageSquare className="w-3 h-3" />
+                                <span>{elemEval?.comment ? 'Note' : 'Comment'}</span>
+                              </button>
+                            </div>
+                          );
+                        })()}
+
                         {hasTargetScreen ? (
-                          <span className="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200">
+                          <span className="text-xs font-mono text-indigo-700 font-bold bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-200">
                             SCREEN LINK
                           </span>
                         ) : (
-                          <span className="text-[10px] font-mono text-slate-400">
+                          <span className="text-xs font-mono text-slate-400">
                             action
                           </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Per-Element Persistent Comment Box (Never Erased!) */}
+                    {(() => {
+                      const elemEvalKey = `${screen.id}::${elemName}`;
+                      const elemEval = elementEvaluations[elemEvalKey];
+                      const isOpen = openCommentElemId === elemEvalKey;
+                      if (!isOpen && !elemEval?.comment) return null;
+
+                      return (
+                        <div
+                          className="ml-8 mr-4 my-1.5 p-2 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center space-x-2 shadow-2xs"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <input
+                            type="text"
+                            value={elemEval?.comment || ''}
+                            onChange={(e) => updateElementComment(screen.id, elemName, e.target.value)}
+                            placeholder="Type a permanent comment for this element (auto-saved)..."
+                            className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
+                          />
+                          {elemEval?.comment && (
+                            <span className="text-[10px] font-mono text-emerald-600 font-bold shrink-0">
+                              ✓ Saved
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Child Screen (Expanded recursively under this link!) - [PERMANENT FIX] Code-editor nested block indentation */}
                     {hasTargetScreen && isExpanded && targetScreen && (
@@ -1126,7 +1292,9 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-5 py-3">
+    <div className={`flex-1 flex flex-col min-h-0 bg-[#f8fafc] px-5 py-3 transition-all ${
+      isFullscreen ? 'fixed inset-0 z-50 p-6 overflow-y-auto bg-[#f8fafc]' : ''
+    }`}>
       {/* Top Header & View Mode Switcher */}
       <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-slate-200/80 gap-3">
         <div className="flex items-center space-x-3">
@@ -1148,8 +1316,55 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
           </div>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+        {/* Top Action Controls: Fullscreen, Text Size, View Modes */}
+        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+          {/* Text Size Switcher */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs">
+            <button
+              onClick={() => setTextSize('normal')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                textSize === 'normal'
+                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Standard Text Size"
+            >
+              A Normal
+            </button>
+            <button
+              onClick={() => setTextSize('large')}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                textSize === 'large'
+                  ? 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Large Text Size (Easy reading on big monitors)"
+            >
+              A+ Large
+            </button>
+          </div>
+
+          {/* Fullscreen Button */}
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Exit Fullscreen</span>
+              </>
+            ) : (
+              <>
+                <Maximize className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Fullscreen</span>
+              </>
+            )}
+          </button>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
           <button
             onClick={() => setViewMode('nav_graph')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -1185,6 +1400,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             <Code className="w-3.5 h-3.5" />
             <span>Raw JSON</span>
           </button>
+        </div>
         </div>
       </div>
 
