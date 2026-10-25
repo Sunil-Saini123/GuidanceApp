@@ -322,14 +322,27 @@ object NavigationStateMachine {
                             Log.i(TAG, "Fast-forward: screen='$activeScreenName' matches step[$nearestIdx]='${nearest!!.second}' — starting from ${nearestIdx + 1}")
                             (nearestIdx + 1).coerceAtMost(pathSteps.size - 1)
                         }
-                        // [PERMANENT FIX] Do not remove this! Dynamic Live Tree Sub-Screen Unwinding & Path Re-Anchoring.
+                        // [PERMANENT FIX] Do not remove this! Dynamic Live Tree Sub-Screen Unwinding & Position-Aware Anchoring.
                         // When user is in the target app on a leaf sub-page (e.g. "About phone" or deep sub-menu),
-                        // do NOT fast-forward past root! Prepend "BACK" to unwind back to root first.
+                        // first check if any step in pathSteps is ALREADY physically visible on the current screen (e.g. "Dark mode" on Display & brightness).
+                        // If an item is already on screen, start directly on it without prepending BACK!
                         else -> {
-                            if (!pathSteps.firstOrNull().equals("BACK", ignoreCase = true)) {
-                                pathSteps.add(0, "BACK")
+                            val visibleStepIdx = if (::elementFinder.isInitialized) {
+                                pathSteps.indexOfFirst { step ->
+                                    val b = elementFinder.findElementBoundsInLiveTree(step)
+                                    b != null
+                                }
+                            } else -1
+
+                            if (visibleStepIdx >= 0) {
+                                Log.i(TAG, "Live screen anchor: step[$visibleStepIdx]='${pathSteps[visibleStepIdx]}' is already visible on screen '$activeScreenName' — starting directly at $visibleStepIdx without BACK")
+                                visibleStepIdx
+                            } else {
+                                if (!pathSteps.firstOrNull().equals("BACK", ignoreCase = true)) {
+                                    pathSteps.add(0, "BACK")
+                                }
+                                0
                             }
-                            0
                         }
                     }
 
@@ -1579,13 +1592,14 @@ object NavigationStateMachine {
                         )
                     } else {
                         marker?.hideMarker()
-                        // Last step and not found — keep it simple
+                        // [PERMANENT FIX] Do not remove this! When the element is not found on screen,
+                        // display orange NOT FOUND warning on the HUD with the Reroute button so the user can request AI path re-anchoring.
                         hud.updateHud(
                             stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                            actionInstruction = "Find and tap '$targetStep'",
+                            actionInstruction = "Looking for '$targetStep'",
                             breadcrumb        = buildBreadcrumb(),
-                            contextText       = "Last step",
-                            subTag            = "final-step-hint",
+                            contextText       = "Not found on screen",
+                            subTag            = "not-found-reroute",
                             onHelpRequested   = triggerReroute,
                             hudState          = NavigationHudOverlay.HudState.SEARCHING
                         )

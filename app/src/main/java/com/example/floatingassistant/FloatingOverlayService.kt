@@ -904,9 +904,9 @@ class FloatingOverlayService : Service() {
                 // 3. Gather device info
                 val deviceInfo = DeviceInfoGatherer.gather(this@FloatingOverlayService)
 
-                // [PERMANENT FIX] Do not remove this! Extract connected SQLite Graph DB Context for Reroute.
-                // Gives the AI full knowledge of the verified local graph structure (.db) to prevent hallucinated
-                // or collided generic button steps (e.g. 3-dots on root vs 3-dots in a chat).
+                // [PERMANENT FIX] Do not remove this! Full hierarchical explored tree Reroute payload.
+                // Sends the actual nested screen hierarchy with real elements and outgoing branches explored till now,
+                // ensuring the AI knows what is inside what (e.g. Dark mode inside Display & brightness) rather than just a flat list.
                 val navGraphContext = try {
                     val db = NavGraphDatabase.getInstance(this@FloatingOverlayService)
                     val canonicalPkg = GraphStateMachine.getPackageNameForApp(targetApp) ?: targetApp
@@ -915,27 +915,43 @@ class FloatingOverlayService : Service() {
 
                     if (connectedScreens.isNotEmpty()) {
                         val gObj = org.json.JSONObject()
-                        val sArr = org.json.JSONArray()
-                        connectedScreens.take(15).forEach { s ->
-                            sArr.put(s.screenTitle)
-                        }
-                        gObj.put("known_screens", sArr)
+                        gObj.put("app", targetApp)
+                        gObj.put("package", canonicalPkg)
+                        val screensArr = org.json.JSONArray()
 
-                        val tArr = org.json.JSONArray()
-                        connectedTransitions.take(20).forEach { t ->
-                            val fromTitle = connectedScreens.find { it.id == t.fromScreenId }?.screenTitle ?: t.fromScreenId.substringAfterLast("::")
-                            val toTitle = connectedScreens.find { it.id == t.toScreenId }?.screenTitle ?: t.toScreenId.substringAfterLast("::")
-                            val tObj = org.json.JSONObject()
-                            tObj.put("from", fromTitle)
-                            tObj.put("to", toTitle)
-                            tObj.put("action", t.actionLabel)
-                            tArr.put(tObj)
+                        connectedScreens.forEach { s ->
+                            val sObj = org.json.JSONObject()
+                            sObj.put("screen", s.screenTitle)
+
+                            // Extract real elements inside this screen
+                            val elemArr = org.json.JSONArray()
+                            try {
+                                val rawElems = org.json.JSONArray(s.elementsJson)
+                                for (i in 0 until rawElems.length()) {
+                                    val name = rawElems.optJSONObject(i)?.optString("name", "")?.trim() ?: ""
+                                    if (name.isNotEmpty()) elemArr.put(name)
+                                }
+                            } catch (_: Exception) {}
+                            sObj.put("elements", elemArr)
+
+                            // Extract outgoing transitions from this screen
+                            val branchArr = org.json.JSONArray()
+                            connectedTransitions.filter { it.fromScreenId == s.id && it.actionType == "CLICK" }.forEach { t ->
+                                val toTitle = connectedScreens.find { it.id == t.toScreenId }?.screenTitle ?: t.toScreenId.substringAfterLast("::")
+                                val bObj = org.json.JSONObject()
+                                bObj.put("action", t.actionLabel)
+                                bObj.put("to_screen", toTitle)
+                                branchArr.put(bObj)
+                            }
+                            sObj.put("branches", branchArr)
+
+                            screensArr.put(sObj)
                         }
-                        gObj.put("known_transitions", tArr)
+                        gObj.put("explored_tree", screensArr)
                         gObj
                     } else null
                 } catch (e: Exception) {
-                    Log.w("[PathFinder]", "Failed to extract graph context: ${e.message}")
+                    Log.w("[PathFinder]", "Failed to extract hierarchical graph context: ${e.message}")
                     null
                 }
 

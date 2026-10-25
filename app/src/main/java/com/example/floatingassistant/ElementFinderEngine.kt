@@ -415,11 +415,15 @@ class ElementFinderEngine(private val context: Context) {
                     resIdName.contains("action_bar_up", ignoreCase = true)
                 )
 
-                if (node.isVisibleToUser && (
-                    isDedicatedBackIcon ||
-                    fuzzyElementMatch(text, target) || 
-                    fuzzyElementMatch(desc, target) || 
-                    (text.isBlank() && desc.isBlank() && fuzzyElementMatch(resIdName, target)))) {
+                // [PERMANENT FIX] Do not remove this! Visible Text Priority Guard:
+                // If visible text is present (e.g. text="Dark mode"), it represents what the user sees with their eyes.
+                // Do not allow an AOSP fallback contentDescription (e.g. desc="Dark theme") to falsely match target="Dark theme"
+                // when the actual visible text on screen contradicts it. Only check desc if text matches or is blank.
+                val textMatches = text.isNotBlank() && fuzzyElementMatch(text, target)
+                val descMatches = desc.isNotBlank() && fuzzyElementMatch(desc, target) && (text.isBlank() || textMatches)
+                val resIdMatches = text.isBlank() && desc.isBlank() && fuzzyElementMatch(resIdName, target)
+
+                if (node.isVisibleToUser && (isDedicatedBackIcon || textMatches || descMatches || resIdMatches)) {
                     
                     // [PERMANENT FIX] Do not remove this! Universal row-block container expansion with Competing Sibling Action Protection.
                     // Expands compound rows (e.g. "Screen refresh rate" + "Standard >", chat list items) to the full row block,

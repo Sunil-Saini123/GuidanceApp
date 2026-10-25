@@ -137,7 +137,7 @@ public class PromptBuilder {
         }
 
         if (navGraphContext != null && navGraphContext.length() > 0) {
-            sb.append("Verified Local App Navigation Graph (.db):\n").append(navGraphContext.toString()).append("\n\n");
+            sb.append(formatHierarchicalTree(navGraphContext));
         }
 
         // [PERMANENT FIX] Do not remove this! Format screen elements concisely so the AI sees all elements on screen without truncation.
@@ -168,8 +168,9 @@ public class PromptBuilder {
         sb.append("   - AOSP/Pixel: 'About phone'  |  ColorOS/Realme/OPPO: 'About device'  |  Samsung OneUI: 'About phone'  |  MIUI/Xiaomi: 'About phone'\n");
         sb.append("   - AOSP: 'Display'  |  ColorOS: 'Display & brightness'\n");
         sb.append("   Check the Device Context above to determine the correct OEM naming.\n");
-        sb.append("5. Disambiguate Generic & Ambiguous Controls: Generic buttons like 'More options' (3 dots), 'Search', 'Menu', or 'Settings' exist on multiple different screens with totally different functions. You MUST make sure each step realistically belongs to the CURRENT screen. If the user is on the wrong screen (e.g. inside a wrong chat or wrong sub-page), output 'Back' first to return to the parent screen before proceeding.\n");
-        sb.append("6. Generate the exact ordered navigation path to accomplish the task.\n");
+        sb.append("5. Disambiguate Generic & Ambiguous Controls: Generic buttons like 'More options' (3 dots), 'Search', 'Menu', or 'Settings' exist on multiple different screens with totally different functions. You MUST make sure each step realistically belongs to the CURRENT screen.\n");
+        sb.append("6. [PERMANENT FIX] TARGET ON-SCREEN & TREE POSITION RULE: If the target option (e.g. for task 'Turn on Dark mode', the button 'Dark mode') is ALREADY on the current screen or inside the current sub-screen according to the Explored App Navigation Tree above, output the path directly forward from root/current screen (e.g. [\"Display & brightness\", \"Dark mode\"] or [\"Dark mode\"]). NEVER output 'BACK' or 'Home' when the user is already on the screen containing the target element!\n");
+        sb.append("7. Generate the exact ordered navigation path to accomplish the task.\n");
         return sb.toString();
     }
 
@@ -206,5 +207,54 @@ public class PromptBuilder {
             screen = screen.substring(0, GroqProxyClient.MAX_SCREEN_CONTENT_CHARS) + "\n... [truncated]";
         }
         return "Current Screen Elements (live UI snapshot):\n" + screen + "\n\n";
+    }
+
+    // [PERMANENT FIX] Do not remove this! Format explored app navigation tree as an actual nested hierarchy
+    // where the AI clearly understands what is inside what (e.g. Dark mode inside Display & brightness).
+    private static String formatHierarchicalTree(JSONObject navGraphContext) {
+        if (navGraphContext == null || navGraphContext.length() == 0) return "";
+        try {
+            JSONArray screens = navGraphContext.optJSONArray("explored_tree");
+            if (screens == null || screens.length() == 0) {
+                return "Verified Local App Navigation Graph (.db):\n" + navGraphContext.toString() + "\n\n";
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("Verified Local App Navigation Graph (.db) - EXPLORED APP NAVIGATION TREE (Actual Hierarchical Structure - What is inside what):\n");
+            sb.append("Target App: ").append(navGraphContext.optString("app", "Settings")).append("\n");
+
+            for (int i = 0; i < screens.length(); i++) {
+                JSONObject s = screens.optJSONObject(i);
+                if (s == null) continue;
+                String title = s.optString("screen", "");
+                sb.append("▼ Screen: [").append(title).append("]\n");
+
+                JSONArray elems = s.optJSONArray("elements");
+                if (elems != null && elems.length() > 0) {
+                    sb.append("   Elements on this screen: [");
+                    for (int j = 0; j < Math.min(elems.length(), 25); j++) {
+                        sb.append("\"").append(elems.optString(j, "")).append("\"");
+                        if (j < Math.min(elems.length(), 25) - 1) sb.append(", ");
+                    }
+                    if (elems.length() > 25) sb.append(", ...");
+                    sb.append("]\n");
+                }
+
+                JSONArray branches = s.optJSONArray("branches");
+                if (branches != null && branches.length() > 0) {
+                    for (int b = 0; b < branches.length(); b++) {
+                        JSONObject br = branches.optJSONObject(b);
+                        if (br == null) continue;
+                        String act = br.optString("action", "");
+                        String leadsTo = br.optString("to_screen", "");
+                        sb.append("   └── Tapping \"").append(act).append("\" leads to Sub-Screen -> [").append(leadsTo).append("]\n");
+                    }
+                }
+                sb.append("\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "Explored App Navigation Tree:\n" + navGraphContext.toString() + "\n\n";
+        }
     }
 }
