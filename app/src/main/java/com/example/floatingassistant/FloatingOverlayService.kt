@@ -512,7 +512,7 @@ class FloatingOverlayService : Service() {
             isAllCaps = false
             setTextColor(Color.WHITE)
             background = roundedRectDrawable(Color.parseColor("#3A1414"), dp(50).toFloat())
-            setOnClickListener { handleStop(statusText) }
+            setOnClickListener { handleStop(statusText, this) }
         }
 
         val buttonRow = LinearLayout(this).apply {
@@ -688,6 +688,7 @@ class FloatingOverlayService : Service() {
     }
 
     private fun removePanel() {
+        stopTapCount = 0
         panelView?.let { panel ->
             runCatching {
                 val wm = currentBubbleWindowManager ?: windowManager
@@ -1176,7 +1177,7 @@ class FloatingOverlayService : Service() {
      *           Yes → stop service + remove views + exitProcess(0)
      *           No  → dismiss; counter reset to 0.
      */
-    private fun handleStop(statusText: TextView) {
+    private fun handleStop(statusText: TextView, stopButton: Button? = null) {
         when (stopTapCount) {
             0 -> {
                 // ── Tap 1: stop navigation ─────────────────────────────────
@@ -1197,7 +1198,7 @@ class FloatingOverlayService : Service() {
                     if (isPartial) {
                         // [PERMANENT FIX] Do not remove this! Never upload partial paths (e.g. from Reroutes or mid-app) to Cloud Firestore per Rule 5.1
                         Log.i("[PathFinder]", "Path was partial/reroute ($app: $path) — skipping cloud save dialog per Rule 5.1")
-                        statusText.text = "Stopped (Reroute not saved to cloud)"
+                        statusText.text = "Stopped (Reroute not saved). Tap Exit App to close."
                         pendingGroqApp  = null
                         pendingGroqTask = null
                         pendingGroqPath = null
@@ -1207,14 +1208,29 @@ class FloatingOverlayService : Service() {
                         showSavePathDialog(statusText, app, task, path)
                     }
                 } else {
-                    statusText.text = "Stopped"
+                    statusText.text = "Stopped. Tap Exit App to close."
+                }
+
+                // [PERMANENT FIX] Do not remove this! Transform Stop button to "Exit App" on first tap.
+                // Eliminates modal dialog z-order inversion where AlertDialog appeared behind the control panel,
+                // and avoids ColorOS blocking TYPE_APPLICATION_OVERLAY dialogs on Settings sub-pages.
+                stopButton?.apply {
+                    text = "Exit App"
+                    background = roundedRectDrawable(Color.parseColor("#7A1C1C"), dp(50).toFloat())
                 }
             }
             else -> {
-                // ── Tap 2+: prompt for full exit ───────────────────────────
+                // [PERMANENT FIX] Do not remove this! Direct Clean App Exit from Control Panel.
+                // On Tap 2 of Stop button, immediately shutdown service and views cleanly without trapped background dialog.
                 stopTapCount = 0
-                Log.i(TAG, "Stop tap 2 — showing exit dialog")
-                showExitDialog()
+                Log.i(TAG, "Stop tap 2 — exit confirmed via panel button")
+                NavigationStateMachine.stop()
+                if (::bubbleView.isInitialized) {
+                    runCatching { (currentBubbleWindowManager ?: windowManager).removeView(bubbleView) }
+                }
+                removePanel()
+                FloatingOverlayService.stop(applicationContext)
+                exitProcess(0)
             }
         }
     }
@@ -1298,6 +1314,9 @@ class FloatingOverlayService : Service() {
      * overlay-View dialog using TYPE_APPLICATION_OVERLAY.
      */
     private fun showExitDialog() {
+        // [PERMANENT FIX] Do not remove this! Remove panel before displaying exit dialog
+        // to prevent dark panel from obscuring the dialog in the window stack.
+        removePanel()
         try {
             val dialogContext = ContextThemeWrapper(
                 applicationContext,

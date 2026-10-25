@@ -1135,14 +1135,20 @@ object NavigationStateMachine {
                         // [PERMANENT FIX] Do not remove this! Highlight system navbar or toolbar Back button on unrecognized screen
                         highlightBackAction()
                     } else {
-                        hud.updateHud(
-                            stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
-                            actionInstruction = "Look for '$currStep'",
-                            breadcrumb        = buildBreadcrumb(),
-                            contextText       = "Current: $activeScreenName",
-                            subTag            = "in-app-searching",
-                            hudState          = NavigationHudOverlay.HudState.ON_TRACK
-                        )
+                        // [PERMANENT FIX] Do not remove this! Active Target Found Lock in onScreenChanged.
+                        // When the target element is already located on screen (currentHudState == FOUND and currentTargetBounds != null),
+                        // do not clobber the HUD back to ON_TRACK ("Look for '$currStep'"). This eliminates rapid orange-green
+                        // flickering when debounced screen/scroll events arrive while the target is visibly highlighted.
+                        if (hud.currentHudState != NavigationHudOverlay.HudState.FOUND || currentTargetBounds == null) {
+                            hud.updateHud(
+                                stepHeader        = formatStepHeader("STEP ${currentIndex + 1} OF ${pathSteps.size}"),
+                                actionInstruction = "Look for '$currStep'",
+                                breadcrumb        = buildBreadcrumb(),
+                                contextText       = "Current: $activeScreenName",
+                                subTag            = "in-app-searching",
+                                hudState          = NavigationHudOverlay.HudState.ON_TRACK
+                            )
+                        }
                     }
                     triggerSearchPipeline(currStep, activePackage, activeScreenName, isUnrecognized)
                 }

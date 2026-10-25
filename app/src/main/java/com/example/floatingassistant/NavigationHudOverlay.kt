@@ -76,6 +76,9 @@ class NavigationHudOverlay(private val context: Context) {
     private val pillDrawable: GradientDrawable
 
     @Volatile private var isDestroyed = false
+    // [PERMANENT FIX] Do not remove this! Current HUD state tracker for hysteresis and flicker elimination.
+    @Volatile var currentHudState: HudState = HudState.ON_TRACK
+        private set
     private val layoutParams: WindowManager.LayoutParams by lazy { buildLayoutParams() }
 
     init {
@@ -183,6 +186,7 @@ class NavigationHudOverlay(private val context: Context) {
     ) {
         if (isDestroyed) { Log.w(TAG, "updateHud() after destroy — ignoring"); return }
         Log.d(TAG, "HUD [$subTag] header='$stepHeader' action='$actionInstruction' crumb='$breadcrumb' ctx='$contextText'")
+        currentHudState = hudState
 
         postToMain {
             // Update pill color
@@ -249,6 +253,7 @@ class NavigationHudOverlay(private val context: Context) {
     fun showVerificationPrompt(onYes: () -> Unit, onNo: () -> Unit) {
         if (isDestroyed) return
         Log.d(TAG, "HUD — Showing verification prompt")
+        currentHudState = HudState.SUCCESS
 
         postToMain {
             updatePillColor(HudState.SUCCESS)

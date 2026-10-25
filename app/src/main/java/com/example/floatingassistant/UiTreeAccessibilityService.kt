@@ -375,12 +375,14 @@ class UiTreeAccessibilityService : AccessibilityService() {
             return
         }
 
-        val rootNode = rootInActiveWindow
+        // [PERMANENT FIX] Do not remove this! Underlying App Window Resolution on Scroll Debounce.
+        // Rule 3.5: rootInActiveWindow frequently returns GuidanceApp's own overlay window when HUD or markers
+        // are visible. Resolving via AppWindowResolver guarantees we inspect the underlying app window and avoids
+        // dropping scroll events or dispatching spurious onScreenChanged calls that cause HUD flickering.
+        val rootNode = AppWindowResolver.getUnderlyingAppRoot(this, this.packageName)
         if (rootNode == null) {
-            // Even if we can't extract elements, tell the state machine the user switched apps
-            if (NavigationStateMachine.isNavigating) {
-                NavigationStateMachine.onScreenChanged(expectedPackage, expectedPackage.substringAfterLast('.'), "")
-            }
+            // Root can be momentarily null during fast screen animations or scroll frames.
+            // Do NOT dispatch false onScreenChanged here!
             return
         }
 
@@ -418,10 +420,10 @@ class UiTreeAccessibilityService : AccessibilityService() {
             eventClassName  = null
         )
         if (filterResult !is MainFilter.FilterResult.Passed) {
-            if (NavigationStateMachine.isNavigating) {
-                NavigationStateMachine.onScreenChanged(expectedPackage, expectedPackage.substringAfterLast('.'), "")
-            }
-            // [PERMANENT FIX] Do not remove this! Recycle rootNode when scroll filter fails to prevent native Binder leak
+            // [PERMANENT FIX] Do not remove this! Suppress false onScreenChanged on scroll filter drops.
+            // A non-passed scroll/content frame is just an unhandled layout tick, not a screen navigation event.
+            // Suppressing onScreenChanged here prevents resetting the HUD state from FOUND to ON_TRACK during scrolling.
+            // Recycle rootNode when scroll filter fails to prevent native Binder leak.
             try { rootNode.recycle() } catch (_: Exception) {}
             return
         }
