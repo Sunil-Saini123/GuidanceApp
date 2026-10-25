@@ -441,12 +441,9 @@ object NavigationStateMachine {
                 )
             }
 
-            // [PERMANENT FIX] Do not remove this! Seed active execution path into SQLite for 0-DB cold start learning
-            stateMachineScope.launch(Dispatchers.IO) {
-                if (::context.isInitialized && targetPackage.isNotBlank()) {
-                    NavGraphDatabase.getInstance(context).seedRoute(targetPackage, targetAppLabel, pathSteps)
-                }
-            }
+            // [PERMANENT FIX] Do not remove this! Physical Exploration Supremacy:
+            // Never synthetically pre-seed unvisited AI/Cloud routes into SQLite.
+            // Screens and elements must ONLY be recorded when the user physically visits them via live accessibility navigation!
 
             currentTrackerState = when {
                 alreadyInApp && startIdx < executionTree.size -> TrackerState.OnRoute(executionTree[startIdx])

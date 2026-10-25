@@ -45,6 +45,11 @@ These rules are strictly enforced across all code changes, architecture decision
    - Always explain things using **simple, plain words** and basic grammar so it is easy to read.
    - Keep responses **short, concise, and direct**—avoid lengthy paragraphs or overwhelming technical jargon.
    - Clearly state: 1) What broke, 2) Why (with a simple daily-life example), and 3) The quick fix.
+9. **Continuous Evaluation & Ground-Truth Tree Quality Rule:**
+   - **Inspect Right/Wrong & Comments Every Time:** The agent MUST inspect the evaluation dataset (`dashboard/evaluations.json`) before making changes to understand what elements the user flagged as Right vs. Wrong.
+   - **Permanent Right Data:** Data marked as `Right` represents verified ground truth and must NEVER be deleted by `CLEAR_GRAPH` or generic history clears. Only a dedicated user action (`Clear Right Data`) can clear it.
+   - **Root Cause & Elimination of Wrong Data:** The primary engineering goal is to identify why bad data entered the tree, trace the root cause in `CleanPageProcessor` or `NavGraphDatabase`, and eliminate that category of bad data permanently so it never re-occurs.
+   - **Physical Exploration Supremacy (No Fake Pre-Seeding):** Synthetic path pre-population (`seedRoute`) is forbidden. Screens and transitions must ONLY be added to the database when physically navigated in real time.
 
 ---
 

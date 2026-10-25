@@ -162,8 +162,56 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   useEffect(() => {
     try {
       localStorage.setItem('guidance_element_evaluations', JSON.stringify(elementEvaluations));
+      fetch('/api/evaluations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ elements: elementEvaluations })
+      }).catch(() => {});
     } catch (_) {}
   }, [elementEvaluations]);
+
+  // Load persistent evaluations from backend on mount
+  useEffect(() => {
+    fetch('/api/evaluations')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        if (data.elements && Object.keys(data.elements).length > 0) {
+          setElementEvaluations((prev) => ({ ...data.elements, ...prev }));
+        }
+        if (data.screens && Object.keys(data.screens).length > 0) {
+          setEvaluations((prev) => ({ ...data.screens, ...prev }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // [PERMANENT FIX] Do not remove this! Dedicated Clear-Right Evaluation Control. Keeps wrong issues and comments preserved.
+  const handleClearRight = async () => {
+    try {
+      await fetch('/api/evaluations/clear-right', { method: 'POST' });
+    } catch (_) {}
+    setElementEvaluations((prev) => {
+      const next: Record<string, ElementEvaluationRecord> = {};
+      for (const [key, val] of Object.entries(prev)) {
+        if (val.status !== 'right') {
+          next[key] = val;
+        } else if (val.comment) {
+          next[key] = { ...val, status: undefined };
+        }
+      }
+      return next;
+    });
+    setEvaluations((prev) => {
+      const next: Record<string, EvaluationStatus> = {};
+      for (const [key, val] of Object.entries(prev)) {
+        if (val !== 'correct') {
+          next[key] = val;
+        }
+      }
+      return next;
+    });
+  };
 
   const toggleElementStatus = (screenId: string, elementName: string, targetStatus: ElementEvaluationStatus) => {
     const key = `${screenId}::${elementName}`;
@@ -1447,6 +1495,15 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             <span className="px-2 py-0.5 rounded-lg font-mono font-medium text-slate-500">
               {navGraphStats.unreviewed} Unreviewed
             </span>
+            {navGraphStats.correct > 0 && (
+              <button
+                onClick={handleClearRight}
+                className="px-2 py-0.5 rounded-lg font-mono font-bold text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition-all cursor-pointer ml-1.5"
+                title="Clear only verified Right elements. Wrong issues and comments are preserved!"
+              >
+                Clear Right Data
+              </button>
+            )}
           </div>
           <div className="text-[11px] font-mono text-slate-400 font-medium">
             {Math.round(((navGraphStats.correct + navGraphStats.wrong) / Math.max(1, navGraphStats.totalScreens)) * 100)}% Evaluated

@@ -494,6 +494,11 @@ object CleanPageProcessor {
             // ── Rule 2: Drop dynamic data ─────────────────────────────────────
             if (isDynamic(name)) { i++; continue }
 
+            // [PERMANENT FIX] Do not remove this! Standalone Status Word Suppression:
+            // Drop standalone status/toggle state words (e.g. "Off", "On", "Connected", "Disabled")
+            // so they never become independent navigation elements.
+            if (name.lowercase() in CONTAINER_STATUS_WORDS) { i++; continue }
+
             // ── Rule 5: Name-level dedup ──────────────────────────────────────
             if (seenNames.add(name.lowercase())) {
                 result.add(buildElement(name, node, bounds, source = "direct"))

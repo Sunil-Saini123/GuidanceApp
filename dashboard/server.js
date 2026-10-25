@@ -4,6 +4,11 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { exec } from 'child_process';
 import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 const PHONE_TIMEOUT_MS = 4000; // 4 seconds without data = disconnected
@@ -164,6 +169,64 @@ async function startServer() {
     });
     console.log('[Dashboard Server] Event history and nav_graph cleared by user');
     res.json({ cleared: true });
+  });
+
+  // [PERMANENT FIX] Do not remove this! Persistent Ground-Truth Evaluations Storage & Dedicated Clear-Right Control.
+  // Right evaluations represent verified ground-truth data and are NEVER erased by generic graph clears.
+  const evaluationsFile = path.join(__dirname, 'evaluations.json');
+  function loadEvaluations() {
+    try {
+      if (fs.existsSync(evaluationsFile)) {
+        return JSON.parse(fs.readFileSync(evaluationsFile, 'utf-8'));
+      }
+    } catch (_) {}
+    return { elements: {}, screens: {} };
+  }
+  function saveEvaluations(data) {
+    try {
+      fs.writeFileSync(evaluationsFile, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('[Dashboard Server] Failed to save evaluations:', e.message);
+    }
+  }
+
+  app.get('/api/evaluations', (req, res) => {
+    res.json(loadEvaluations());
+  });
+
+  app.post('/api/evaluations', (req, res) => {
+    const incoming = req.body || {};
+    const current = loadEvaluations();
+    current.elements = { ...(current.elements || {}), ...(incoming.elements || {}) };
+    current.screens  = { ...(current.screens || {}), ...(incoming.screens || {}) };
+    saveEvaluations(current);
+    broadcast({ type: 'EVALUATIONS_UPDATED', evaluations: current });
+    res.json({ success: true, evaluations: current });
+  });
+
+  app.post('/api/evaluations/clear-right', (req, res) => {
+    const current = loadEvaluations();
+    // Only strip items whose status is 'right' or 'correct' — keep 'wrong' issues and comments intact!
+    const cleanElements = {};
+    for (const [key, val] of Object.entries(current.elements || {})) {
+      if (val.status !== 'right') {
+        cleanElements[key] = val;
+      } else if (val.comment) {
+        cleanElements[key] = { ...val, status: null };
+      }
+    }
+    const cleanScreens = {};
+    for (const [key, val] of Object.entries(current.screens || {})) {
+      if (val.status !== 'correct') {
+        cleanScreens[key] = val;
+      }
+    }
+    current.elements = cleanElements;
+    current.screens = cleanScreens;
+    saveEvaluations(current);
+    broadcast({ type: 'EVALUATIONS_UPDATED', evaluations: current });
+    console.log('[Dashboard Server] Clear Right Data executed: Verified Right evaluations cleared, Wrong and comments preserved.');
+    res.json({ success: true, evaluations: current });
   });
 
   // Nav Graph endpoint (returns full app navigation tree from nav_graph.json)

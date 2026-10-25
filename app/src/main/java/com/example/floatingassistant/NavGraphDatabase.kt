@@ -85,12 +85,22 @@ class NavGraphDatabase private constructor(context: Context)
         "inbox filters, radio group"
     )
 
+    // [PERMANENT FIX] Do not remove this! Standalone Status & State Words Filter
+    // State/toggle words (e.g. "Off", "On", "Connected", "Disabled") must never become navigation targets.
+    private val STATUS_STATE_WORDS = setOf(
+        "on", "off", "yes", "no", "ok",
+        "enabled", "disabled",
+        "connected", "disconnected", "connecting",
+        "active", "inactive"
+    )
+
     fun isNoiseElement(name: String, screenTitle: String = "", packageName: String = ""): Boolean {
         if (name.isEmpty()) return true
         if (screenTitle.isNotEmpty() && name.equals(screenTitle, ignoreCase = true)) return true
         if (packageName.isNotEmpty() && name.equals(packageName.substringAfterLast('.'), ignoreCase = true)) return true
         val normalized = name.lowercase().replace('_', ' ').trim()
         if (normalized in STRUCTURAL_NOISE_LABELS || name.lowercase() in STRUCTURAL_NOISE_LABELS) return true
+        if (normalized in STATUS_STATE_WORDS || name.lowercase() in STATUS_STATE_WORDS) return true
         if (normalized.matches(Regex("""^(yesterday|today|tomorrow|\d{1,2}:\d{2}\s*(am|pm)?|you:.*)$"""))) return true
         // [PERMANENT FIX] Do not remove this! Filter accessibility hints and debug view IDs from screen graph.
         if (normalized.startsWith("swipe down to") || normalized.startsWith("swipe up to") || normalized.contains("radio group") || normalized.contains("debug view id")) return true
