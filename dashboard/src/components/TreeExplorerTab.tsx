@@ -26,11 +26,12 @@ import {
   Minimize,
   MessageSquare
 } from 'lucide-react';
-import { NavGraph, NavGraphApp, NavGraphScreen, NavGraphTransition } from '../types';
+import { NavGraph, NavGraphApp, NavGraphScreen, NavGraphTransition, AppState } from '../types';
 
 interface TreeExplorerTabProps {
   events: any[];
   navGraph: NavGraph | null;
+  appState?: AppState;
 }
 
 export interface TreeElementItem {
@@ -130,7 +131,7 @@ const getLayerStyle = (layer: number) => {
   }
 };
 
-export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGraph }) => {
+export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGraph, appState }) => {
   const [viewMode, setViewMode] = useState<'nav_graph' | 'live' | 'json'>(() => {
     return navGraph && navGraph.apps && navGraph.apps.length > 0 ? 'nav_graph' : 'nav_graph';
   });
@@ -300,6 +301,13 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   // [PERMANENT FIX] Do not remove this! Keyboard shortcuts: Esc closes side drawer, clears search, or exits tree fullscreen.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // [PERMANENT FIX] Do not remove this! Keyboard Shortcut: Ctrl + Enter / Cmd + Enter toggles Maximize & Minimize (Fullscreen)
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setIsFullscreen((prev) => !prev);
+        return;
+      }
+
       if (e.key === 'Escape') {
         if (selectedElement) {
           setSelectedElement(null);
@@ -414,23 +422,64 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
   // [PERMANENT FIX] Do not remove this! Real-time phone location flagging with live screen and target step indicator.
   const latestLiveLocation = useMemo(() => {
-    let screenTitle = '';
-    let packageName = '';
-    let currentStep = '';
+    let screenTitle = appState?.activeScreenTitle || '';
+    let packageName = appState?.activePackage || '';
+    let currentStep = appState?.currentStep || '';
 
-    for (let i = events.length - 1; i >= 0; i--) {
+    // Inspect events (newest first, index 0 is newest)
+    for (let i = 0; i < events.length; i++) {
       const ev = events[i];
-      if (!screenTitle && (ev.tag === 'SCREEN_CHANGED' || ev.tag === 'CLEAN_PAGE') && ev.payload) {
-        screenTitle = ev.payload.screen_title || ev.payload.title || ev.payload.new_screen || '';
-        packageName = ev.payload.package_name || ev.payload.package || '';
+      if (!ev) continue;
+
+      if (!screenTitle) {
+        const title =
+          ev.screenTitle ||
+          (ev as any).screen_title ||
+          ev.payload?.screen_title ||
+          ev.payload?.title ||
+          ev.payload?.new_screen ||
+          (ev.type === 'SCREEN_CHANGED' && ev.title ? ev.title.replace(/^Screen Transition:\s*/i, '') : '');
+        if (title) {
+          screenTitle = title;
+          if (!packageName) {
+            packageName = ev.packageName || (ev as any).package_name || ev.payload?.package_name || ev.payload?.package || '';
+          }
+        }
       }
-      if (!currentStep && ev.tag === 'STEP_ADVANCED' && ev.payload) {
-        currentStep = ev.payload.next_step || ev.payload.step || '';
+
+      if (!packageName) {
+        const pkg = ev.packageName || (ev as any).package_name || ev.payload?.package_name || ev.payload?.package || '';
+        if (pkg) {
+          packageName = pkg;
+        }
       }
-      if (screenTitle && currentStep) break;
+
+      if (!currentStep) {
+        const step = ev.currentStep || (ev as any).current_step || ev.payload?.next_step || ev.payload?.step || '';
+        if (step) {
+          currentStep = step;
+        }
+      }
+
+      if (screenTitle && packageName && currentStep) break;
     }
+
     return { screenTitle, packageName, currentStep };
-  }, [events]);
+  }, [events, appState?.activeScreenTitle, appState?.activePackage, appState?.currentStep]);
+
+  // [PERMANENT FIX] Do not remove this! Auto-Switch App Tab on Phone Package Change.
+  useEffect(() => {
+    if (latestLiveLocation.packageName && navGraph?.apps) {
+      const livePkg = latestLiveLocation.packageName.toLowerCase();
+      const matchingApp = navGraph.apps.find((a) => {
+        const aPkg = a.package_name.toLowerCase();
+        return aPkg === livePkg || (livePkg.includes('settings') && aPkg.includes('settings'));
+      });
+      if (matchingApp && matchingApp.package_name !== selectedAppPkg) {
+        setSelectedAppPkg(matchingApp.package_name);
+      }
+    }
+  }, [latestLiveLocation.packageName, navGraph]);
 
   const [expandedLiveScreens, setExpandedLiveScreens] = useState<Record<string, boolean>>({
     0: true
@@ -744,21 +793,29 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   useEffect(() => {
     if (!latestLiveLocation.screenTitle || !activeApp) return;
 
-    const targetTitleNorm = normalizeLabel(latestLiveLocation.screenTitle);
-    const targetScreen = activeApp.screens.find(
-      (s) => normalizeLabel(s.title) === targetTitleNorm
-    );
-    if (!targetScreen) return;
+    const targetTitleNorm = normalizeLabel(latestLiveLocation.screenTitle.replace(/,\s*\d+\s+new.*$/i, ''));
+    if (!targetTitleNorm || targetTitleNorm === 'settings') return;
 
     const toExpand: Record<string, boolean> = {};
 
     (activeApp.screens || []).forEach((parent) => {
       (parent.elements || []).forEach((elem, eIdx) => {
         const transKey = `${parent.id}_to_${elem}_${eIdx}`;
-        const hasTransition = (parent.transitions || []).some(
-          (t) => t.to_id === targetScreen.id
-        );
-        if (hasTransition || normalizeLabel(elem) === targetTitleNorm) {
+        const normElem = normalizeLabel(elem);
+
+        const matchesTransition = (parent.transitions || []).some((t) => {
+          if (t.type !== 'CLICK') return false;
+          const normAction = normalizeLabel(t.action);
+          const normToTitle = normalizeLabel(t.to_title);
+          return (normAction === normElem || normToTitle === normElem) &&
+                 (normToTitle === targetTitleNorm || (targetTitleNorm.length >= 4 && (normToTitle.includes(targetTitleNorm) || targetTitleNorm.includes(normToTitle))));
+        });
+
+        const matchesDirectName = (normElem === targetTitleNorm ||
+          (normElem.length >= 4 && (targetTitleNorm.includes(normElem) || normElem.includes(targetTitleNorm)))) &&
+          normElem !== 'settings';
+
+        if (matchesTransition || matchesDirectName) {
           toExpand[transKey] = true;
         }
       });
@@ -931,14 +988,16 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
     const isCurrentLiveScreen = Boolean(
       liveTitleNorm &&
-      (!latestLiveLocation?.packageName || screen.id.toLowerCase().startsWith(latestLiveLocation.packageName.toLowerCase())) &&
+      (!latestLiveLocation?.packageName ||
+       screen.id.toLowerCase().startsWith(latestLiveLocation.packageName.toLowerCase()) ||
+       (latestLiveLocation.packageName.includes('settings') && screen.id.includes('settings'))) &&
       (
         screenTitleNorm === liveTitleNorm ||
         (screenTitleNorm === 'chats' && (liveTitleNorm === 'whatsapp' || liveTitleNorm === 'chats')) ||
         (screenTitleNorm === 'whatsapp' && (liveTitleNorm === 'chats' || liveTitleNorm === 'whatsapp')) ||
-        (screenTitleNorm === 'settings' && liveTitleNorm.includes('settings')) ||
-        (screenTitleNorm.length >= 3 && liveTitleNorm.includes(screenTitleNorm)) ||
-        (liveTitleNorm.length >= 3 && screenTitleNorm.includes(liveTitleNorm))
+        (screenTitleNorm === 'settings' && (liveTitleNorm === 'settings' || liveTitleNorm === 'settings homepage')) ||
+        (screenTitleNorm !== 'settings' && liveTitleNorm !== 'settings' && screenTitleNorm.length >= 4 &&
+         (liveTitleNorm === screenTitleNorm || (liveTitleNorm.length >= 4 && (liveTitleNorm.includes(screenTitleNorm) || screenTitleNorm.includes(liveTitleNorm)))))
       )
     );
 
@@ -1120,6 +1179,31 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 const isRight = elemEval?.status === 'right';
                 const isWrong = elemEval?.status === 'wrong';
 
+                // [PERMANENT FIX] Do not remove this! Screen Link Live Location Flagging (Place 1).
+                // If the phone is currently inside a sub-screen, mark the link in the parent screen (e.g. "Display & brightness" under Settings).
+                const isCurrentScreen =
+                  screenTitleNorm === liveTitleNorm ||
+                  (screenTitleNorm === 'settings' && (liveTitleNorm === 'settings' || liveTitleNorm === 'settings homepage')) ||
+                  (screenTitleNorm === 'chats' && (liveTitleNorm === 'whatsapp' || liveTitleNorm === 'chats')) ||
+                  (screenTitleNorm === 'whatsapp' && (liveTitleNorm === 'chats' || liveTitleNorm === 'whatsapp'));
+
+                const targetTitleNorm = targetScreen ? normalizeLabel(targetScreen.title.replace(/,\s*\d+\s+new.*$/i, '')) : '';
+                const transToNorm = transition ? normalizeLabel(transition.to_title.replace(/,\s*\d+\s+new.*$/i, '')) : '';
+
+                const isDirectLiveLink = Boolean(
+                  !isCurrentScreen &&
+                  liveTitleNorm &&
+                  (hasTargetScreen || transition) &&
+                  (
+                    normElem === liveTitleNorm ||
+                    targetTitleNorm === liveTitleNorm ||
+                    transToNorm === liveTitleNorm ||
+                    (normElem.length >= 4 && (liveTitleNorm.includes(normElem) || normElem.includes(liveTitleNorm))) ||
+                    (targetTitleNorm.length >= 4 && (liveTitleNorm.includes(targetTitleNorm) || targetTitleNorm.includes(liveTitleNorm))) ||
+                    (transToNorm.length >= 4 && (liveTitleNorm.includes(transToNorm) || transToNorm.includes(liveTitleNorm)))
+                  )
+                );
+
                 return (
                   <div key={`${screen.id}_elem_${eIdx}`} className="py-0.5 first:pt-1">
                     {/* Element Row - [PERMANENT FIX] High-contrast colorful target step marker box & status tinting */}
@@ -1130,7 +1214,9 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         }
                       }}
                       className={`flex items-center justify-between pr-4 py-2.5 ${style.paddingLeft} rounded-xl select-none transition-all ${
-                        isTargetStep
+                        isDirectLiveLink
+                          ? 'bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-100/50 border-2 border-teal-500 shadow-md ring-2 ring-teal-400/30'
+                          : isTargetStep
                           ? 'bg-gradient-to-r from-amber-50 via-amber-100/60 to-orange-50 border-2 border-amber-500 shadow-md ring-2 ring-amber-400/20'
                           : isRight
                           ? 'bg-emerald-50/70 hover:bg-emerald-100/60 border border-emerald-300 text-emerald-950 shadow-2xs'
@@ -1165,7 +1251,9 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
                         <span
                           className={`${textSize === 'large' ? 'text-[15px] font-bold' : 'text-sm font-semibold'} truncate ${
-                            isTargetStep
+                            isDirectLiveLink
+                              ? 'text-teal-950 font-black'
+                              : isTargetStep
                               ? 'text-amber-950 font-black'
                               : isRight
                               ? 'text-emerald-950 font-bold'
@@ -1178,6 +1266,13 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         >
                           {highlightMatch(elemName, searchQuery)}
                         </span>
+
+                        {/* [PERMANENT FIX] Do not remove this! Live Location Marker Badge on Screen Link */}
+                        {isDirectLiveLink && (
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-md font-mono font-bold bg-teal-600 text-white animate-pulse shadow-sm flex items-center space-x-1 shrink-0">
+                            <span>📍 ACTIVE LINK (YOU ARE HERE)</span>
+                          </span>
+                        )}
 
                         {isTargetStep && (
                           <span className="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold bg-amber-500 text-white animate-pulse shadow-sm flex items-center space-x-1 shrink-0">
@@ -1422,10 +1517,11 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
-              title="Enter Fullscreen (Focus on Tree)"
+              title="Toggle Fullscreen (Ctrl + Enter or Esc)"
             >
               <Maximize className="w-3.5 h-3.5 text-indigo-600" />
               <span>Fullscreen</span>
+              <kbd className="hidden sm:inline-block ml-1 text-[10px] font-mono px-1 py-0.2 bg-slate-100 text-slate-600 rounded border border-slate-300">Ctrl+↵</kbd>
             </button>
 
             {/* View Mode Toggle */}
@@ -1599,18 +1695,19 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
                   : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 active:scale-[0.98]'
               }`}
-              title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Enter Fullscreen (Focus on Tree)'}
+              title={isFullscreen ? 'Exit Fullscreen (Ctrl+Enter or Esc)' : 'Enter Fullscreen (Ctrl+Enter)'}
             >
               {isFullscreen ? (
                 <>
                   <Minimize className="w-3.5 h-3.5" />
                   <span>Exit Fullscreen</span>
-                  <span className="text-[10px] opacity-75 font-mono ml-0.5">(Esc)</span>
+                  <kbd className="text-[10px] font-mono px-1 py-0.2 bg-indigo-700 text-white rounded border border-indigo-500 ml-1">Ctrl+↵</kbd>
                 </>
               ) : (
                 <>
                   <Maximize className="w-3.5 h-3.5" />
                   <span>Fullscreen</span>
+                  <kbd className="text-[10px] font-mono px-1 py-0.2 bg-indigo-100 text-indigo-800 rounded border border-indigo-200 ml-1">Ctrl+↵</kbd>
                 </>
               )}
             </button>

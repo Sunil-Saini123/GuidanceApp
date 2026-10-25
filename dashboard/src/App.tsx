@@ -243,7 +243,7 @@ export const App: React.FC = () => {
         {activeTab === 'screen' && <ScreenSimulatorTab appState={appState} events={events} />}
         {activeTab === 'tree' && (
           <ErrorBoundary>
-            <TreeExplorerTab events={events} navGraph={navGraph} />
+            <TreeExplorerTab events={events} navGraph={navGraph} appState={appState} />
           </ErrorBoundary>
         )}
         {activeTab === 'ai' && <AiInspectorTab events={events} />}

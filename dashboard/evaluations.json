@@ -1,4 +1,285 @@
 {
-  "elements": {},
+  "elements": {
+    "com.android.settings::Settings::Aeroplane mode": {
+      "id": "com.android.settings::Settings::Aeroplane mode",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Aeroplane mode",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961355924
+    },
+    "com.android.settings::Settings::Air gestures": {
+      "id": "com.android.settings::Settings::Air gestures",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Air gestures",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962035045
+    },
+    "com.android.settings::Settings::Sound & vibration": {
+      "id": "com.android.settings::Settings::Sound & vibration",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Sound & vibration",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961373615
+    },
+    "com.android.settings::Settings::Home screen, Lock screen & style": {
+      "id": "com.android.settings::Settings::Home screen, Lock screen & style",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Home screen, Lock screen & style",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961375726
+    },
+    "com.android.settings::Settings::Device Connect": {
+      "id": "com.android.settings::Settings::Device Connect",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Device Connect",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961377741
+    },
+    "com.android.settings::Settings::Mobile network": {
+      "id": "com.android.settings::Settings::Mobile network",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Mobile network",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961380173
+    },
+    "com.android.settings::Settings::Bluetooth": {
+      "id": "com.android.settings::Settings::Bluetooth",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Bluetooth",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961385508
+    },
+    "com.android.settings::Settings::Wi-Fi": {
+      "id": "com.android.settings::Settings::Wi-Fi",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Wi-Fi",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961386759
+    },
+    "com.android.settings::Settings::Manage account info and security": {
+      "id": "com.android.settings::Settings::Manage account info and security",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Manage account info and security",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961396224
+    },
+    "com.android.settings::Settings::Search": {
+      "id": "com.android.settings::Settings::Search",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Search",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961405654
+    },
+    "com.android.settings::Settings::Display & brightness": {
+      "id": "com.android.settings::Settings::Display & brightness",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Display & brightness",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961407677
+    },
+    "com.android.settings::Settings::Security and privacy": {
+      "id": "com.android.settings::Settings::Security and privacy",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Security and privacy",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961414214
+    },
+    "com.android.settings::Settings::Safety & emergency": {
+      "id": "com.android.settings::Settings::Safety & emergency",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Safety & emergency",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961414974
+    },
+    "com.android.settings::Settings::Off": {
+      "id": "com.android.settings::Settings::Off",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Off",
+      "status": "wrong",
+      "comment": "what is menad and forwhat it is associate with if it is a off button for somthign add with it not sepearte ",
+      "updatedAt": 1792961560060
+    },
+    "com.android.settings::Settings::Location": {
+      "id": "com.android.settings::Settings::Location",
+      "screenId": "com.android.settings::Settings",
+      "elementName": "Location",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792961636499
+    },
+    "com.android.settings::Sound & vibration::Ring": {
+      "id": "com.android.settings::Sound & vibration::Ring",
+      "screenId": "com.android.settings::Sound & vibration",
+      "elementName": "Ring",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962907148
+    },
+    "com.android.settings::Sound & vibration::Vibrate": {
+      "id": "com.android.settings::Sound & vibration::Vibrate",
+      "screenId": "com.android.settings::Sound & vibration",
+      "elementName": "Vibrate",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962907836
+    },
+    "com.android.settings::Sound & vibration::Silent": {
+      "id": "com.android.settings::Sound & vibration::Silent",
+      "screenId": "com.android.settings::Sound & vibration",
+      "elementName": "Silent",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962909604
+    },
+    "com.android.settings::Sound & vibration::Vibrate on ring": {
+      "id": "com.android.settings::Sound & vibration::Vibrate on ring",
+      "screenId": "com.android.settings::Sound & vibration",
+      "elementName": "Vibrate on ring",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962911300
+    },
+    "com.android.settings::Sound & vibration::Do Not Disturb": {
+      "id": "com.android.settings::Sound & vibration::Do Not Disturb",
+      "screenId": "com.android.settings::Sound & vibration",
+      "elementName": "Do Not Disturb",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962912189
+    },
+    "com.android.settings::Sound & vibration::App-specific volume": {
+      "id": "com.android.settings::Sound & vibration::App-specific volume",
+      "screenId": "com.android.settings::Sound & vibration",
+      "elementName": "App-specific volume",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962912869
+    },
+    "com.android.settings::Display & brightness::Light mode": {
+      "id": "com.android.settings::Display & brightness::Light mode",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Light mode",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962923277
+    },
+    "com.android.settings::Display & brightness::Dark mode": {
+      "id": "com.android.settings::Display & brightness::Dark mode",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Dark mode",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962924029
+    },
+    "com.android.settings::Display & brightness::Scheduled": {
+      "id": "com.android.settings::Display & brightness::Scheduled",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Scheduled",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962927254
+    },
+    "com.android.settings::Display & brightness::Dark mode settings": {
+      "id": "com.android.settings::Display & brightness::Dark mode settings",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Dark mode settings",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962928716
+    },
+    "com.android.settings::Display & brightness::Font": {
+      "id": "com.android.settings::Display & brightness::Font",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Font",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962958469
+    },
+    "com.android.settings::Display & brightness::Display size": {
+      "id": "com.android.settings::Display & brightness::Display size",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Display size",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962959374
+    },
+    "com.android.settings::Display & brightness::Video Colour Boost": {
+      "id": "com.android.settings::Display & brightness::Video Colour Boost",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Video Colour Boost",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962962823
+    },
+    "com.android.settings::Display & brightness::Auto-rotate": {
+      "id": "com.android.settings::Display & brightness::Auto-rotate",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Auto-rotate",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962969086
+    },
+    "com.android.settings::Display & brightness::Auto screen": {
+      "id": "com.android.settings::Display & brightness::Auto screen",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Auto screen",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962971822
+    },
+    "com.android.settings::Display & brightness::Screen refresh rate": {
+      "id": "com.android.settings::Display & brightness::Screen refresh rate",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Screen refresh rate",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962973593
+    },
+    "com.android.settings::Display & brightness::Full screen for apps": {
+      "id": "com.android.settings::Display & brightness::Full screen for apps",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Full screen for apps",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792962982582
+    },
+    "com.android.settings::Display & brightness::You might be looking for:": {
+      "id": "com.android.settings::Display & brightness::You might be looking for:",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "You might be looking for:",
+      "status": "wrong",
+      "comment": "it is just a text and its is not usefull ",
+      "updatedAt": 1792963037234
+    },
+    "com.android.settings::Display & brightness::Bright HDR video mode": {
+      "id": "com.android.settings::Display & brightness::Bright HDR video mode",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "Bright HDR video mode",
+      "status": "right",
+      "comment": "",
+      "updatedAt": 1792963001055
+    },
+    "com.android.settings::Display & brightness::895,Brightness": {
+      "id": "com.android.settings::Display & brightness::895,Brightness",
+      "screenId": "com.android.settings::Display & brightness",
+      "elementName": "895,Brightness",
+      "status": "wrong",
+      "comment": "canyou change it name find the correct name and aall ",
+      "updatedAt": 1792963078172
+    }
+  },
   "screens": {}
 }
