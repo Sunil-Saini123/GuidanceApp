@@ -615,6 +615,21 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
     return liveScreens.filter((s) => evaluations[s.id]?.status === 'wrong');
   }, [liveScreens, evaluations]);
 
+  // Graph health & quality statistics for NavGraph mode
+  const navGraphStats = useMemo(() => {
+    if (!activeApp) return null;
+    const totalScreens = (activeApp.screens || []).length;
+    let correct = 0;
+    let wrong = 0;
+    for (const s of (activeApp.screens || [])) {
+      const st = evaluations[s.id]?.status;
+      if (st === 'correct') correct++;
+      else if (st === 'wrong') wrong++;
+    }
+    const unreviewed = Math.max(0, totalScreens - correct - wrong);
+    return { totalScreens, correct, wrong, unreviewed };
+  }, [activeApp, evaluations]);
+
   // Search match counter for visual feedback
   const searchMatchInfo = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -650,7 +665,8 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
   const renderNavGraphScreen = (
     screen: NavGraphScreen,
     depth: number = 1,
-    visitedScreens: Set<string> = new Set()
+    visitedScreens: Set<string> = new Set(),
+    trail: string[] = []
   ) => {
     const isLoop = visitedScreens.has(screen.id);
     const nextVisited = new Set(visitedScreens);
@@ -732,6 +748,19 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
     return (
       <div key={screen.id} className="space-y-2">
+        {/* Interactive Breadcrumb Trail on Sub-Screens */}
+        {trail.length > 0 && (
+          <div className={`flex items-center space-x-1.5 text-[11px] font-mono text-slate-500 ${style.paddingLeft} pt-1 select-none flex-wrap`}>
+            {trail.map((ancestor, aIdx) => (
+              <React.Fragment key={`trail_${ancestor}_${aIdx}`}>
+                <span className="text-slate-500 font-medium">{ancestor}</span>
+                <span className="text-indigo-400 font-bold">›</span>
+              </React.Fragment>
+            ))}
+            <span className="font-bold text-slate-800">{screen.title}</span>
+          </div>
+        )}
+
         {/* Screen Header - [PERMANENT FIX] High-contrast glowing live location marker box */}
         <div
           className={`flex items-center justify-between px-4 py-2.5 rounded-2xl select-none transition-all duration-200 border ${
@@ -969,7 +998,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                     {/* Child Screen (Expanded recursively under this link!) - [PERMANENT FIX] Code-editor nested block indentation */}
                     {hasTargetScreen && isExpanded && targetScreen && (
                       <div className="ml-6 pl-4 border-l-2 border-indigo-200/80 my-1.5 transition-all">
-                        {renderNavGraphScreen(targetScreen, depth + 1, nextVisited)}
+                        {renderNavGraphScreen(targetScreen, depth + 1, nextVisited, [...trail, screen.title])}
                       </div>
                     )}
                   </div>
@@ -1036,7 +1065,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
                         {isDtExpanded && (
                           <div className="ml-6 pl-4 border-l-2 border-indigo-200/80 my-1.5">
-                            {renderNavGraphScreen(directTarget, depth + 1, nextVisited)}
+                            {renderNavGraphScreen(directTarget, depth + 1, nextVisited, [...trail, screen.title])}
                           </div>
                         )}
                       </div>
@@ -1113,6 +1142,38 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
           </button>
         </div>
       </div>
+
+      {/* Graph Health & Quality Stats Bar */}
+      {viewMode === 'nav_graph' && navGraphStats && (
+        <div className="my-2.5 px-4 py-2 bg-white rounded-2xl border border-slate-200/80 text-xs shadow-xs flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center space-x-2.5 flex-wrap gap-y-1">
+            <span className="font-bold text-slate-800 flex items-center space-x-1.5 mr-1">
+              <Layers className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Graph Health:</span>
+            </span>
+            <span className="px-2 py-0.5 rounded-lg font-mono font-bold bg-slate-100 text-slate-700">
+              {navGraphStats.totalScreens} Screens
+            </span>
+            <span className="px-2 py-0.5 rounded-lg font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+              {totalTransitionsCount} Links
+            </span>
+            <span className="px-2 py-0.5 rounded-lg font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              ✓ {navGraphStats.correct} Correct
+            </span>
+            {navGraphStats.wrong > 0 && (
+              <span className="px-2 py-0.5 rounded-lg font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                ✗ {navGraphStats.wrong} Wrong
+              </span>
+            )}
+            <span className="px-2 py-0.5 rounded-lg font-mono font-medium text-slate-500">
+              {navGraphStats.unreviewed} Unreviewed
+            </span>
+          </div>
+          <div className="text-[11px] font-mono text-slate-400 font-medium">
+            {Math.round(((navGraphStats.correct + navGraphStats.wrong) / Math.max(1, navGraphStats.totalScreens)) * 100)}% Evaluated
+          </div>
+        </div>
+      )}
 
       {/* App Selector & Search Controls (Nav Graph Mode) */}
       {viewMode === 'nav_graph' && navGraph && navGraph.apps && navGraph.apps.length > 0 && (
@@ -1376,16 +1437,24 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         {viewMode === 'nav_graph' && (
           <div className="space-y-4">
             {!activeApp ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
-                <GitFork className="w-10 h-10 stroke-[1.5] mb-2 opacity-40 text-slate-400" />
-                <p className="text-sm font-semibold text-slate-700">No App Selected or No Graph Data</p>
-                <p className="text-xs text-slate-500 mt-1">Select an app above to view its screen hierarchy</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200/80 shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-3 text-indigo-600 shadow-xs">
+                  <GitFork className="w-7 h-7 stroke-[1.75]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800">No App Selected</h3>
+                <p className="text-xs text-slate-500 max-w-sm mt-1.5 leading-relaxed">
+                  Choose an application from the "Select App" dropdown above to explore its navigation graph and screen structure.
+                </p>
               </div>
             ) : !rootScreen ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
-                <FolderOpen className="w-10 h-10 stroke-[1.5] mb-2 opacity-40 text-slate-400" />
-                <p className="text-sm font-semibold text-slate-700">No Screens in App</p>
-                <p className="text-xs text-slate-500 mt-1">{activeApp.package_name} has 0 screens recorded</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200/80 shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-3 text-slate-400">
+                  <FolderOpen className="w-7 h-7 stroke-[1.75]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800">No Screens Recorded</h3>
+                <p className="text-xs text-slate-500 max-w-sm mt-1.5 leading-relaxed font-mono">
+                  {activeApp.package_name} has 0 screens in the graph. Open the app on your phone and navigate to start recording screens.
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -1430,7 +1499,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                 )}
 
                 {/* Graph recursive transitions tree */}
-                {renderNavGraphScreen(rootScreen, 1)}
+                {renderNavGraphScreen(rootScreen, 1, new Set(), [])}
 
                 {/* [PERMANENT FIX] Do not remove this! Render Root Screen + Additional Unconnected Screens Guard.
                     In case some screens in this app are not reachable directly via forward transitions from root,
@@ -1458,7 +1527,7 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
                         <span>Additional Sub-Screens ({unconnected.length})</span>
                       </div>
                       <div className="space-y-2">
-                        {unconnected.map((islandScreen) => renderNavGraphScreen(islandScreen, 1))}
+                        {unconnected.map((islandScreen) => renderNavGraphScreen(islandScreen, 1, new Set(), ['Island Screens']))}
                       </div>
                     </div>
                   );
@@ -1472,10 +1541,14 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
         {viewMode === 'live' && (
           <div className="space-y-3">
             {liveScreens.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
-                <Smartphone className="w-10 h-10 stroke-[1.5] mb-2 opacity-40 text-slate-400" />
-                <p className="text-sm font-semibold text-slate-700">No Live Screen Captures</p>
-                <p className="text-xs text-slate-500 mt-1">Screen dumps from active phone navigation will appear here in real time</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400 p-8 bg-white rounded-3xl border border-slate-200/80 shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-3 text-indigo-600 shadow-xs">
+                  <Smartphone className="w-7 h-7 stroke-[1.75]" />
+                </div>
+                <h3 className="text-base font-bold text-slate-800">No Live Screen Captures Yet</h3>
+                <p className="text-xs text-slate-500 max-w-sm mt-1.5 leading-relaxed">
+                  As you navigate your phone, live accessibility tree dumps with clickable buttons will stream here automatically in real time.
+                </p>
               </div>
             ) : displayedLiveScreens.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400">
