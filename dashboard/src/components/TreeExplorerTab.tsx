@@ -592,8 +592,11 @@ export const TreeExplorerTab: React.FC<TreeExplorerTabProps> = ({ events, navGra
 
   // Nav Graph calculations
   const activeApp: NavGraphApp | undefined = useMemo(() => {
-    if (!navGraph || !navGraph.apps) return undefined;
-    return navGraph.apps.find((a) => a.package_name === selectedAppPkg);
+    if (!navGraph || !navGraph.apps || navGraph.apps.length === 0) return undefined;
+    const found = navGraph.apps.find((a) => a.package_name === selectedAppPkg);
+    if (found) return found;
+    const settings = navGraph.apps.find((a) => a.package_name.includes('settings'));
+    return settings || navGraph.apps[0];
   }, [navGraph, selectedAppPkg]);
 
   // Index ALL screens across all apps in navGraph by ID (so cross-package transitions resolve!)

@@ -809,11 +809,43 @@ class FloatingOverlayService : Service() {
 
         // Run from UI thread
         serviceScope.launch(Dispatchers.Main) {
+            // [PERMANENT FIX] Do not remove this! Immediate visual feedback on HUD during Reroute
+            navigationHud.updateHud(
+                stepHeader        = "REROUTING",
+                actionInstruction = "Searching Cloud DB & AI...",
+                breadcrumb        = null,
+                contextText       = "Finding '$task'...",
+                subTag            = "rerouting-ai",
+                hudState          = NavigationHudOverlay.HudState.SEARCHING
+            )
+
+            // [PERMANENT FIX] Do not remove this! Check Tier 2 Cloud Database first before Groq AI during Reroute
+            val canonicalPkg = GraphStateMachine.getPackageNameForApp(app)
+                ?: if (app.contains(".")) app.lowercase() else GraphStateMachine.getPackageNameForApp(app.lowercase()) ?: app
+            val cloudPath = withContext(Dispatchers.IO) {
+                CloudPathDatabase.lookup(canonicalPkg, task)
+            }
+            if (cloudPath.isNotEmpty()) {
+                Log.i("[NavigationEngine]", "Reroute matched Tier 2 Cloud DB: $cloudPath")
+                val cloudSteps = cloudPath.split("->").map { it.trim() }.filter { it.isNotEmpty() }
+                NavigationStateMachine.startNavigation(cloudSteps, canonicalPkg, task, isReroute = true, source = "db")
+                return@launch
+            }
+
             val dummyStatus = TextView(this@FloatingOverlayService)
             val error = executeTier3Groq(app, task, dummyStatus, pendingGroqPath)
             if (error != null) {
-                // If it fails, log it. The user can try again.
+                // If it fails, log it and present retry option on HUD.
                 Log.e("[PathFinder]", "Reroute failed: $error")
+                navigationHud.updateHud(
+                    stepHeader        = "AI SEARCH FAILED",
+                    actionInstruction = error,
+                    breadcrumb        = null,
+                    contextText       = "Tap to try again",
+                    subTag            = "reroute-failed",
+                    hudState          = NavigationHudOverlay.HudState.OFF_TRACK,
+                    onHelpRequested   = { triggerGroqReroute(app, task) }
+                )
             }
         }
     }

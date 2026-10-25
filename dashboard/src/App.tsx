@@ -86,7 +86,7 @@ export const App: React.FC = () => {
 
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host || 'localhost:3000';
+      const host = window.location.port === '5173' ? 'localhost:3000' : (window.location.host || 'localhost:3000');
       const wsUrl = `${protocol}//${host}/ws`;
 
       ws = new WebSocket(wsUrl);

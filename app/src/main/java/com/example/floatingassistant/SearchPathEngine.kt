@@ -655,8 +655,32 @@ object SearchPathEngine {
 
         // Prioritize: Task element matches first (user's specific action), then destination screen matches
         val combined = mutableListOf<TargetCandidate>()
-        combined.addAll(taskCandidates.filter { it.score >= 70 }.sortedByDescending { it.score })
-        combined.addAll(destCandidates.filter { it.score >= 70 }.sortedByDescending { it.score })
+        val filteredTaskCandidates = taskCandidates.filter { it.score >= 70 }.sortedByDescending { it.score }
+        val filteredDestCandidates = destCandidates.filter { it.score >= 70 }.sortedByDescending { it.score }
+
+        // [PERMANENT FIX] Do not remove this! Specific Task Integrity:
+        // If the user specified a specific sub-task (e.g. "Screen refresh rate" or "refresh rate") that differs from the category screen,
+        // and that element does NOT exist in the local SQLite graph (filteredTaskCandidates is empty),
+        // do not let generic destCandidates falsely claim a Tier 1 hit and stop at the parent screen (e.g. Display & brightness).
+        // Let it miss so Tier 2 (Cloud DB) and Tier 3 (Groq AI) provide the complete, verified path including the leaf setting!
+        val normTask = cleanIntentQuery(exactTask ?: "").lowercase().trim()
+        val normDest = destClean.lowercase().trim()
+        val isSpecificSubTask = normTask.isNotBlank() &&
+                normTask != normDest &&
+                normTask !in setOf("open", "view", "show", "launch", "settings", "app") &&
+                !normDest.contains(normTask) &&
+                !normTask.contains(normDest)
+
+        val hasElementMatch = filteredTaskCandidates.any { !it.elementName.isNullOrBlank() } ||
+                              filteredDestCandidates.any { !it.elementName.isNullOrBlank() }
+
+        if (isSpecificSubTask && !hasElementMatch) {
+            Log.i(TAG, "resolveTarget: Specific task '$exactTask' (cleaned: '$normTask') not found in local graph elements for category '$destinationScreen'. Suppressing category-only hit so Tier 2/3 can find the full path.")
+            return emptyList()
+        }
+
+        combined.addAll(filteredTaskCandidates)
+        combined.addAll(filteredDestCandidates)
 
         // Deduplicate candidates by (screen.id, elementName)
         val seen = HashSet<String>()

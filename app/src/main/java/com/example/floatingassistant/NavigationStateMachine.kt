@@ -338,8 +338,12 @@ object NavigationStateMachine {
                                 Log.i(TAG, "Live screen anchor: step[$visibleStepIdx]='${pathSteps[visibleStepIdx]}' is already visible on screen '$activeScreenName' — starting directly at $visibleStepIdx without BACK")
                                 visibleStepIdx
                             } else {
-                                if (!pathSteps.firstOrNull().equals("BACK", ignoreCase = true)) {
-                                    pathSteps.add(0, "BACK")
+                                // [PERMANENT FIX] Do not remove this! Protect against false BACK unwinding during reroute or scrollable sub-screen
+                                val hasScrollable = if (::elementFinder.isInitialized) elementFinder.hasScrollableContainer() else false
+                                if (!isReroute && !hasScrollable) {
+                                    if (!pathSteps.firstOrNull().equals("BACK", ignoreCase = true)) {
+                                        pathSteps.add(0, "BACK")
+                                    }
                                 }
                                 0
                             }
@@ -1334,14 +1338,16 @@ object NavigationStateMachine {
                 onYes = { hud.resetFocusability(); handleSuccess() },
                 onNo  = {
                     hud.resetFocusability()
-                    // Per spec: Groq healing disabled for now — ask user to retry manually
+                    // [PERMANENT FIX] Do not remove this! Surface Reroute with AI/Cloud when destination verification fails (User tapped NO)
+                    val taskName = initialTask.ifBlank { currStep }
                     hud.updateHud(
                         stepHeader        = "NOT FOUND",
-                        actionInstruction = "Try again or restart",
+                        actionInstruction = "Didn't find '$taskName'?",
                         breadcrumb        = buildBreadcrumb(),
-                        contextText       = "Tap the bubble to submit a new command",
+                        contextText       = "Tap Reroute to search with Cloud DB / AI",
                         subTag            = "destination-no",
-                        hudState          = NavigationHudOverlay.HudState.OFF_TRACK
+                        hudState          = NavigationHudOverlay.HudState.SEARCHING,
+                        onHelpRequested   = { onRerouteRequested?.invoke(targetPackage, taskName) }
                     )
                 }
             )
